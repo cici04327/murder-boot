@@ -1,0 +1,16 @@
+# Debug 模式配置
+spring:
+  profiles:
+    active: dev
+
+# 日志配置
+logging:
+  level:
+    root: INFO
+    com.murder: DEBUG
+    org.springframework: INFO
+    org.springframework.boot: DEBUG
+    com.zaxxer.hikari: DEBUG
+    com.baomidou.mybatisplus: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"

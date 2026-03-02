@@ -1,0 +1,50 @@
+/*
+ * 全局禁用渐变（用户端）
+ * 目标：页面不出现任何渐变色块，整体保持纯白/纯色风格。
+ *
+ * 说明：
+ * - 这里以“覆盖”为主，避免逐页改动大量 scoped 样式。
+ * - 不会影响 <img>，但可能会覆盖少量依赖渐变的装饰层。
+ */
+
+/* 1) 应用整体背景强制为纯白 */
+html, body, #app {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+/* 2) 禁用主题背景伪元素（防止 radial-gradient / 网格等装饰） */
+#app::before,
+#app::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  background-image: none !important;
+}
+
+/* 3) 常见“渐变类名”统一打平 */
+[class*="gradient"],
+.text-gradient,
+.text-shine,
+.gradient-text,
+.gradient-animate,
+.hero-gradient {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+/* 渐变文字恢复为普通文字颜色 */
+.text-gradient,
+.gradient-text {
+  -webkit-text-fill-color: currentColor !important;
+  color: inherit !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+}
+
+/* 4) 如果有内联 style 写了渐变，也强制去掉 */
+[style*="linear-gradient"],
+[style*="radial-gradient"],
+[style*="conic-gradient"] {
+  background-image: none !important;
+}

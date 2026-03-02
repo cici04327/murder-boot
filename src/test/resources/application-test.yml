@@ -1,0 +1,48 @@
+# 测试环境配置
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    # 使用H2内存数据库进行测试
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;IGNORECASE=TRUE
+    username: sa
+    password: 
+  
+  # 初始化数据库
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-test.sql
+      data-locations: classpath:data-test.sql
+  
+  # 禁用 Redis 自动配置
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      
+  # 关闭缓存
+  cache:
+    type: none
+
+# MyBatis Plus配置
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+# JWT配置（测试用）
+jwt:
+  secret: test-secret-key-for-integration-testing-purposes-only
+  expiration: 86400000
+
+# 日志级别
+logging:
+  level:
+    com.murder: DEBUG
+    org.springframework.test: DEBUG
+    org.springframework.jdbc: DEBUG

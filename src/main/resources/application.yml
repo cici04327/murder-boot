@@ -1,0 +1,185 @@
+# ============================================
+# Murder Boot Application - 主配置文件
+# Spring Boot 单体应用配置
+# ============================================
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: murder-boot
+  profiles:
+    active: dev
+  
+  # 数据源配置
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/murder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      stat-view-servlet:
+        enabled: true
+        url-pattern: /druid/*
+        login-username: admin
+        login-password: admin
+      web-stat-filter:
+        enabled: true
+        url-pattern: /*
+        exclusions: "*.js,*.gif,*.jpg,*.png,*.css,*.ico,/druid/*"
+  
+  # Redis配置（与 Spring Cloud 共享，使用不同 database）
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 1  # Spring Cloud 使用 database 0，这里使用 database 1
+      connect-timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+          max-wait: -1ms
+  
+  # Jackson配置
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: always
+  
+  # 文件上传配置
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 100MB
+
+# MyBatis Plus配置
+mybatis-plus:
+  type-aliases-package: com.murder.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT配置
+murder:
+  jwt:
+    # 通用配置
+    secret-key: murder-mystery-system-secret-key-2025-secure-jwt
+    ttl: 7200000  # 2小时
+    token-name: token
+    # 用户端配置
+    user-secret-key: murder-user-secret-key-2024-secure-key-for-jwt
+    user-ttl: 7200000  # 2小时
+    user-token-name: token
+    # 管理端配置
+    admin-secret-key: murder-admin-secret-key-2024-secure-key-for-jwt
+    admin-ttl: 7200000  # 2小时
+    admin-token-name: token
+
+# AI服务配置
+ai:
+  provider: openrouter
+  api-key: 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
+  api-url: https://openrouter.ai/api/v1/chat/completions
+  # 使用免费的DeepSeek R1模型
+  model: deepseek/deepseek-r1-0528:free
+  temperature: 0.7
+  max-tokens: 1000
+
+# 支付宝配置
+alipay:
+  app-id: your-app-id
+  private-key: your-private-key
+  public-key: your-public-key
+  gateway-url: https://openapi.alipay.com/gateway.do
+  format: json
+  charset: UTF-8
+  sign-type: RSA2
+  notify-url: http://your-domain.com/payment/notify
+  return-url: http://your-domain.com/payment/return
+
+# Knife4j配置
+knife4j:
+  enable: true
+  openapi:
+    title: 剧本杀预约与门店管理系统 API
+    description: Spring Boot单体应用版本
+    version: 1.0.0
+    contact:
+      name: Murder System
+      email: support@murder-system.com
+    license: Apache 2.0
+    license-url: https://www.apache.org/licenses/LICENSE-2.0.html
+  setting:
+    language: zh_cn
+    enable-swagger-models: true
+    enable-footer-custom: true
+    footer-custom-content: Copyright © 2025 Murder System
+
+# 日志配置
+logging:
+  level:
+    com.murder: debug
+    com.murder.mapper: debug
+  pattern:
+    console: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
+    file: '%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n'
+  file:
+    name: logs/murder-boot.log
+    max-size: 10MB
+    max-history: 30
+
+# CDN配置
+cdn:
+  # 是否启用CDN（生产环境建议开启）
+  enabled: false
+  # CDN域名（替换为您的CDN域名）
+  domain: https://cdn.example.com
+  # 原始文件域名
+  origin-domain: http://localhost:8080
+  # 图片处理配置（阿里云OSS图片处理参数格式）
+  image-process:
+    enabled: true
+    # 缩略图：300x300，居中裁剪
+    thumbnail: "?x-oss-process=image/resize,w_300,h_300,m_fill"
+    # 中等尺寸：宽度600
+    medium: "?x-oss-process=image/resize,w_600"
+    # 大图：宽度1200
+    large: "?x-oss-process=image/resize,w_1200"
+    # WebP格式转换
+    webp: "?x-oss-process=image/format,webp"
+    # 质量压缩80%
+    quality: "?x-oss-process=image/quality,q_80"
+    # 优化缩略图：缩放+WebP+压缩
+    thumbnail-optimized: "?x-oss-process=image/resize,w_300,h_300,m_fill/format,webp/quality,q_80"
+    # 优化中图：缩放+WebP+压缩
+    medium-optimized: "?x-oss-process=image/resize,w_600/format,webp/quality,q_85"

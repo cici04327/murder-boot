@@ -1,0 +1,31 @@
+# ============================================
+# AI 服务配置
+# ============================================
+
+ai:
+  # AI服务提供商: mock(测试), openai, openrouter, wenxin(文心一言), tongyi(通义千问)
+  provider: openrouter
+  
+  # API密钥
+  api-key: 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
+  
+  # API地址 (OpenRouter使用兼容OpenAI的API格式)
+  api-url: https://openrouter.ai/api/v1/chat/completions
+  
+  # 模型名称 - 使用免费的 DeepSeek R1 模型
+  model: deepseek/deepseek-r1-0528:free
+  
+  # 温度参数(0-1)，越大越有创造性
+  temperature: 0.7
+  
+  # 最大token数
+  max-tokens: 1000
+  
+  # 系统提示词
+  system-prompt: |
+    你是一个专业的剧本杀客服助手。你的职责是：
+    1. 为用户推荐合适的剧本
+    2. 解答用户关于预约、支付、退款等问题
+    3. 介绍门店设施和服务
+    4. 提供友好、专业的咨询服务
+    请用简洁、友好的语言回答用户问题。

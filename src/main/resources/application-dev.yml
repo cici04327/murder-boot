@@ -1,0 +1,30 @@
+# ============================================
+# 开发环境配置
+# ============================================
+
+server:
+  port: 8080
+
+# 文件上传配置
+file:
+  upload:
+    path: ./uploads
+    base-url: http://localhost:8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/murder?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false
+    username: root
+    password: root
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 1  # 使用 database 1，与 Spring Cloud 隔离
+
+# 日志级别
+logging:
+  level:
+    com.murder: debug
+    com.murder.mapper: debug

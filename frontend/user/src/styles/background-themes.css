@@ -1,0 +1,248 @@
+/**
+ * 用户端背景主题样式库
+ * 提供多种可选的背景主题
+ */
+
+/* ==================== 默认主题（简洁灰白 - 与0.html一致） ==================== */
+.theme-default #app {
+  background: #f9fafb !important; /* bg-gray-50 */
+  animation: none !important;
+}
+
+.theme-default #app::before {
+  display: none !important;
+}
+
+.theme-default #app::after {
+  display: none !important;
+}
+
+/* ==================== 神秘暗夜主题 ==================== */
+/* 深色氛围 + 轻微光晕装饰（不刺眼） */
+.theme-dark #app {
+  background: radial-gradient(1200px circle at 20% 10%, rgba(59, 130, 246, 0.12) 0%, transparent 45%),
+              radial-gradient(900px circle at 80% 30%, rgba(168, 85, 247, 0.10) 0%, transparent 45%),
+              linear-gradient(180deg, #0b1020 0%, #0f172a 35%, #0b1020 100%) !important;
+  background-attachment: fixed;
+  animation: none !important;
+}
+
+.theme-dark #app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 25% 30%, rgba(255,255,255,0.06) 0%, transparent 55%),
+    radial-gradient(circle at 70% 60%, rgba(255,255,255,0.04) 0%, transparent 55%);
+  opacity: 0.9;
+}
+
+.theme-dark #app::after {
+  display: none !important;
+}
+
+/* ==================== 浪漫紫色主题 ==================== */
+.theme-purple #app {
+  background: linear-gradient(135deg,
+    #f3e8ff 0%,
+    #e9d5ff 22%,
+    #e0e7ff 50%,
+    #fae8ff 78%,
+    #f3e8ff 100%
+  ) !important;
+  background-size: 200% 200%;
+  animation: gradientShift 18s ease infinite;
+}
+
+.theme-purple #app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(124, 58, 237, 0.18) 0%, transparent 55%),
+    radial-gradient(circle at 80% 65%, rgba(236, 72, 153, 0.14) 0%, transparent 55%);
+}
+
+/* 旧版本代码（已禁用）
+.theme-purple-old #app {
+  background: linear-gradient(135deg,
+    #a8edea 0%,
+    #fed6e3 25%,
+    #d299c2 50%,
+    #fef9d7 75%,
+    #a8edea 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 18s ease infinite;
+}
+
+/* ==================== 科技蓝主题 ==================== */
+.theme-tech #app {
+  background: #263238 !important; /* 纯深蓝灰 */
+  animation: none !important;
+}
+
+.theme-tech #app::before {
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 247, 255, 0.03) 2px,
+      rgba(0, 247, 255, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 247, 255, 0.03) 2px,
+      rgba(0, 247, 255, 0.03) 4px
+    );
+}
+
+/* ==================== 温暖橙色主题 ==================== */
+.theme-warm #app {
+  background: #ffecd2 !important; /* 纯暖色米白 */
+  animation: none !important;
+}
+
+/* 旧版本代码（已禁用）
+.theme-warm-old #app {
+  background: linear-gradient(135deg,
+    #fa709a 0%,
+    #fee140 25%,
+    #fccb90 50%,
+    #d57eeb 75%,
+    #fa709a 100%
+  );
+  background-size: 400% 400%;
+  animation: gradientShift 16s ease infinite;
+}
+
+/* ==================== 清新绿色主题 ==================== */
+.theme-nature #app {
+  background: #e8f5e9 !important; /* 纯浅绿色 */
+  animation: none !important;
+}
+
+/* ==================== 极光主题 ==================== */
+.theme-aurora #app {
+  background: #f0f4f8 !important; /* 纯浅灰蓝 */
+  animation: none !important;
+}
+
+.theme-aurora #app::before {
+  background-image: 
+    radial-gradient(circle at 30% 40%, rgba(193, 80, 192, 0.2) 0%, transparent 60%),
+    radial-gradient(circle at 70% 70%, rgba(67, 233, 123, 0.15) 0%, transparent 60%),
+    radial-gradient(circle at 50% 20%, rgba(255, 204, 112, 0.18) 0%, transparent 60%);
+}
+
+/* ==================== 悬疑深红主题（血色谜案） ==================== */
+.theme-mystery #app {
+  background: radial-gradient(1000px circle at 18% 12%, rgba(220, 38, 38, 0.16) 0%, transparent 48%),
+              radial-gradient(900px circle at 85% 35%, rgba(190, 18, 60, 0.14) 0%, transparent 48%),
+              linear-gradient(180deg, #13060a 0%, #1f0a10 45%, #12060a 100%) !important;
+  background-attachment: fixed;
+  animation: none !important;
+}
+
+.theme-mystery #app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.03) 0,
+      rgba(255, 255, 255, 0.03) 2px,
+      transparent 2px,
+      transparent 10px
+    );
+  opacity: 0.35;
+}
+
+.theme-mystery #app::after {
+  display: none !important;
+}
+
+/* ==================== 简约浅色主题 ==================== */
+/* 不是纯白：用轻微灰雾感提升层次 */
+.theme-light #app {
+  background: linear-gradient(180deg, #f6f7fb 0%, #f9fafb 60%, #f6f7fb 100%) !important;
+  animation: none !important;
+}
+
+/* ==================== 星空主题 ==================== */
+.theme-starry #app {
+  background: radial-gradient(800px circle at 20% 15%, rgba(59, 130, 246, 0.14) 0%, transparent 48%),
+              radial-gradient(900px circle at 80% 30%, rgba(147, 51, 234, 0.12) 0%, transparent 52%),
+              linear-gradient(180deg, #050714 0%, #0b1020 60%, #050714 100%) !important;
+  background-attachment: fixed;
+  animation: none !important;
+}
+
+.theme-starry #app::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* 简易星点（避免图片依赖） */
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(255,255,255,0.55) 50%, transparent 52%),
+    radial-gradient(1px 1px at 55% 20%, rgba(255,255,255,0.45) 50%, transparent 52%),
+    radial-gradient(1px 1px at 75% 60%, rgba(255,255,255,0.40) 50%, transparent 52%),
+    radial-gradient(1px 1px at 35% 75%, rgba(255,255,255,0.35) 50%, transparent 52%),
+    radial-gradient(1px 1px at 90% 40%, rgba(255,255,255,0.30) 50%, transparent 52%);
+  opacity: 0.8;
+}
+
+.theme-starry #app::after {
+  display: none !important;
+}
+
+@keyframes sparkle {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==================== 公共动画 ==================== */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* ==================== 响应式适配 ==================== */
+@media (max-width: 768px) {
+  [class*="theme-"] #app::after {
+    background-size: 30px 30px;
+  }
+}
+
+/* ==================== 性能优化 ==================== */
+@media (prefers-reduced-motion: reduce) {
+  [class*="theme-"] #app {
+    animation: none !important;
+    background-position: 0% 50%;
+  }
+  
+  [class*="theme-"] #app::before,
+  [class*="theme-"] #app::after {
+    animation: none !important;
+  }
+}
+

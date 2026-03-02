@@ -1,0 +1,1 @@
+import{G as o}from"./index-mtb8gjqy.js";const t=e=>o({url:"/coupon/user",method:"get",params:e}),a=()=>o({url:"/coupon/page",method:"get",params:{status:1}}),s=e=>o({url:"/coupon/receive",method:"post",params:{couponId:e}}),u=e=>o({url:`/coupon/available/reservation/${e}`,method:"get"});export{u as a,a as b,t as g,s as r};
