@@ -73,9 +73,19 @@ public class Reservation implements Serializable {
     private Long couponId;
     
     /**
-     * 优惠金额
+     * 优惠金额（含VIP折扣+优惠券，合计）
      */
     private BigDecimal discountAmount;
+
+    /**
+     * VIP折扣金额
+     */
+    private BigDecimal vipDiscountAmount;
+
+    /**
+     * VIP折扣率（如0.90表示9折）
+     */
+    private BigDecimal vipDiscount;
     
     /**
      * 实际支付金额

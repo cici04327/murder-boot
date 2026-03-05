@@ -61,6 +61,9 @@ public class ReservationServiceImpl implements ReservationService {
     @Autowired(required = false)
     private com.murder.service.GroupOrderService groupOrderService;
 
+    @Autowired(required = false)
+    private com.murder.service.VipService vipService;
+
     private static final AtomicLong SEQUENCE = new AtomicLong(1);
 
     /**
@@ -93,37 +96,79 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setStatus(1); // 待确?
         reservation.setPayStatus(0); // 未支?
         
-        // 处理优惠券
+        // 第一步：优先使用前端预计算的VIP折扣，后端再验证
+        BigDecimal vipDiscountAmount = BigDecimal.ZERO;
+        BigDecimal vipDiscountRate = null;
+        BigDecimal basePrice = reservation.getTotalPrice();
+
+        if (reservationDTO.getVipDiscountAmount() != null
+                && reservationDTO.getVipDiscountAmount().compareTo(BigDecimal.ZERO) > 0
+                && reservationDTO.getVipDiscount() != null) {
+            // 前端传来了VIP折扣，后端验证是否合法
+            BigDecimal expectedDiscount = null;
+            if (vipService != null && reservationDTO.getUserId() != null) {
+                expectedDiscount = vipService.getVipDiscount(reservationDTO.getUserId());
+            }
+            // 验证折扣率一致（允许0.01误差）
+            if (expectedDiscount != null
+                    && reservationDTO.getVipDiscount().subtract(expectedDiscount).abs().compareTo(new BigDecimal("0.01")) <= 0) {
+                vipDiscountRate = expectedDiscount;
+                vipDiscountAmount = reservation.getTotalPrice()
+                        .multiply(BigDecimal.ONE.subtract(vipDiscountRate))
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                basePrice = reservation.getTotalPrice().subtract(vipDiscountAmount);
+                log.info("VIP折扣验证通过: userId={}, rate={}, amount={}", reservationDTO.getUserId(), vipDiscountRate, vipDiscountAmount);
+            } else {
+                log.warn("VIP折扣验证失败，不应用折扣: userId={}, 前端rate={}, 后端rate={}",
+                        reservationDTO.getUserId(), reservationDTO.getVipDiscount(), expectedDiscount);
+            }
+        } else if (vipService != null && reservationDTO.getUserId() != null) {
+            // 前端没传，后端自行查询计算（兜底）
+            try {
+                BigDecimal vipDiscount = vipService.getVipDiscount(reservationDTO.getUserId());
+                log.info("后端查询VIP折扣: userId={}, vipDiscount={}", reservationDTO.getUserId(), vipDiscount);
+                if (vipDiscount != null && vipDiscount.compareTo(BigDecimal.ONE) < 0) {
+                    vipDiscountRate = vipDiscount;
+                    vipDiscountAmount = basePrice.multiply(BigDecimal.ONE.subtract(vipDiscount))
+                            .setScale(2, java.math.RoundingMode.HALF_UP);
+                    basePrice = basePrice.subtract(vipDiscountAmount);
+                }
+            } catch (Exception e) {
+                log.warn("获取VIP折扣失败: userId={}", reservationDTO.getUserId(), e);
+            }
+        }
+
+        // 第二步：处理优惠券（基于VIP折后价再折扣）
         boolean couponValid = false;
+        BigDecimal couponDiscountAmount = BigDecimal.ZERO;
         if (reservationDTO.getUserCouponId() != null) {
             try {
-                // 计算优惠金额（直接调用couponService，让异常正常抛出）
                 BigDecimal discount = couponService.calculateDiscount(
-                    reservationDTO.getUserCouponId(), 
-                    reservation.getTotalPrice()
-                );
-                
-                // 只有优惠金额大于0才认为优惠券有效
+                    reservationDTO.getUserCouponId(), basePrice);
                 if (discount != null && discount.compareTo(BigDecimal.ZERO) > 0) {
+                    couponDiscountAmount = discount;
                     reservation.setCouponId(reservationDTO.getUserCouponId());
-                    reservation.setDiscountAmount(discount);
-                    reservation.setActualAmount(reservation.getTotalPrice().subtract(discount));
                     couponValid = true;
                     log.info("订单使用优惠券，userCouponId={}, 优惠金额: {}", reservationDTO.getUserCouponId(), discount);
                 } else {
                     log.warn("优惠券折扣金额为0，不使用优惠券, userCouponId={}", reservationDTO.getUserCouponId());
-                    reservation.setActualAmount(reservation.getTotalPrice());
                 }
             } catch (Exception e) {
                 log.error("计算优惠券折扣失败, userCouponId={}", reservationDTO.getUserCouponId(), e);
-                // 优惠券处理失败不影响订单创建
-                reservation.setActualAmount(reservation.getTotalPrice());
                 reservation.setCouponId(null);
-                reservation.setDiscountAmount(BigDecimal.ZERO);
             }
-        } else {
-            reservation.setActualAmount(reservation.getTotalPrice());
         }
+
+        // 第三步：汇总折扣，计算最终实付金额
+        BigDecimal totalDiscount = vipDiscountAmount.add(couponDiscountAmount);
+        BigDecimal actualAmount = reservation.getTotalPrice().subtract(totalDiscount);
+        if (actualAmount.compareTo(BigDecimal.ZERO) < 0) actualAmount = BigDecimal.ZERO;
+        reservation.setDiscountAmount(totalDiscount);
+        reservation.setActualAmount(actualAmount);
+        reservation.setVipDiscountAmount(vipDiscountAmount.compareTo(BigDecimal.ZERO) > 0 ? vipDiscountAmount : null);
+        reservation.setVipDiscount(vipDiscountRate);
+        log.info("订单金额汇总: totalPrice={}, vipRate={}, vipAmt={}, couponAmt={}, actualAmount={}",
+                reservation.getTotalPrice(), vipDiscountRate, vipDiscountAmount, couponDiscountAmount, actualAmount);
         
         // 保存预约
         reservationMapper.insert(reservation);

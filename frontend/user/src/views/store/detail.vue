@@ -566,6 +566,15 @@ const loadStoreDetail = async () => {
     if (res.data) {
       store.value = res.data
       store.value.tags = store.value.tags || ['环境优雅', '服务专业', '交通便利']
+
+      // 将后端 images 字段（逗号分隔字符串）转换为前端所需的 coverImage 和 environmentImages
+      if (store.value.images) {
+        const imageList = store.value.images.split(',').map(img => img.trim()).filter(img => img)
+        if (imageList.length > 0) {
+          store.value.coverImage = store.value.coverImage || imageList[0]
+          store.value.environmentImages = store.value.environmentImages || imageList
+        }
+      }
       
       // 如果后端返回的description为空，使用通用的默认描述
       if (!store.value.description) {

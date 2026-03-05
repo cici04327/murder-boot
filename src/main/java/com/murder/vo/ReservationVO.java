@@ -130,5 +130,14 @@ public class ReservationVO implements Serializable {
     
     @Schema(description = "是否已评价：0未评价，1已评价")
     private Integer hasReviewed;
+
+    @Schema(description = "VIP折扣率（如0.9表示9折，null表示无折扣）")
+    private BigDecimal vipDiscount;
+
+    @Schema(description = "VIP折扣优惠金额")
+    private BigDecimal vipDiscountAmount;
+
+    @Schema(description = "VIP等级名称")
+    private String vipLevelName;
 }
 

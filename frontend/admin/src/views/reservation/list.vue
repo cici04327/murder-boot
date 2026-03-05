@@ -42,7 +42,23 @@
         <el-table-column prop="reservationTime" label="预约时间" width="160" />
         <el-table-column prop="playerCount" label="人数" width="70" />
         <el-table-column prop="duration" label="时长(h)" width="80" />
-        <el-table-column prop="totalPrice" label="总价" width="90" />
+        <el-table-column prop="totalPrice" label="原价" width="80">
+          <template #default="{ row }">
+            <span :style="row.discountAmount > 0 ? 'color:#c0c4cc;text-decoration:line-through;font-size:12px' : ''">
+              ¥{{ row.totalPrice }}
+            </span>
+          </template>
+        </el-table-column>
+        <el-table-column label="实付/折扣" width="130">
+          <template #default="{ row }">
+            <div style="line-height:1.6">
+              <span style="color:#f56c6c;font-weight:bold">¥{{ Number(row.actualAmount || row.totalPrice).toFixed(2) }}</span>
+              <div v-if="row.vipDiscountAmount > 0" style="margin-top:2px">
+                <el-tag type="warning" size="small">💎 {{ getVipDiscountLabel(row.vipDiscount) }}</el-tag>
+              </div>
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column prop="payStatus" label="支付" width="90">
           <template #default="{ row }">
             <el-tag :type="row.payStatus === 1 ? 'success' : row.payStatus === 2 ? 'info' : 'warning'" size="small">
@@ -107,6 +123,12 @@ const queryForm = reactive({
   pageSize: 10
 })
 
+const getVipDiscountLabel = (discount) => {
+  if (!discount) return 'VIP折扣'
+  const fold = Math.round(discount * 10)
+  return `${fold}折`
+}
+
 const getStatusType = (status) => {
   const types = ['warning', 'success', 'info', 'danger']
   return types[status] || 'info'
@@ -135,6 +157,11 @@ const fetchData = async () => {
       playerCount: it.playerCount || it.people || 0,
       duration: it.duration || 3.5,
       totalPrice: it.totalPrice || it.price || 0,
+      actualAmount: it.actualAmount,
+      discountAmount: it.discountAmount || 0,
+      vipDiscountAmount: it.vipDiscountAmount || 0,
+      vipDiscount: it.vipDiscount || null,
+      couponId: it.couponId || null,
       payStatus: it.payStatus ?? 0,
       status: it.status ?? 0
     }))
@@ -284,7 +311,14 @@ const handleExport = async () => {
       '预约时间': item.reservationTime || '-',
       '人数': item.playerCount || item.people || 0,
       '时长(小时)': item.duration || 3.5,
-      '总价': item.totalPrice || item.price || 0,
+      '原价': item.totalPrice || item.price || 0,
+      'VIP折扣': item.vipDiscountAmount > 0
+        ? `${Math.round(item.vipDiscount * 10)}折(-¥${Number(item.vipDiscountAmount).toFixed(2)})`
+        : '无',
+      '优惠券折扣': item.couponId && item.discountAmount > 0
+        ? `-¥${(Number(item.discountAmount) - Number(item.vipDiscountAmount || 0)).toFixed(2)}`
+        : '无',
+      '实付金额': Number(item.actualAmount || item.totalPrice || 0).toFixed(2),
       '支付状态': item.payStatus === 1 ? '已支付' : item.payStatus === 2 ? '已退款' : '未支付',
       '预约状态': getStatusText(item.status),
       '创建时间': item.createTime || '-'
@@ -306,7 +340,10 @@ const handleExport = async () => {
       { wch: 20 }, // 预约时间
       { wch: 8 },  // 人数
       { wch: 10 }, // 时长
-      { wch: 10 }, // 总价
+      { wch: 10 }, // 原价
+      { wch: 16 }, // VIP折扣
+      { wch: 14 }, // 优惠券折扣
+      { wch: 12 }, // 实付金额
       { wch: 10 }, // 支付状态
       { wch: 10 }, // 预约状态
       { wch: 20 }  // 创建时间

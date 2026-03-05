@@ -199,11 +199,14 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
         allWrapper.eq(AdminNotification::getStatus, 2); // 只统计已发送的
         Long totalCount = adminNotificationMapper.selectCount(allWrapper);
         
-        // 未读数 (system_notification 没有此字段)
-        Long unreadCount = 0L;
-        
+        // 未读数
+        LambdaQueryWrapper<AdminNotification> unreadWrapper = new LambdaQueryWrapper<>();
+        unreadWrapper.eq(AdminNotification::getStatus, 2);
+        unreadWrapper.eq(AdminNotification::getIsRead, 0);
+        Long unreadCount = adminNotificationMapper.selectCount(unreadWrapper);
+
         // 已读数
-        Long readCount = totalCount;
+        Long readCount = totalCount - unreadCount;
         
         // 按类型统计
         List<AdminNotification> allNotifications = adminNotificationMapper.selectList(allWrapper);
@@ -235,7 +238,8 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
     private AdminNotificationVO convertToVO(AdminNotification notification) {
         AdminNotificationVO vo = new AdminNotificationVO();
         BeanUtils.copyProperties(notification, vo);
-        vo.setIsRead(false); // system_notification 没有已读状态,默认为未读
+        // 根据数据库中的 is_read 字段（0=未读，1=已读）设置已读状态
+        vo.setIsRead(notification.getIsRead() != null && notification.getIsRead() == 1);
         vo.setTypeName(getTypeName(notification.getType()));
         
         return vo;

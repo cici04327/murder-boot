@@ -2,36 +2,36 @@ package com.murder.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
 import com.murder.dto.UserLoginDTO;
 import com.murder.dto.UserRegisterDTO;
+import com.murder.entity.Reservation;
 import com.murder.entity.User;
-import com.murder.vo.UserLoginVO;
+import com.murder.mapper.ReservationMapper;
+import com.murder.service.UserBrowseHistoryService;
 import com.murder.service.UserService;
+import com.murder.service.UserSettingsService;
+import com.murder.vo.BrowseHistoryVO;
+import com.murder.vo.UserLoginVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.util.StringUtils;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-
-import com.murder.service.UserBrowseHistoryService;
-import com.murder.vo.BrowseHistoryVO;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.murder.common.context.BaseContext;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -50,6 +50,65 @@ public class UserController {
 
     @Autowired
     private UserBrowseHistoryService browseHistoryService;
+
+    @Autowired
+    private ReservationMapper reservationMapper;
+
+    @Autowired
+    private UserSettingsService userSettingsService;
+
+    // ==================== 用户设置接口 ====================
+
+    @GetMapping("/settings/privacy")
+    @Operation(summary = "获取隐私设置")
+    public Result<java.util.Map<String, Object>> getPrivacySettings() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) return Result.error("用户未登录");
+        return Result.success(userSettingsService.getPrivacySettings(userId));
+    }
+
+    @PutMapping("/settings/privacy")
+    @Operation(summary = "更新隐私设置")
+    public Result<String> updatePrivacySettings(@RequestBody java.util.Map<String, Object> settings) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) return Result.error("用户未登录");
+        userSettingsService.updatePrivacySettings(userId, settings);
+        return Result.success("保存成功");
+    }
+
+    @GetMapping("/settings/notification")
+    @Operation(summary = "获取通知设置")
+    public Result<java.util.Map<String, Object>> getNotificationSettings() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) return Result.error("用户未登录");
+        return Result.success(userSettingsService.getNotificationSettings(userId));
+    }
+
+    @PutMapping("/settings/notification")
+    @Operation(summary = "更新通知设置")
+    public Result<String> updateNotificationSettings(@RequestBody java.util.Map<String, Object> settings) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) return Result.error("用户未登录");
+        userSettingsService.updateNotificationSettings(userId, settings);
+        return Result.success("保存成功");
+    }
+
+    @GetMapping("/settings/preference")
+    @Operation(summary = "获取偏好设置")
+    public Result<java.util.Map<String, Object>> getPreferenceSettings() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) return Result.error("用户未登录");
+        return Result.success(userSettingsService.getPreferenceSettings(userId));
+    }
+
+    @PutMapping("/settings/preference")
+    @Operation(summary = "更新偏好设置")
+    public Result<String> updatePreferenceSettings(@RequestBody java.util.Map<String, Object> settings) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) return Result.error("用户未登录");
+        userSettingsService.updatePreferenceSettings(userId, settings);
+        return Result.success("保存成功");
+    }
 
     /**
      * 用户注册
@@ -106,6 +165,45 @@ public class UserController {
         pageResult.setRecords(pageInfo.getRecords());
         
         return Result.success(pageResult);
+    }
+
+    /**
+     * 获取当前用户账号统计（必须放在 /{id} 之前避免路由冲突）
+     */
+    @GetMapping("/statistics")
+    @Operation(summary = "获取当前用户账号统计")
+    public Result<java.util.Map<String, Object>> getStatistics() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+        log.info("获取用户统计: userId={}", userId);
+
+        // 查询用户积分
+        User user = userService.getById(userId);
+        int totalPoints = (user != null && user.getPoints() != null) ? user.getPoints() : 0;
+
+        // 查询累计预约数（不含已取消）
+        LambdaQueryWrapper<Reservation> countWrapper = new LambdaQueryWrapper<>();
+        countWrapper.eq(Reservation::getUserId, userId)
+                    .ne(Reservation::getStatus, 4);  // 4=已取消
+        long totalReservations = reservationMapper.selectCount(countWrapper);
+
+        // 查询累计消费金额（已支付的订单 actual_amount 求和）
+        LambdaQueryWrapper<Reservation> spentWrapper = new LambdaQueryWrapper<>();
+        spentWrapper.eq(Reservation::getUserId, userId)
+                    .eq(Reservation::getPayStatus, 1);  // 1=已支付
+        java.util.List<Reservation> paidList = reservationMapper.selectList(spentWrapper);
+        BigDecimal totalSpent = paidList.stream()
+                .map(r -> r.getActualAmount() != null ? r.getActualAmount() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        stats.put("totalPoints", totalPoints);
+        stats.put("totalReservations", totalReservations);
+        stats.put("totalSpent", totalSpent);
+        stats.put("friendCount", 0);
+        return Result.success(stats);
     }
 
     /**

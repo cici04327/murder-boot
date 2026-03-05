@@ -50,4 +50,13 @@ public class ReservationDTO implements Serializable {
     
     @Schema(description = "用户优惠券ID")
     private Long userCouponId;
+
+    @Schema(description = "前端预计算的VIP折扣金额")
+    private BigDecimal vipDiscountAmount;
+
+    @Schema(description = "前端预计算的VIP折扣率")
+    private BigDecimal vipDiscount;
+
+    @Schema(description = "前端预计算的实付金额")
+    private BigDecimal actualAmount;
 }

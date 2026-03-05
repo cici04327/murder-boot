@@ -7,7 +7,7 @@ ai:
   provider: openrouter
   
   # API密钥
-  api-key: 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
+  api-key: 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
   
   # API地址 (OpenRouter使用兼容OpenAI的API格式)
   api-url: https://openrouter.ai/api/v1/chat/completions

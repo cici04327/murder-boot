@@ -872,7 +872,13 @@ const loadHotStores = async () => {
   try {
     const res = await getHotStores()
     if (res.data) {
-      hotStores.value = res.data.slice(0, 3)
+      hotStores.value = res.data.slice(0, 6).map(store => {
+        if (!store.coverImage && store.images) {
+          const imageList = store.images.split(',').map(img => img.trim()).filter(img => img)
+          if (imageList.length > 0) store.coverImage = imageList[0]
+        }
+        return store
+      })
     }
   } catch (error) {
     console.error('加载推荐门店失败:', error)

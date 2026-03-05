@@ -372,17 +372,29 @@
               </div>
               <div class="price-row">
                 <span>小计</span>
-                <span>¥{{ totalPrice }}</span>
+                <span :style="vipDiscountAmount > 0 ? 'color:#909399;text-decoration:line-through' : ''">
+                  ¥{{ totalPrice }}
+                </span>
               </div>
-              <div class="price-row discount" v-if="discountAmount > 0">
-                <span>优惠</span>
-                <span>-¥{{ discountAmount }}</span>
+              <div class="price-row vip-discount" v-if="vipDiscountRate">
+                <span>
+                  <el-tag size="small" type="warning" style="margin-right:4px">💎{{ vipLevelName }}</el-tag>
+                  {{ Math.round(vipDiscountRate * 10) }}折
+                </span>
+                <span style="color:#e6a23c;font-weight:bold">-¥{{ vipDiscountAmount }}</span>
+              </div>
+              <div class="price-row discount" v-if="couponDiscountAmount > 0">
+                <span>🎫 优惠券</span>
+                <span style="color:#67c23a;font-weight:bold">-¥{{ couponDiscountAmount }}</span>
               </div>
             </div>
             
             <div class="total-price">
               <span class="total-label">应付金额</span>
               <span class="total-value">¥{{ finalPrice }}</span>
+            </div>
+            <div class="vip-saved-tip" v-if="vipDiscountAmount > 0">
+              💎 VIP专属优惠已为您节省 ¥{{ vipDiscountAmount }}
             </div>
           </div>
           
@@ -421,6 +433,7 @@ import { getStoreList, getStoreRooms } from '@/api/store'
 import { createReservation, checkRoomAvailability } from '@/api/reservation'
 import { createGroup } from '@/api/group'
 import { getMyCoupons } from '@/api/coupon'
+import { getUserVipInfo } from '@/api/vip'
 import { useUserStore } from '@/store/user'
 
 const route = useRoute()
@@ -443,6 +456,28 @@ const stores = ref([])
 const rooms = ref([])
 const availableCoupons = ref([])
 const selectedCoupon = ref(null)
+
+// VIP折扣相关
+const vipDiscountRate = ref(null)   // 折扣率，如 0.9 表示9折
+const vipLevelName = ref('')        // 等级名称，如"银章侦探"
+const vipDiscountMap = { 1: 0.95, 2: 0.90, 3: 0.85, 4: 0.80 }
+const vipLevelNameMap = { 1: '见习侦探', 2: '银章侦探', 3: '金章侦探', 4: '传奇侦探' }
+
+const loadVipInfo = async () => {
+  try {
+    const res = await getUserVipInfo()
+    if ((res.code === 1 || res.code === 200) && res.data?.isVip) {
+      const level = res.data.level
+      vipDiscountRate.value = vipDiscountMap[level] || null
+      vipLevelName.value = vipLevelNameMap[level] || ''
+    } else {
+      vipDiscountRate.value = null
+      vipLevelName.value = ''
+    }
+  } catch (e) {
+    vipDiscountRate.value = null
+  }
+}
 
 const form = reactive({
   scriptId: null,
@@ -517,22 +552,38 @@ const availableRooms = computed(() => {
   return rooms.value.filter(r => r.status === 1)
 })
 
+// 原始总价（剧本单价 × 人数）
 const totalPrice = computed(() => {
   if (!selectedScript.value) return 0
   return (selectedScript.value.price * form.playerCount).toFixed(2)
 })
 
-const discountAmount = computed(() => {
-  if (!selectedCoupon.value) return 0
+// VIP折扣金额
+const vipDiscountAmount = computed(() => {
+  if (!vipDiscountRate.value || !selectedScript.value) return 0
   const total = parseFloat(totalPrice.value)
+  return (total * (1 - vipDiscountRate.value)).toFixed(2)
+})
+
+// VIP折后价（优惠券在此基础上再折扣）
+const priceAfterVip = computed(() => {
+  const total = parseFloat(totalPrice.value)
+  const vipDiscount = parseFloat(vipDiscountAmount.value)
+  return Math.max(total - vipDiscount, 0)
+})
+
+// 优惠券折扣金额（基于VIP折后价计算）
+const couponDiscountAmount = computed(() => {
+  if (!selectedCoupon.value) return 0
+  const base = priceAfterVip.value
   if (selectedCoupon.value.type === 1) {
     // 满减券
-    if (total >= parseFloat(selectedCoupon.value.minAmount || 0)) {
+    if (base >= parseFloat(selectedCoupon.value.minAmount || 0)) {
       return parseFloat(selectedCoupon.value.discountValue)
     }
   } else if (selectedCoupon.value.type === 2) {
-    // 折扣券：discountValue是小数（如0.8表示8折）
-    return (total * (1 - parseFloat(selectedCoupon.value.discountValue))).toFixed(2)
+    // 折扣券
+    return (base * (1 - parseFloat(selectedCoupon.value.discountValue))).toFixed(2)
   } else if (selectedCoupon.value.type === 3) {
     // 代金券
     return parseFloat(selectedCoupon.value.discountValue)
@@ -540,6 +591,12 @@ const discountAmount = computed(() => {
   return 0
 })
 
+// 合计优惠（VIP + 优惠券）
+const discountAmount = computed(() => {
+  return (parseFloat(vipDiscountAmount.value) + parseFloat(couponDiscountAmount.value)).toFixed(2)
+})
+
+// 最终实付金额
 const finalPrice = computed(() => {
   const total = parseFloat(totalPrice.value)
   const discount = parseFloat(discountAmount.value)
@@ -680,7 +737,7 @@ const handleSubmit = async () => {
         const totalAmount = parseFloat(totalPrice.value)
         const actualAmount = parseFloat(finalPrice.value)
         
-        // 构建预约数据（只发送后端需要的字段）
+        // 构建预约数据
         const reservationData = {
           storeId: form.storeId,
           roomId: form.roomId,
@@ -688,20 +745,18 @@ const handleSubmit = async () => {
           playerCount: form.playerCount,
           reservationTime: `${form.reservationDate} ${form.reservationTime}`,
           duration: selectedScript.value?.duration || 3.0,
-          totalPrice: totalAmount,
+          totalPrice: totalAmount,          // 原价
+          discountAmount: parseFloat(discountAmount.value),   // 合计优惠
+          vipDiscountAmount: parseFloat(vipDiscountAmount.value), // VIP折扣金额
+          vipDiscount: vipDiscountRate.value,                 // VIP折扣率
+          actualAmount: parseFloat(finalPrice.value),         // 实付金额
           contactName: form.contactName,
           contactPhone: form.contactPhone,
           remark: form.remark,
           userId: userStore.userInfo?.id,
           userCouponId: form.userCouponId || null
         }
-        
-        // 调试日志：确认提交的数据
-        console.log('=== 预约提交数据 ===')
-        console.log('form.userCouponId:', form.userCouponId, typeof form.userCouponId)
-        console.log('reservationData.userCouponId:', reservationData.userCouponId)
-        console.log('totalPrice:', totalAmount)
-        console.log('完整数据:', JSON.stringify(reservationData, null, 2))
+        console.log('预约提交数据:', reservationData)
         
         // 如果人数不足，需要发起拼单
         if (needGroup.value) {
@@ -785,8 +840,8 @@ watch(rooms, (newRooms) => {
 })
 
 onMounted(async () => {
-  // 先加载剧本、门店列表和优惠券
-  await Promise.all([loadScripts(), loadStores(), loadAvailableCoupons()])
+  // 先加载剧本、门店列表、优惠券和VIP信息
+  await Promise.all([loadScripts(), loadStores(), loadAvailableCoupons(), loadVipInfo()])
   
   // 从URL参数中获取预选值
   if (route.query.scriptId) {
@@ -1374,6 +1429,14 @@ onMounted(async () => {
   color: #7ddc7a;
 }
 
+.price-row.vip-discount {
+  background: rgba(230, 162, 60, 0.1);
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin: 4px 0;
+  border: 1px solid rgba(230, 162, 60, 0.3);
+}
+
 .total-price {
   display: flex;
   justify-content: space-between;
@@ -1394,6 +1457,17 @@ onMounted(async () => {
   font-size: 28px;
   font-weight: bold;
   color: #ff6b6b;
+}
+
+.vip-saved-tip {
+  text-align: center;
+  font-size: 13px;
+  color: #e6a23c;
+  background: rgba(230, 162, 60, 0.1);
+  border: 1px solid rgba(230, 162, 60, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 16px;
 }
 
 .summary-actions {

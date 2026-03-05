@@ -436,9 +436,10 @@
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item label="VIP等级">
-                  <el-tag v-if="accountInfo.vipLevel > 0" type="warning">
-                    VIP{{ accountInfo.vipLevel }}
-                  </el-tag>
+                  <el-tag v-if="accountInfo.vipLevel === 4" type="danger">💎 钻石会员</el-tag>
+                  <el-tag v-else-if="accountInfo.vipLevel === 3" type="warning">🥇 金卡会员</el-tag>
+                  <el-tag v-else-if="accountInfo.vipLevel === 2" type="info">🥈 银卡会员</el-tag>
+                  <el-tag v-else-if="accountInfo.vipLevel === 1" type="success">⭐ 普通VIP</el-tag>
                   <el-text v-else type="info">普通用户</el-text>
                 </el-descriptions-item>
               </el-descriptions>
@@ -630,7 +631,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -638,6 +639,16 @@ import {
   User, Lock, View, Bell, Setting, UserFilled, Camera, Phone,
   Message, CreditCard, Document
 } from '@element-plus/icons-vue'
+import {
+  updateUserInfo, updatePassword, uploadAvatar,
+  sendPhoneCode, bindPhone, sendEmailCode, bindEmail,
+  realNameVerify, getLoginLogs,
+  getPrivacySettings, updatePrivacySettings,
+  getNotificationSettings, updateNotificationSettings,
+  getPreferenceSettings, updatePreferenceSettings,
+  getAccountStatistics, deactivateAccount
+} from '@/api/user'
+import { clearBrowseHistory } from '@/api/history'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -877,13 +888,25 @@ const handleSaveBasic = async () => {
   try {
     await basicFormRef.value.validate()
     saving.value = true
-
-    // TODO: 调用API保存基本信息
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    ElMessage.success('保存成功')
+    const res = await updateUserInfo({
+      nickname: basicForm.nickname,
+      gender: basicForm.gender,
+      birthday: basicForm.birthday,
+      bio: basicForm.bio
+    })
+    if (res.code === 1 || res.code === 200) {
+      // 同步更新 store
+      userStore.userInfo.nickname = basicForm.nickname
+      userStore.userInfo.gender = basicForm.gender
+      userStore.userInfo.birthday = basicForm.birthday
+      userStore.userInfo.bio = basicForm.bio
+      ElMessage.success('保存成功')
+    } else {
+      ElMessage.error(res.msg || '保存失败')
+    }
   } catch (error) {
     console.error('保存失败:', error)
+    ElMessage.error('保存失败，请稍后重试')
   } finally {
     saving.value = false
   }
@@ -893,7 +916,6 @@ const handleSaveBasic = async () => {
 const beforeAvatarUpload = (file) => {
   const isImage = file.type.startsWith('image/')
   const isLt2M = file.size / 1024 / 1024 < 2
-
   if (!isImage) {
     ElMessage.error('只能上传图片文件!')
     return false
@@ -905,11 +927,15 @@ const beforeAvatarUpload = (file) => {
   return true
 }
 
-// 头像上传成功
+// 头像上传成功（el-upload 回调）
 const handleAvatarSuccess = (response) => {
-  if (response.code === 200) {
-    basicForm.avatar = response.data.url
+  if (response.code === 1 || response.code === 200) {
+    const url = response.data?.url || response.data
+    basicForm.avatar = url
+    userStore.userInfo.avatar = url
     ElMessage.success('头像上传成功')
+  } else {
+    ElMessage.error(response.msg || '头像上传失败')
   }
 }
 
@@ -918,25 +944,26 @@ const handleUpdatePassword = async () => {
   try {
     await passwordFormRef.value.validate()
     saving.value = true
-
-    // TODO: 调用API修改密码
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    ElMessage.success('密码修改成功，请重新登录')
-    showPasswordDialog.value = false
-    
-    // 重置表单
-    passwordForm.oldPassword = ''
-    passwordForm.newPassword = ''
-    passwordForm.confirmPassword = ''
-
-    // 3秒后退出登录
-    setTimeout(() => {
-      userStore.logout()
-      router.push('/login')
-    }, 3000)
+    const res = await updatePassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
+    if (res.code === 1 || res.code === 200) {
+      ElMessage.success('密码修改成功，3秒后自动退出登录')
+      showPasswordDialog.value = false
+      passwordForm.oldPassword = ''
+      passwordForm.newPassword = ''
+      passwordForm.confirmPassword = ''
+      setTimeout(() => {
+        userStore.logout()
+        router.push('/login')
+      }, 3000)
+    } else {
+      ElMessage.error(res.msg || '密码修改失败，请检查原密码是否正确')
+    }
   } catch (error) {
     console.error('修改密码失败:', error)
+    ElMessage.error('修改失败，请稍后重试')
   } finally {
     saving.value = false
   }
@@ -944,27 +971,17 @@ const handleUpdatePassword = async () => {
 
 // 发送手机验证码
 const handleSendPhoneCode = async () => {
-  if (!phoneForm.phone) {
-    ElMessage.warning('请先输入手机号')
-    return
-  }
-  if (!/^1[3-9]\d{9}$/.test(phoneForm.phone)) {
-    ElMessage.warning('请输入正确的手机号')
-    return
-  }
-
+  if (!phoneForm.phone) { ElMessage.warning('请先输入手机号'); return }
+  if (!/^1[3-9]\d{9}$/.test(phoneForm.phone)) { ElMessage.warning('请输入正确的手机号'); return }
   try {
-    // TODO: 调用API发送验证码
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    ElMessage.success('验证码已发送')
-    countdown.value = 60
-    const timer = setInterval(() => {
-      countdown.value--
-      if (countdown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
+    const res = await sendPhoneCode(phoneForm.phone)
+    if (res.code === 1 || res.code === 200) {
+      ElMessage.success('验证码已发送')
+      countdown.value = 60
+      const timer = setInterval(() => { countdown.value--; if (countdown.value <= 0) clearInterval(timer) }, 1000)
+    } else {
+      ElMessage.error(res.msg || '发送失败')
+    }
   } catch (error) {
     ElMessage.error('发送失败，请稍后重试')
   }
@@ -972,27 +989,17 @@ const handleSendPhoneCode = async () => {
 
 // 发送邮箱验证码
 const handleSendEmailCode = async () => {
-  if (!emailForm.email) {
-    ElMessage.warning('请先输入邮箱地址')
-    return
-  }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.email)) {
-    ElMessage.warning('请输入正确的邮箱地址')
-    return
-  }
-
+  if (!emailForm.email) { ElMessage.warning('请先输入邮箱地址'); return }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailForm.email)) { ElMessage.warning('请输入正确的邮箱地址'); return }
   try {
-    // TODO: 调用API发送验证码
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    ElMessage.success('验证码已发送到您的邮箱')
-    countdown.value = 60
-    const timer = setInterval(() => {
-      countdown.value--
-      if (countdown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
+    const res = await sendEmailCode(emailForm.email)
+    if (res.code === 1 || res.code === 200) {
+      ElMessage.success('验证码已发送到您的邮箱')
+      countdown.value = 60
+      const timer = setInterval(() => { countdown.value--; if (countdown.value <= 0) clearInterval(timer) }, 1000)
+    } else {
+      ElMessage.error(res.msg || '发送失败')
+    }
   } catch (error) {
     ElMessage.error('发送失败，请稍后重试')
   }
@@ -1003,18 +1010,18 @@ const handleUpdatePhone = async () => {
   try {
     await phoneFormRef.value.validate()
     saving.value = true
-
-    // TODO: 调用API更新手机号
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    securityInfo.value.phone = phoneForm.phone
-    ElMessage.success('手机号绑定成功')
-    showPhoneDialog.value = false
-    
-    phoneForm.phone = ''
-    phoneForm.code = ''
+    const res = await bindPhone({ phone: phoneForm.phone, code: phoneForm.code })
+    if (res.code === 1 || res.code === 200) {
+      securityInfo.value.phone = phoneForm.phone
+      ElMessage.success('手机号绑定成功')
+      showPhoneDialog.value = false
+      phoneForm.phone = ''; phoneForm.code = ''
+    } else {
+      ElMessage.error(res.msg || '绑定失败，验证码可能有误')
+    }
   } catch (error) {
     console.error('绑定失败:', error)
+    ElMessage.error('绑定失败，请稍后重试')
   } finally {
     saving.value = false
   }
@@ -1025,18 +1032,18 @@ const handleUpdateEmail = async () => {
   try {
     await emailFormRef.value.validate()
     saving.value = true
-
-    // TODO: 调用API更新邮箱
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    securityInfo.value.email = emailForm.email
-    ElMessage.success('邮箱绑定成功')
-    showEmailDialog.value = false
-    
-    emailForm.email = ''
-    emailForm.code = ''
+    const res = await bindEmail({ email: emailForm.email, code: emailForm.code })
+    if (res.code === 1 || res.code === 200) {
+      securityInfo.value.email = emailForm.email
+      ElMessage.success('邮箱绑定成功')
+      showEmailDialog.value = false
+      emailForm.email = ''; emailForm.code = ''
+    } else {
+      ElMessage.error(res.msg || '绑定失败，验证码可能有误')
+    }
   } catch (error) {
     console.error('绑定失败:', error)
+    ElMessage.error('绑定失败，请稍后重试')
   } finally {
     saving.value = false
   }
@@ -1047,18 +1054,18 @@ const handleRealNameVerify = async () => {
   try {
     await realNameFormRef.value.validate()
     saving.value = true
-
-    // TODO: 调用API提交实名认证
-    await new Promise(resolve => setTimeout(resolve, 1500))
-
-    securityInfo.value.realNameVerified = true
-    ElMessage.success('实名认证提交成功，请等待审核')
-    showRealNameDialog.value = false
-    
-    realNameForm.realName = ''
-    realNameForm.idCard = ''
+    const res = await realNameVerify({ realName: realNameForm.realName, idCard: realNameForm.idCard })
+    if (res.code === 1 || res.code === 200) {
+      securityInfo.value.realNameVerified = true
+      ElMessage.success('实名认证提交成功')
+      showRealNameDialog.value = false
+      realNameForm.realName = ''; realNameForm.idCard = ''
+    } else {
+      ElMessage.error(res.msg || '认证失败，请检查信息是否正确')
+    }
   } catch (error) {
     console.error('认证失败:', error)
+    ElMessage.error('认证失败，请稍后重试')
   } finally {
     saving.value = false
   }
@@ -1067,48 +1074,60 @@ const handleRealNameVerify = async () => {
 // 加载登录日志
 const loadLoginLogs = async () => {
   try {
-    // TODO: 调用API加载登录日志
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    // 模拟数据
-    loginLogs.value = [
-      {
-        time: '2025-11-03 14:30:25',
-        ip: '192.168.1.100',
-        location: '北京市朝阳区',
-        device: 'Windows Chrome',
-        status: '成功'
-      },
-      {
-        time: '2025-11-02 10:15:10',
-        ip: '192.168.1.100',
-        location: '北京市朝阳区',
-        device: 'Windows Chrome',
-        status: '成功'
-      }
-    ]
-    loginLogTotal.value = 15
+    const res = await getLoginLogs({ page: loginLogPage.value, pageSize: loginLogPageSize.value })
+    if (res.code === 1 || res.code === 200) {
+      const data = res.data
+      loginLogs.value = data.records || data.list || []
+      loginLogTotal.value = data.total || 0
+    }
   } catch (error) {
     console.error('加载登录日志失败:', error)
+    // 后端暂未实现时展示空列表
+    loginLogs.value = []
+    loginLogTotal.value = 0
   }
 }
 
 // 隐私设置变更
-const handlePrivacyChange = () => {
-  // TODO: 调用API保存隐私设置
-  ElMessage.success('设置已保存')
+const handlePrivacyChange = async () => {
+  try {
+    const res = await updatePrivacySettings({ ...privacySettings })
+    if (res.code === 1 || res.code === 200) {
+      ElMessage.success('设置已保存')
+    } else {
+      ElMessage.error(res.msg || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error('保存失败，请稍后重试')
+  }
 }
 
 // 通知设置变更
-const handleNotificationChange = () => {
-  // TODO: 调用API保存通知设置
-  ElMessage.success('设置已保存')
+const handleNotificationChange = async () => {
+  try {
+    const res = await updateNotificationSettings({ ...notificationSettings })
+    if (res.code === 1 || res.code === 200) {
+      ElMessage.success('设置已保存')
+    } else {
+      ElMessage.error(res.msg || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error('保存失败，请稍后重试')
+  }
 }
 
 // 偏好设置变更
-const handlePreferenceChange = () => {
-  // TODO: 调用API保存偏好设置
-  ElMessage.success('设置已保存')
+const handlePreferenceChange = async () => {
+  try {
+    const res = await updatePreferenceSettings({ ...preferenceSettings })
+    if (res.code === 1 || res.code === 200) {
+      ElMessage.success('设置已保存')
+    } else {
+      ElMessage.error(res.msg || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error('保存失败，请稍后重试')
+  }
 }
 
 // 清空浏览历史
@@ -1118,9 +1137,16 @@ const handleClearHistory = () => {
     cancelButtonText: '取消',
     type: 'warning'
   }).then(async () => {
-    // TODO: 调用API清空历史
-    await new Promise(resolve => setTimeout(resolve, 500))
-    ElMessage.success('浏览历史已清空')
+    try {
+      const res = await clearBrowseHistory()
+      if (res.code === 1 || res.code === 200) {
+        ElMessage.success('浏览历史已清空')
+      } else {
+        ElMessage.error(res.msg || '清空失败')
+      }
+    } catch (e) {
+      ElMessage.error('清空失败，请稍后重试')
+    }
   }).catch(() => {})
 }
 
@@ -1132,15 +1158,21 @@ const handleDeactivateAccount = () => {
     type: 'error',
     inputPattern: /^确认注销$/,
     inputErrorMessage: '请输入"确认注销"'
-  }).then(async ({ value }) => {
-    // TODO: 调用API注销账号
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    ElMessage.success('账号已注销')
-    
-    setTimeout(() => {
-      userStore.logout()
-      router.push('/login')
-    }, 1500)
+  }).then(async () => {
+    try {
+      const res = await deactivateAccount({})
+      if (res.code === 1 || res.code === 200) {
+        ElMessage.success('账号已注销')
+        setTimeout(() => {
+          userStore.logout()
+          router.push('/login')
+        }, 1500)
+      } else {
+        ElMessage.error(res.msg || '注销失败')
+      }
+    } catch (e) {
+      ElMessage.error('注销失败，请稍后重试')
+    }
   }).catch(() => {})
 }
 
@@ -1161,7 +1193,6 @@ const maskEmail = (email) => {
 const loadUserData = () => {
   const user = userStore.userInfo
   if (user) {
-    // 基本信息
     basicForm.avatar = user.avatar || ''
     basicForm.username = user.username || user.name || ''
     basicForm.nickname = user.nickname || user.username || ''
@@ -1169,20 +1200,62 @@ const loadUserData = () => {
     basicForm.birthday = user.birthday || ''
     basicForm.bio = user.bio || ''
 
-    // 安全信息
     securityInfo.value.phone = user.phone || ''
     securityInfo.value.email = user.email || ''
     securityInfo.value.realNameVerified = user.realNameVerified || false
 
-    // 账号信息
     accountInfo.value.userId = user.id || ''
     accountInfo.value.createTime = user.createTime ? new Date(user.createTime).toLocaleDateString() : ''
-    accountInfo.value.vipLevel = user.vipLevel || 0
+    accountInfo.value.vipLevel = user.memberLevel || user.vipLevel || 0
+  }
+}
+
+// 加载账号统计
+const loadAccountStats = async () => {
+  try {
+    const res = await getAccountStatistics()
+    if (res.code === 1 || res.code === 200) {
+      const d = res.data || {}
+      accountStats.value.totalReservations = d.totalReservations || 0
+      accountStats.value.totalSpent = d.totalSpent || 0
+      accountStats.value.totalPoints = d.totalPoints || 0
+      accountStats.value.friendCount = d.friendCount || 0
+    }
+  } catch (e) {
+    // 接口暂未实现，使用 userStore 中已有的积分数据
+    const user = userStore.userInfo
+    if (user) {
+      accountStats.value.totalPoints = user.points || 0
+    }
+  }
+}
+
+// 加载各类设置
+const loadSettings = async () => {
+  try {
+    const [privacyRes, notifyRes, prefRes] = await Promise.allSettled([
+      getPrivacySettings(),
+      getNotificationSettings(),
+      getPreferenceSettings()
+    ])
+    if (privacyRes.status === 'fulfilled' && (privacyRes.value.code === 1 || privacyRes.value.code === 200)) {
+      Object.assign(privacySettings, privacyRes.value.data || {})
+    }
+    if (notifyRes.status === 'fulfilled' && (notifyRes.value.code === 1 || notifyRes.value.code === 200)) {
+      Object.assign(notificationSettings, notifyRes.value.data || {})
+    }
+    if (prefRes.status === 'fulfilled' && (prefRes.value.code === 1 || prefRes.value.code === 200)) {
+      Object.assign(preferenceSettings, prefRes.value.data || {})
+    }
+  } catch (e) {
+    console.error('加载设置失败:', e)
   }
 }
 
 onMounted(() => {
   loadUserData()
+  loadAccountStats()
+  loadSettings()
 })
 </script>
 

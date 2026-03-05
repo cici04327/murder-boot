@@ -58,16 +58,42 @@
       
       <!-- 价格信息 -->
       <el-descriptions title="价格信息" :column="2" border style="margin-top: 20px">
-        <el-descriptions-item label="商品总价">
-          ¥{{ reservation.totalPrice }}
+        <el-descriptions-item label="商品原价" :span="2">
+          <span :style="reservation.discountAmount > 0 ? 'color:#909399;text-decoration:line-through' : 'font-weight:bold'">
+            ¥{{ reservation.totalPrice }}
+          </span>
         </el-descriptions-item>
-        <el-descriptions-item label="优惠金额" v-if="reservation.discountAmount">
-          <span style="color: #f56c6c">-¥{{ reservation.discountAmount }}</span>
+        <el-descriptions-item label="VIP折扣" v-if="reservation.vipDiscountAmount > 0">
+          <el-tag type="warning" size="small" style="margin-right:6px">
+            {{ getVipDiscountLabel(reservation.vipDiscount) }}
+          </el-tag>
+          <span style="color:#e6a23c;font-weight:bold">
+            -¥{{ Number(reservation.vipDiscountAmount).toFixed(2) }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item
+          label="优惠券折扣"
+          v-if="reservation.couponId && reservation.discountAmount > 0"
+        >
+          <span style="color:#67c23a;font-weight:bold">
+            -¥{{ (Number(reservation.discountAmount) - Number(reservation.vipDiscountAmount || 0)).toFixed(2) }}
+          </span>
+        </el-descriptions-item>
+        <el-descriptions-item label="合计优惠" v-if="reservation.discountAmount > 0">
+          <span style="color:#f56c6c;font-weight:bold">-¥{{ Number(reservation.discountAmount).toFixed(2) }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="实付金额" :span="2">
-          <span style="color: #f56c6c; font-weight: bold; font-size: 20px">
-            ¥{{ reservation.actualAmount || reservation.totalPrice }}
+          <span style="color:#f56c6c;font-weight:bold;font-size:22px">
+            ¥{{ Number(reservation.actualAmount || reservation.totalPrice).toFixed(2) }}
           </span>
+          <el-tag
+            v-if="reservation.vipDiscountAmount > 0"
+            type="success"
+            size="small"
+            style="margin-left:10px"
+          >
+            💎 VIP专属优惠已享
+          </el-tag>
         </el-descriptions-item>
       </el-descriptions>
       
@@ -226,6 +252,12 @@ const timeline = computed(() => {
   
   return items
 })
+
+const getVipDiscountLabel = (discount) => {
+  if (!discount) return 'VIP折扣'
+  const fold = Math.round(discount * 10)
+  return `会员${fold}折`
+}
 
 const getStatusType = (status) => {
   const types = {

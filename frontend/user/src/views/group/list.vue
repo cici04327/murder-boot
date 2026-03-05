@@ -16,29 +16,32 @@
 
     <!-- 筛选区域 -->
     <div class="filter-section">
-      <div class="filter-title">🔍 筛选条件</div>
-      <el-form :inline="true" class="filter-form">
-        <el-form-item label="剧本类型">
-          <el-select v-model="filters.categoryId" placeholder="全部类型" clearable @change="loadGroups">
-            <el-option v-for="cat in categories" :key="cat.id" :label="cat.name" :value="cat.id" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="人数要求">
-          <el-select v-model="filters.playerCount" placeholder="全部人数" clearable @change="loadGroups">
-            <el-option label="4人本" :value="4" />
-            <el-option label="5人本" :value="5" />
-            <el-option label="6人本" :value="6" />
-            <el-option label="7人本" :value="7" />
-            <el-option label="8人本+" :value="8" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="拼单状态">
-          <el-select v-model="filters.status" placeholder="全部状态" clearable @change="loadGroups">
-            <el-option label="召集中" :value="1" />
-            <el-option label="已成团" :value="2" />
-          </el-select>
-        </el-form-item>
-      </el-form>
+      <div class="filter-row">
+        <span class="filter-label">状态</span>
+        <div class="filter-tags">
+          <span class="filter-tag" :class="{ active: filters.status === null }" @click="setFilter('status', null)">全部</span>
+          <span class="filter-tag" :class="{ active: filters.status === 1 }" @click="setFilter('status', 1)">召集中</span>
+          <span class="filter-tag" :class="{ active: filters.status === 2 }" @click="setFilter('status', 2)">已成团</span>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">人数</span>
+        <div class="filter-tags">
+          <span class="filter-tag" :class="{ active: filters.playerCount === null }" @click="setFilter('playerCount', null)">全部</span>
+          <span class="filter-tag" :class="{ active: filters.playerCount === 4 }" @click="setFilter('playerCount', 4)">4人本</span>
+          <span class="filter-tag" :class="{ active: filters.playerCount === 5 }" @click="setFilter('playerCount', 5)">5人本</span>
+          <span class="filter-tag" :class="{ active: filters.playerCount === 6 }" @click="setFilter('playerCount', 6)">6人本</span>
+          <span class="filter-tag" :class="{ active: filters.playerCount === 7 }" @click="setFilter('playerCount', 7)">7人本</span>
+          <span class="filter-tag" :class="{ active: filters.playerCount === 8 }" @click="setFilter('playerCount', 8)">8人本+</span>
+        </div>
+      </div>
+      <div class="filter-row" v-if="categories.length > 0">
+        <span class="filter-label">类型</span>
+        <div class="filter-tags">
+          <span class="filter-tag" :class="{ active: filters.categoryId === null }" @click="setFilter('categoryId', null)">全部</span>
+          <span class="filter-tag" v-for="cat in categories" :key="cat.id" :class="{ active: filters.categoryId === cat.id }" @click="setFilter('categoryId', cat.id)">{{ cat.name }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- 拼单列表 -->
@@ -155,6 +158,13 @@ const filters = reactive({
   playerCount: null,
   status: null
 })
+
+// 设置筛选条件
+const setFilter = (key, value) => {
+  filters[key] = value
+  page.value = 1
+  loadGroups()
+}
 
 // 加载拼单列表
 const loadGroups = async () => {
@@ -312,18 +322,61 @@ onMounted(() => {
 
 /* 筛选区域 */
 .filter-section {
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
+  border: 1px solid rgba(139, 0, 0, 0.2);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   padding: 20px 24px;
   border-radius: 16px;
   margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
 }
 
-.filter-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  margin-bottom: 16px;
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-label {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  min-width: 36px;
+  flex-shrink: 0;
+}
+
+.filter-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-tag {
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.06);
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.filter-tag:hover {
+  border-color: rgba(139, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(139, 0, 0, 0.15);
+}
+
+.filter-tag.active {
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.8), rgba(180, 0, 0, 0.7));
+  border-color: rgba(180, 0, 0, 0.6);
+  color: #fff;
+  font-weight: 500;
 }
 
 .group-list {
@@ -332,7 +385,7 @@ onMounted(() => {
 
 /* 剧本杀风格卡片 */
 .group-card {
-  background: #fff;
+  background: #16213e;
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
@@ -343,9 +396,9 @@ onMounted(() => {
 }
 
 .group-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 32px rgba(139, 0, 0, 0.15);
-  border-color: rgba(139, 0, 0, 0.3);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(139, 0, 0, 0.3);
 }
 
 .group-header {
@@ -427,7 +480,7 @@ onMounted(() => {
   margin: 0 0 12px;
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: rgba(255, 255, 255, 0.95);
   line-height: 1.4;
 }
 
@@ -443,7 +496,7 @@ onMounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .group-info .info-item .el-icon {
@@ -452,7 +505,7 @@ onMounted(() => {
 
 /* 座位可视化 */
 .seats-visual {
-  background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
   padding: 12px;
   margin-bottom: 14px;
@@ -461,7 +514,7 @@ onMounted(() => {
 
 .seats-label {
   font-size: 13px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 10px;
 }
 
@@ -478,7 +531,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f0f0f0;
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   transition: all 0.3s;
 }
@@ -522,8 +575,8 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px;
-  border-top: 1px solid #f0f0f0;
-  background: linear-gradient(135deg, #fafafa 0%, #fff 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(13, 27, 42, 0.95);
 }
 
 .group-price {
@@ -535,7 +588,7 @@ onMounted(() => {
 .group-price small {
   font-size: 13px;
   font-weight: normal;
-  color: #999;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .group-footer .el-button--primary {

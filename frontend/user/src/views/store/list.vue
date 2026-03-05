@@ -265,6 +265,16 @@ const loadStores = async () => {
         total.value = res.data.total || 0
       }
       
+      // 将后端 images 字段（逗号分隔字符串）转换为前端所需的 coverImage
+      stores.value.forEach(store => {
+        if (!store.coverImage && store.images) {
+          const imageList = store.images.split(',').map(img => img.trim()).filter(img => img)
+          if (imageList.length > 0) {
+            store.coverImage = imageList[0]
+          }
+        }
+      })
+
       // 自动计算所有门店的距离
       calculateStoresDistance()
     }

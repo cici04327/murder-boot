@@ -706,6 +706,7 @@ const resetForm = () => {
 /* 表单 */
 .feedback-form {
   padding: 10px 0;
+  background: transparent !important;
 }
 
 .feedback-form :deep(.el-form-item__label) {
@@ -953,5 +954,29 @@ const resetForm = () => {
 
 .contact-page .info-card.el-card .el-card__body {
   background: transparent !important;
+}
+
+/* 强制覆盖在线留言卡片内所有子元素背景 */
+.contact-page .info-card.el-card .el-card__body,
+.contact-page .info-card.el-card .el-card__body > *,
+.contact-page .info-card .feedback-form,
+.contact-page .info-card .el-form {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* 修复 el-select 下拉面板蓝紫色 */
+.contact-page .el-select-dropdown {
+  background: rgba(26, 26, 46, 0.98) !important;
+  border: 1px solid rgba(139, 0, 0, 0.3) !important;
+}
+
+.contact-page .el-select-dropdown .el-select-dropdown__item {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.contact-page .el-select-dropdown .el-select-dropdown__item.hover,
+.contact-page .el-select-dropdown .el-select-dropdown__item:hover {
+  background: rgba(139, 0, 0, 0.2) !important;
 }
 </style>

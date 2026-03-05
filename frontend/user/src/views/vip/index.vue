@@ -122,6 +122,12 @@
             <!-- 套餐名称 -->
             <h3 class="package-name">{{ pkg.name }}</h3>
 
+            <!-- 预约折扣专属标签 -->
+            <div class="booking-discount-tag" v-if="pkg.specialDiscount">
+              <span class="discount-icon">💎</span>
+              <span>预约享 <strong>{{ Math.round(pkg.specialDiscount * 10) }}折</strong> 优惠</span>
+            </div>
+
             <!-- 价格 -->
             <div class="package-price">
               <div class="current-price">
@@ -304,7 +310,7 @@ const benefits = [
     icon: 'Discount',
     emoji: '💎',
     title: '专属折扣',
-    description: '全场剧本享受92-98折优惠'
+    description: '预约剧本享受专属折扣：见习9.5折、银章9折、金章8.5折、传奇8折'
   },
   {
     icon: 'Calendar',
@@ -475,10 +481,10 @@ const getLevelDescription = (level) => {
 // 根据VIP等级获取权益列表 - 剧本杀主题
 const getVipBenefits = (level) => {
   const benefitsMap = {
-    1: ['🔍 线索翻倍', '🎂 生日特权', '🕵️ 专属助手'],
-    2: ['🔍 线索2倍', '🎂 生日特权', '🕵️ 专属助手', '🎯 优先预约', '🎫 每月2张券'],
-    3: ['🔍 线索3倍', '🎂 生日特权', '🕵️ 专属助手', '🎯 优先预约', '🎫 每月5张券', '💎 专属折扣'],
-    4: ['🔍 线索5倍', '🎂 生日特权', '🕵️ 专属助手', '🎯 优先预约', '🎫 每月10张券', '💎 专属折扣', '👑 传奇徽章']
+    1: ['🔍 线索翻倍', '🎂 生日特权', '🕵️ 专属助手', '💎 预约9.5折'],
+    2: ['🔍 线索2倍', '🎂 生日特权', '🕵️ 专属助手', '🎯 优先预约', '🎫 每月2张券', '💎 预约9折'],
+    3: ['🔍 线索3倍', '🎂 生日特权', '🕵️ 专属助手', '🎯 优先预约', '🎫 每月5张券', '💎 预约8.5折'],
+    4: ['🔍 线索5倍', '🎂 生日特权', '🕵️ 专属助手', '🎯 优先预约', '🎫 每月10张券', '💎 预约8折', '👑 传奇徽章']
   }
   return benefitsMap[level] || []
 }
@@ -997,6 +1003,28 @@ onMounted(() => {
     font-weight: bold;
     color: #fff;
     margin: 0 0 8px 0;
+  }
+
+  .booking-discount-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, rgba(230, 162, 60, 0.2) 0%, rgba(255, 200, 0, 0.15) 100%);
+    border: 1px solid rgba(230, 162, 60, 0.5);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #e6a23c;
+    margin-bottom: 12px;
+
+    strong {
+      font-size: 15px;
+      color: #ffd700;
+    }
+
+    .discount-icon {
+      font-size: 16px;
+    }
   }
 
   .package-duration {

@@ -167,7 +167,8 @@ public class VipServiceImpl implements VipService {
             result.put("couponCount", vipPackage.getCouponCount());
             result.put("priorityBooking", vipPackage.getPriorityBooking() == 1);
             result.put("exclusiveService", vipPackage.getExclusiveService() == 1);
-            result.put("specialDiscount", vipPackage.getSpecialDiscount());
+            // 按等级返回固定折扣，不再依赖数据库字段
+            result.put("specialDiscount", LEVEL_DISCOUNT_MAP.get(currentVip.getLevel()));
 
             // 解析权益列表
             try {
@@ -218,15 +219,29 @@ public class VipServiceImpl implements VipService {
         return vipPackage.getPointMultiplier();
     }
 
+    /**
+     * 按会员等级固定折扣：
+     * 1-见习侦探 9.5折(0.95)
+     * 2-银章侦探 9折(0.90)
+     * 3-金章侦探 8.5折(0.85)
+     * 4-传奇侦探 8折(0.80)
+     */
+    private static final Map<Integer, BigDecimal> LEVEL_DISCOUNT_MAP;
+    static {
+        LEVEL_DISCOUNT_MAP = new HashMap<>();
+        LEVEL_DISCOUNT_MAP.put(1, new BigDecimal("0.95"));
+        LEVEL_DISCOUNT_MAP.put(2, new BigDecimal("0.90"));
+        LEVEL_DISCOUNT_MAP.put(3, new BigDecimal("0.85"));
+        LEVEL_DISCOUNT_MAP.put(4, new BigDecimal("0.80"));
+    }
+
     @Override
     public BigDecimal getVipDiscount(Long userId) {
         UserVip currentVip = userVipMapper.getCurrentVip(userId);
-        if (currentVip == null) {
+        if (currentVip == null || LocalDateTime.now().isAfter(currentVip.getEndTime())) {
             return null;
         }
-
-        VipPackage vipPackage = vipPackageMapper.selectById(currentVip.getPackageId());
-        return vipPackage != null ? vipPackage.getSpecialDiscount() : null;
+        return LEVEL_DISCOUNT_MAP.get(currentVip.getLevel());
     }
 
     @Override
@@ -655,13 +670,13 @@ public class VipServiceImpl implements VipService {
     private String getLevelName(Integer level) {
         switch (level) {
             case 1:
-                return "普通会员";
+                return "见习侦探";
             case 2:
-                return "银卡会员";
+                return "银章侦探";
             case 3:
-                return "金卡会员";
+                return "金章侦探";
             case 4:
-                return "钻石会员";
+                return "传奇侦探";
             default:
                 return "未知等级";
         }

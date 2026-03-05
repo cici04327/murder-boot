@@ -29,9 +29,13 @@ public class ReservationController {
     @PostMapping
     @Operation(summary = "创建预约")
     public Result<Reservation> create(@RequestBody ReservationDTO reservationDTO) {
-        log.info("创建预约: {}", reservationDTO);
-        log.info("收到的优惠券ID: userCouponId={}, totalPrice={}", 
-            reservationDTO.getUserCouponId(), reservationDTO.getTotalPrice());
+        // 优先从Token中获取当前登录用户ID，防止前端传入伪造userId
+        Long currentUserId = com.murder.common.context.BaseContext.getCurrentId();
+        if (currentUserId != null) {
+            reservationDTO.setUserId(currentUserId);
+        }
+        log.info("创建预约: userId={}, userCouponId={}, totalPrice={}",
+            reservationDTO.getUserId(), reservationDTO.getUserCouponId(), reservationDTO.getTotalPrice());
         Reservation reservation = reservationService.create(reservationDTO);
         return Result.success(reservation);
     }

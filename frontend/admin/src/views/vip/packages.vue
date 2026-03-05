@@ -75,7 +75,7 @@
             <div class="package-info">
               <div class="package-name">{{ row.name }}</div>
               <div class="package-level">
-                <el-tag size="small" :type="getLevelType(row.level)">{{ row.levelName }}</el-tag>
+                <el-tag size="small" :type="getLevelType(row.level)">{{ row.levelName || getLevelName(row.level) }}</el-tag>
               </div>
             </div>
           </template>
@@ -101,6 +101,13 @@
             <span v-if="(row.features || []).length > 3">...</span>
           </template>
         </el-table-column>
+        <el-table-column label="预约折扣" width="110">
+          <template #default="{ row }">
+            <el-tag type="warning" size="small">
+              {{ getLevelDiscountLabel(row.level) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
             <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
@@ -123,9 +130,10 @@
         </el-form-item>
         <el-form-item label="会员等级" prop="level">
           <el-select v-model="form.level" placeholder="请选择会员等级">
-            <el-option label="银卡会员" :value="1" />
-            <el-option label="金卡会员" :value="2" />
-            <el-option label="钻石会员" :value="3" />
+            <el-option label="见习侦探（9.5折）" :value="1" />
+            <el-option label="银章侦探（9折）" :value="2" />
+            <el-option label="金章侦探（8.5折）" :value="3" />
+            <el-option label="传奇侦探（8折）" :value="4" />
           </el-select>
         </el-form-item>
         <el-form-item label="套餐价格" prop="currentPrice">
@@ -136,6 +144,12 @@
         </el-form-item>
         <el-form-item label="有效期(天)" prop="durationDays">
           <el-input-number v-model="form.durationDays" :min="1" />
+        </el-form-item>
+        <el-form-item label="预约折扣">
+          <el-tag type="warning">{{ { 1: '9.5折', 2: '9折', 3: '8.5折', 4: '8折' }[form.level] || '-' }}</el-tag>
+          <span style="margin-left:10px;color:#909399;font-size:13px">
+            折扣按会员等级自动生效，无需手动配置
+          </span>
         </el-form-item>
         <el-form-item label="积分倍率">
           <el-input-number v-model="form.pointMultiplier" :min="1" :max="10" :precision="1" />
@@ -199,6 +213,7 @@ const form = reactive({
   priorityBooking: false,
   exclusiveService: false,
   birthdayGift: false,
+  specialDiscount: null,
   status: 1
 })
 
@@ -238,8 +253,18 @@ const loadStats = async () => {
 }
 
 const getLevelType = (level) => {
-  const types = { 1: '', 2: 'warning', 3: 'danger' }
-  return types[level] || ''
+  const types = { 1: 'info', 2: '', 3: 'warning', 4: 'danger' }
+  return types[level] || 'info'
+}
+
+const getLevelDiscountLabel = (level) => {
+  const map = { 1: '9.5折', 2: '9折', 3: '8.5折', 4: '8折' }
+  return map[level] || '-'
+}
+
+const getLevelName = (level) => {
+  const map = { 1: '见习侦探', 2: '银章侦探', 3: '金章侦探', 4: '传奇侦探' }
+  return map[level] || '未知'
 }
 
 const handleAdd = () => {
@@ -321,6 +346,7 @@ const resetForm = () => {
   form.priorityBooking = false
   form.exclusiveService = false
   form.birthdayGift = false
+  form.specialDiscount = null
   form.status = 1
 }
 

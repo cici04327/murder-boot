@@ -19,10 +19,31 @@
             <el-descriptions-item label="联系人">{{ reservation?.contactName }}</el-descriptions-item>
             <el-descriptions-item label="联系电话">{{ reservation?.contactPhone }}</el-descriptions-item>
             <el-descriptions-item label="下单时间" v-if="reservation?.createTime">{{ reservation?.createTime }}</el-descriptions-item>
-            <el-descriptions-item label="预约总价">
-              <span style="color: #f56c6c; font-size: 20px; font-weight: bold">
+            <el-descriptions-item label="原价">
+              <span style="color: #999; text-decoration: line-through">
                 ¥{{ reservation?.totalPrice }}
               </span>
+            </el-descriptions-item>
+            <el-descriptions-item label="VIP折扣" v-if="reservation?.vipDiscountAmount > 0">
+              <el-tag type="warning" size="small" style="margin-right:6px">
+                {{ getVipDiscountLabel(reservation?.vipDiscount) }}
+              </el-tag>
+              <span style="color: #e6a23c; font-weight: bold">
+                - ¥{{ reservation?.vipDiscountAmount?.toFixed(2) }}
+              </span>
+            </el-descriptions-item>
+            <el-descriptions-item label="优惠券折扣" v-if="reservation?.couponId && reservation?.discountAmount > 0">
+              <span style="color: #67c23a; font-weight: bold">
+                - ¥{{ (reservation?.discountAmount - (reservation?.vipDiscountAmount || 0)).toFixed(2) }}
+              </span>
+            </el-descriptions-item>
+            <el-descriptions-item label="实付金额">
+              <span style="color: #f56c6c; font-size: 22px; font-weight: bold">
+                ¥{{ reservation?.actualAmount?.toFixed(2) }}
+              </span>
+              <el-tag v-if="reservation?.vipDiscountAmount > 0" type="success" size="small" style="margin-left:8px">
+                VIP专属优惠
+              </el-tag>
             </el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="getStatusType(reservation?.status)">
@@ -68,6 +89,12 @@ const getStatusType = (status) => {
     4: 'danger'
   }
   return types[status] || 'info'
+}
+
+const getVipDiscountLabel = (discount) => {
+  if (!discount) return 'VIP折扣'
+  const fold = Math.round(discount * 10)
+  return `会员${fold}折`
 }
 
 const getStatusText = (status) => {
