@@ -466,7 +466,7 @@ const knowledgeBase = {
     showFeedback: true
   },
   '热门|推荐|好玩|精品|排行': {
-    answer: `<div class="kb-answer"><p><strong>🔥 热门剧本推荐：</strong></p><ul><li>🎭 <strong>情感本</strong>：《年轮》《云使》- 适合喜欢沉浸体验的玩家</li><li>🔍 <strong>硬核本</strong>：《古木吟》《孤城》- 适合推理爱好者</li><li>😄 <strong>欢乐本</strong>：《奇妙物语》《我们的夜晚》- 适合新手和聚会</li><li>😱 <strong>恐怖本</strong>：《死者之书》《暗夜古堡》- 适合喜欢刺激的玩家</li></ul><p><strong>💡 温馨提示：</strong>可以根据人数、时长、风格筛选剧本哦！</p></div>`,
+    answer: `<div class="kb-answer"><p><strong>🔥 热门剧本推荐：</strong></p><ul><li>🎭 <strong>情感本</strong>：《年轮》《云边有个小卖部》- 适合喜欢沉浸体验的玩家</li><li>🔍 <strong>硬核本</strong>：《东方快车谋杀案》《无人生还》- 适合推理爱好者</li><li>😄 <strong>欢乐本</strong>：《奇妙物语》《我们的夜晚》- 适合新手和聚会</li><li>😱 <strong>恐怖本</strong>：《死者之书》《暗夜古堡》- 适合喜欢刺激的玩家</li></ul><p><strong>💡 温馨提示：</strong>可以根据人数、时长、风格筛选剧本哦！</p></div>`,
     actions: [{ label: '🔥 查看热门', route: '/script?sort=hot', type: 'primary' }, { label: '📖 全部剧本', route: '/script' }],
     showFeedback: true
   },

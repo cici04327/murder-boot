@@ -9,95 +9,86 @@
           </el-tag>
         </div>
       </template>
-      
-      <!-- 订单信息 -->
+
       <el-descriptions title="订单信息" :column="2" border>
-        <el-descriptions-item label="订单编号">{{ reservation.orderNo }}</el-descriptions-item>
-        <el-descriptions-item label="下单时间">{{ reservation.createTime }}</el-descriptions-item>
-        <el-descriptions-item label="订单状态">
-          <el-tag :type="getStatusType(reservation.status)">
-            {{ getStatusText(reservation.status) }}
-          </el-tag>
-        </el-descriptions-item>
+        <el-descriptions-item label="订单号">{{ reservation.orderNo }}</el-descriptions-item>
+        <el-descriptions-item label="下单时间">{{ reservation.createTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="支付状态">
           <el-tag :type="getPayStatusType(reservation.payStatus)">
             {{ getPayStatusText(reservation.payStatus) }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="支付时间" v-if="reservation.payTime">
-          {{ reservation.payTime }}
-        </el-descriptions-item>
+        <el-descriptions-item label="支付时间">{{ reservation.payTime || '-' }}</el-descriptions-item>
       </el-descriptions>
-      
-      <!-- 预约信息 -->
+
       <el-descriptions title="预约信息" :column="2" border style="margin-top: 20px">
         <el-descriptions-item label="剧本名称" :span="2">
-          <el-link type="primary" @click="goToScript">{{ reservation?.scriptName || scriptInfo?.name }}</el-link>
+          <el-link type="primary" @click="goToScript">{{ reservation.scriptName || scriptInfo?.name }}</el-link>
         </el-descriptions-item>
         <el-descriptions-item label="门店名称" :span="2">
-          <el-link type="primary" @click="goToStore">{{ reservation?.storeName || storeInfo?.name }}</el-link>
+          <el-link type="primary" @click="goToStore">{{ reservation.storeName || storeInfo?.name }}</el-link>
         </el-descriptions-item>
         <el-descriptions-item label="门店地址" :span="2">
-          {{ reservation?.storeAddress || storeInfo?.address }}
+          {{ reservation.storeAddress || storeInfo?.address || '-' }}
         </el-descriptions-item>
-        <el-descriptions-item label="房间">{{ reservation?.roomName || roomInfo?.name }}</el-descriptions-item>
-        <el-descriptions-item label="房间容量">{{ reservation?.roomCapacity || roomInfo?.capacity }}人</el-descriptions-item>
+        <el-descriptions-item label="房间">{{ reservation.roomName || roomInfo?.name || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="房间容量">{{ reservation.roomCapacity || roomInfo?.capacity || '-' }} 人</el-descriptions-item>
         <el-descriptions-item label="预约时间" :span="2">
-          <span style="color: #f56c6c; font-weight: bold; font-size: 16px">
-            {{ reservation.reservationTime }}
-          </span>
+          <span class="time-highlight">{{ reservation.reservationTime }}</span>
         </el-descriptions-item>
-        <el-descriptions-item label="参与人数">{{ reservation.playerCount }}人</el-descriptions-item>
-        <el-descriptions-item label="预计时长">{{ scriptInfo?.duration }}小时</el-descriptions-item>
-        <el-descriptions-item label="联系人">{{ reservation.contactName }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ reservation.contactPhone }}</el-descriptions-item>
-        <el-descriptions-item label="备注" :span="2" v-if="reservation.remark">
+        <el-descriptions-item label="参与人数">{{ reservation.playerCount }} 人</el-descriptions-item>
+        <el-descriptions-item label="预计时长">{{ reservation.duration || scriptInfo?.duration || 3 }} 小时</el-descriptions-item>
+        <el-descriptions-item label="联系人">{{ reservation.contactName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ reservation.contactPhone || '-' }}</el-descriptions-item>
+        <el-descriptions-item v-if="reservation.remark" label="备注" :span="2">
           {{ reservation.remark }}
         </el-descriptions-item>
       </el-descriptions>
-      
-      <!-- 价格信息 -->
+
+      <el-descriptions title="到店核销" :column="2" border style="margin-top: 20px">
+        <el-descriptions-item label="核销状态">
+          <el-tag :type="reservation.checkInStatus === 1 ? 'success' : 'info'">
+            {{ reservation.checkInStatus === 1 ? '已核销' : '未核销' }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="核销时间">
+          {{ reservation.checkInTime || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="核销码" :span="2">
+          <div v-if="reservation.payStatus === 1 || reservation.checkInCode" class="check-in-code">
+            <span>{{ reservation.checkInCode || '-' }}</span>
+            <span class="check-in-tip">到店后出示给门店工作人员进行核销</span>
+          </div>
+          <span v-else>支付成功后可查看核销码</span>
+        </el-descriptions-item>
+      </el-descriptions>
+
       <el-descriptions title="价格信息" :column="2" border style="margin-top: 20px">
         <el-descriptions-item label="商品原价" :span="2">
           <span :style="reservation.discountAmount > 0 ? 'color:#909399;text-decoration:line-through' : 'font-weight:bold'">
-            ¥{{ reservation.totalPrice }}
+            ￥{{ Number(reservation.totalPrice || 0).toFixed(2) }}
           </span>
         </el-descriptions-item>
-        <el-descriptions-item label="VIP折扣" v-if="reservation.vipDiscountAmount > 0">
-          <el-tag type="warning" size="small" style="margin-right:6px">
+        <el-descriptions-item v-if="reservation.vipDiscountAmount > 0" label="VIP 折扣">
+          <el-tag type="warning" size="small" style="margin-right: 6px">
             {{ getVipDiscountLabel(reservation.vipDiscount) }}
           </el-tag>
           <span style="color:#e6a23c;font-weight:bold">
-            -¥{{ Number(reservation.vipDiscountAmount).toFixed(2) }}
+            -￥{{ Number(reservation.vipDiscountAmount || 0).toFixed(2) }}
           </span>
         </el-descriptions-item>
-        <el-descriptions-item
-          label="优惠券折扣"
-          v-if="reservation.couponId && reservation.discountAmount > 0"
-        >
+        <el-descriptions-item v-if="reservation.discountAmount > 0 && reservation.couponId" label="优惠券抵扣">
           <span style="color:#67c23a;font-weight:bold">
-            -¥{{ (Number(reservation.discountAmount) - Number(reservation.vipDiscountAmount || 0)).toFixed(2) }}
+            -￥{{ (Number(reservation.discountAmount || 0) - Number(reservation.vipDiscountAmount || 0)).toFixed(2) }}
           </span>
-        </el-descriptions-item>
-        <el-descriptions-item label="合计优惠" v-if="reservation.discountAmount > 0">
-          <span style="color:#f56c6c;font-weight:bold">-¥{{ Number(reservation.discountAmount).toFixed(2) }}</span>
         </el-descriptions-item>
         <el-descriptions-item label="实付金额" :span="2">
-          <span style="color:#f56c6c;font-weight:bold;font-size:22px">
-            ¥{{ Number(reservation.actualAmount || reservation.totalPrice).toFixed(2) }}
+          <span class="amount-highlight">
+            ￥{{ Number(reservation.actualAmount || reservation.totalPrice || 0).toFixed(2) }}
           </span>
-          <el-tag
-            v-if="reservation.vipDiscountAmount > 0"
-            type="success"
-            size="small"
-            style="margin-left:10px"
-          >
-            💎 VIP专属优惠已享
-          </el-tag>
         </el-descriptions-item>
       </el-descriptions>
-      
-      <!-- 操作按钮 -->
+
       <div class="actions">
         <el-button
           v-if="reservation.status === 1 && reservation.payStatus === 0"
@@ -116,7 +107,7 @@
           评价订单
         </el-button>
         <el-button
-          v-if="reservation.status < 3 && reservation.status !== 4"
+          v-if="reservation.status < 3 && reservation.status !== 4 && reservation.checkInStatus !== 1"
           type="danger"
           size="large"
           @click="handleCancel"
@@ -128,15 +119,12 @@
           size="large"
           @click="showContactDialog = true"
         >
-          查看联系方式
+          查看门店联系方式
         </el-button>
-        <el-button size="large" @click="router.back()">
-          返回
-        </el-button>
+        <el-button size="large" @click="router.back()">返回</el-button>
       </div>
-      
-      <!-- 时间轴 -->
-      <el-card style="margin-top: 20px" v-if="timeline.length > 0">
+
+      <el-card v-if="timeline.length > 0" style="margin-top: 20px">
         <template #header>
           <span>订单进度</span>
         </template>
@@ -152,8 +140,7 @@
         </el-timeline>
       </el-card>
     </el-card>
-    
-    <!-- 取消预约对话框 -->
+
     <el-dialog v-model="showCancelDialog" title="取消预约" width="400px">
       <el-form>
         <el-form-item label="取消原因">
@@ -161,36 +148,37 @@
             v-model="cancelReason"
             type="textarea"
             :rows="4"
-            placeholder="请输入取消原因（必填）"
+            placeholder="请输入取消原因"
           />
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="showCancelDialog = false">取消</el-button>
-        <el-button type="primary" @click="confirmCancel" :loading="canceling">确定</el-button>
+        <el-button @click="showCancelDialog = false">返回</el-button>
+        <el-button type="primary" :loading="canceling" @click="confirmCancel">确认取消</el-button>
       </template>
     </el-dialog>
-    
-    <!-- 联系方式对话框 -->
-    <el-dialog v-model="showContactDialog" title="门店联系方式" width="400px">
+
+    <el-dialog v-model="showContactDialog" title="门店联系方式" width="420px">
       <el-descriptions :column="1" border>
-        <el-descriptions-item label="门店名称">{{ storeInfo?.name }}</el-descriptions-item>
-        <el-descriptions-item label="联系电话">{{ storeInfo?.phone }}</el-descriptions-item>
-        <el-descriptions-item label="门店地址">{{ storeInfo?.address }}</el-descriptions-item>
-        <el-descriptions-item label="营业时间">{{ storeInfo?.openTime }} - {{ storeInfo?.closeTime }}</el-descriptions-item>
+        <el-descriptions-item label="门店名称">{{ storeInfo?.name || reservation.storeName }}</el-descriptions-item>
+        <el-descriptions-item label="联系电话">{{ storeInfo?.phone || reservation.storePhone || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="门店地址">{{ storeInfo?.address || reservation.storeAddress || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="营业时间">
+          {{ storeInfo?.openTime || '-' }} - {{ storeInfo?.closeTime || '-' }}
+        </el-descriptions-item>
       </el-descriptions>
       <template #footer>
-        <el-button type="primary" @click="showContactDialog = false">确定</el-button>
+        <el-button type="primary" @click="showContactDialog = false">知道了</el-button>
       </template>
     </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getReservationDetail, cancelReservation } from '@/api/reservation'
+import { ElMessage } from 'element-plus'
+import { cancelReservation, getReservationDetail } from '@/api/reservation'
 import { getScriptDetail } from '@/api/script'
 import { getStoreDetail } from '@/api/store'
 
@@ -209,7 +197,7 @@ const cancelReason = ref('')
 
 const timeline = computed(() => {
   if (!reservation.value) return []
-  
+
   const items = [
     {
       time: reservation.value.createTime,
@@ -217,7 +205,7 @@ const timeline = computed(() => {
       type: 'primary'
     }
   ]
-  
+
   if (reservation.value.payTime) {
     items.push({
       time: reservation.value.payTime,
@@ -225,15 +213,15 @@ const timeline = computed(() => {
       type: 'success'
     })
   }
-  
-  if (reservation.value.status === 2) {
+
+  if (reservation.value.checkInTime) {
     items.push({
-      time: reservation.value.updateTime,
-      content: '预约已确认',
+      time: reservation.value.checkInTime,
+      content: '到店核销成功',
       type: 'success'
     })
   }
-  
+
   if (reservation.value.status === 3) {
     items.push({
       time: reservation.value.updateTime,
@@ -241,75 +229,51 @@ const timeline = computed(() => {
       type: 'success'
     })
   }
-  
+
   if (reservation.value.status === 4) {
     items.push({
       time: reservation.value.updateTime,
-      content: `预约已取消${reservation.value.remark ? '：' + reservation.value.remark : ''}`,
+      content: `预约已取消${reservation.value.remark ? `：${reservation.value.remark}` : ''}`,
       type: 'danger'
     })
   }
-  
+
   return items
 })
 
-const getVipDiscountLabel = (discount) => {
-  if (!discount) return 'VIP折扣'
-  const fold = Math.round(discount * 10)
-  return `会员${fold}折`
-}
-
 const getStatusType = (status) => {
-  const types = {
-    1: 'warning',
-    2: 'success',
-    3: 'info',
-    4: 'danger'
-  }
-  return types[status] || 'info'
+  const map = { 1: 'warning', 2: 'success', 3: 'info', 4: 'danger' }
+  return map[status] || 'info'
 }
 
 const getStatusText = (status) => {
-  const texts = {
-    1: '待确认',
-    2: '已确认',
-    3: '已完成',
-    4: '已取消'
-  }
-  return texts[status] || '未知'
+  const map = { 1: '待确认', 2: '已确认', 3: '已完成', 4: '已取消' }
+  return map[status] || '未知'
 }
 
 const getPayStatusType = (status) => {
-  const types = {
-    0: 'warning',
-    1: 'success',
-    2: 'info'
-  }
-  return types[status] || 'info'
+  const map = { 0: 'warning', 1: 'success', 2: 'info', 3: 'danger' }
+  return map[status] || 'info'
 }
 
 const getPayStatusText = (status) => {
-  const texts = {
-    0: '未支付',
-    1: '已支付',
-    2: '已退款'
-  }
-  return texts[status] || '未知'
+  const map = { 0: '未支付', 1: '已支付', 2: '退款中', 3: '已退款' }
+  return map[status] || '未知'
+}
+
+const getVipDiscountLabel = (discount) => {
+  if (!discount) return 'VIP 折扣'
+  return `会员 ${Math.round(discount * 10)} 折`
 }
 
 const loadReservation = async () => {
   loading.value = true
   try {
     const res = await getReservationDetail(route.params.id)
-    if (res.data) {
-      reservation.value = res.data
-      // 加载关联信息
-      loadScriptInfo()
-      loadStoreInfo()
-    }
+    reservation.value = res.data || null
+    await Promise.all([loadScriptInfo(), loadStoreInfo()])
   } catch (error) {
-    console.error('加载预约详情失败:', error)
-    ElMessage.error('加载预约详情失败')
+    ElMessage.error(error.message || '加载预约详情失败')
   } finally {
     loading.value = false
   }
@@ -319,11 +283,9 @@ const loadScriptInfo = async () => {
   if (!reservation.value?.scriptId) return
   try {
     const res = await getScriptDetail(reservation.value.scriptId)
-    if (res.data) {
-      scriptInfo.value = res.data
-    }
+    scriptInfo.value = res.data || null
   } catch (error) {
-    console.error('加载剧本信息失败:', error)
+    console.error(error)
   }
 }
 
@@ -331,15 +293,12 @@ const loadStoreInfo = async () => {
   if (!reservation.value?.storeId) return
   try {
     const res = await getStoreDetail(reservation.value.storeId)
-    if (res.data) {
-      storeInfo.value = res.data
-      // 从门店信息中获取房间信息
-      if (res.data.rooms) {
-        roomInfo.value = res.data.rooms.find(r => r.id === reservation.value.roomId)
-      }
+    storeInfo.value = res.data || null
+    if (res.data?.rooms) {
+      roomInfo.value = res.data.rooms.find((item) => item.id === reservation.value.roomId) || null
     }
   } catch (error) {
-    console.error('加载门店信息失败:', error)
+    console.error(error)
   }
 }
 
@@ -348,8 +307,8 @@ const handlePay = () => {
 }
 
 const handleCancel = () => {
-  showCancelDialog.value = true
   cancelReason.value = ''
+  showCancelDialog.value = true
 }
 
 const confirmCancel = async () => {
@@ -357,18 +316,14 @@ const confirmCancel = async () => {
     ElMessage.warning('请输入取消原因')
     return
   }
-  
   canceling.value = true
   try {
-    const res = await cancelReservation(reservation.value.id, cancelReason.value)
-    if (res.code === 1 || res.code === 200) {
-      ElMessage.success('取消成功')
-      showCancelDialog.value = false
-      loadReservation()
-    }
+    await cancelReservation(reservation.value.id, cancelReason.value)
+    ElMessage.success('取消成功')
+    showCancelDialog.value = false
+    loadReservation()
   } catch (error) {
-    console.error('取消预约失败:', error)
-    ElMessage.error('取消预约失败')
+    ElMessage.error(error.message || '取消预约失败')
   } finally {
     canceling.value = false
   }
@@ -382,14 +337,14 @@ const handleReview = () => {
 }
 
 const goToScript = () => {
-  if (scriptInfo.value?.id) {
-    router.push(`/script/${scriptInfo.value.id}`)
+  if (reservation.value?.scriptId) {
+    router.push(`/script/${reservation.value.scriptId}`)
   }
 }
 
 const goToStore = () => {
-  if (storeInfo.value?.id) {
-    router.push(`/store/${storeInfo.value.id}`)
+  if (reservation.value?.storeId) {
+    router.push(`/store/${reservation.value.storeId}`)
   }
 }
 
@@ -407,20 +362,49 @@ onMounted(() => {
 
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .header h2 {
   margin: 0;
 }
 
+.time-highlight {
+  color: #f56c6c;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.amount-highlight {
+  color: #f56c6c;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.check-in-code {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.check-in-code span:first-child {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 4px;
+}
+
+.check-in-tip {
+  color: #909399;
+  font-size: 13px;
+}
+
 .actions {
-  margin-top: 30px;
   display: flex;
   gap: 15px;
   justify-content: center;
-  padding: 20px 0;
+  margin-top: 30px;
+  padding-top: 20px;
   border-top: 1px solid #eee;
 }
 </style>

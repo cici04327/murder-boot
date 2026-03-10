@@ -47,20 +47,9 @@ CREATE TABLE IF NOT EXISTS `group_member` (
 
 -- 插入测试数据
 INSERT INTO `group_order` (`creator_id`, `creator_name`, `creator_avatar`, `script_id`, `script_name`, `store_id`, `store_name`, `play_time`, `current_count`, `need_count`, `player_count`, `price`, `gender_requirement`, `newbie_welcome`, `description`, `status`) VALUES
-(1, '小明', NULL, 1, '年轮', 1, '迷雾剧本杀', DATE_ADD(NOW(), INTERVAL 2 DAY), 2, 6, 6, 128.00, '男女不限', 1, '新手局，欢迎萌新一起来玩！', 1),
-(2, '小红', NULL, 2, '古木吟', 2, '探案馆', DATE_ADD(NOW(), INTERVAL 3 DAY), 3, 7, 7, 158.00, '需3男4女', 0, '进阶玩家优先，需要一定推理经验', 1),
-(3, '阿杰', NULL, 3, '夜半歌声', 1, '迷雾剧本杀', DATE_ADD(NOW(), INTERVAL 1 DAY), 5, 5, 5, 99.00, '男女不限', 1, '轻松欢乐本，不烧脑', 2),
-(4, '小李', NULL, 4, '云使', 3, '谜探社', DATE_ADD(NOW(), INTERVAL 4 DAY), 2, 8, 8, 188.00, '需4男4女', 0, '硬核情感本，准备好纸巾', 1);
+(1, '小明', NULL, 1, '年轮', 1, '迷雾剧本杀', DATE_ADD(NOW(), INTERVAL 2 DAY), 2, 6, 6, 128.00, '男女不限', 1, '新手局，欢迎萌新一起来玩！', 1);
 
 -- 插入测试成员数据
 INSERT INTO `group_member` (`group_id`, `user_id`, `nickname`, `avatar`, `is_creator`, `join_count`, `status`) VALUES
 (1, 1, '小明', NULL, 1, 1, 1),
-(1, 5, '玩家A', NULL, 0, 1, 1),
-(2, 2, '小红', NULL, 1, 1, 1),
-(2, 6, '玩家B', NULL, 0, 1, 1),
-(2, 7, '玩家C', NULL, 0, 1, 1),
-(3, 3, '阿杰', NULL, 1, 1, 1),
-(3, 8, '玩家D', NULL, 0, 2, 1),
-(3, 9, '玩家E', NULL, 0, 2, 1),
-(4, 4, '小李', NULL, 1, 1, 1),
-(4, 10, '玩家F', NULL, 0, 1, 1);
+(1, 5, '玩家A', NULL, 0, 1, 1);

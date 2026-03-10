@@ -2,66 +2,47 @@
   <div class="confirm-container" v-loading="loading">
     <el-result
       icon="success"
-      title="预约成功"
-      sub-title="您的预约已提交，请尽快完成支付"
+      title="预约提交成功"
+      sub-title="请尽快完成支付，到店时向门店出示核销码"
     >
       <template #extra>
         <el-card class="reservation-info">
           <el-descriptions title="预约信息" :column="1" border>
-            <el-descriptions-item label="预约编号">{{ reservation?.orderNo }}</el-descriptions-item>
-            <el-descriptions-item label="剧本名称">{{ reservation?.scriptName }}</el-descriptions-item>
-            <el-descriptions-item label="门店名称">{{ reservation?.storeName }}</el-descriptions-item>
-            <el-descriptions-item label="门店地址" v-if="reservation?.storeAddress">{{ reservation?.storeAddress }}</el-descriptions-item>
-            <el-descriptions-item label="房间">{{ reservation?.roomName }}</el-descriptions-item>
-            <el-descriptions-item label="房间容量" v-if="reservation?.roomCapacity">{{ reservation?.roomCapacity }}人</el-descriptions-item>
-            <el-descriptions-item label="预约时间">{{ reservation?.reservationTime }}</el-descriptions-item>
-            <el-descriptions-item label="参与人数">{{ reservation?.playerCount }}人</el-descriptions-item>
-            <el-descriptions-item label="联系人">{{ reservation?.contactName }}</el-descriptions-item>
-            <el-descriptions-item label="联系电话">{{ reservation?.contactPhone }}</el-descriptions-item>
-            <el-descriptions-item label="下单时间" v-if="reservation?.createTime">{{ reservation?.createTime }}</el-descriptions-item>
-            <el-descriptions-item label="原价">
-              <span style="color: #999; text-decoration: line-through">
-                ¥{{ reservation?.totalPrice }}
-              </span>
+            <el-descriptions-item label="预约编号">{{ reservation?.orderNo || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="剧本名称">{{ reservation?.scriptName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="门店名称">{{ reservation?.storeName || '-' }}</el-descriptions-item>
+            <el-descriptions-item v-if="reservation?.storeAddress" label="门店地址">
+              {{ reservation.storeAddress }}
             </el-descriptions-item>
-            <el-descriptions-item label="VIP折扣" v-if="reservation?.vipDiscountAmount > 0">
-              <el-tag type="warning" size="small" style="margin-right:6px">
-                {{ getVipDiscountLabel(reservation?.vipDiscount) }}
-              </el-tag>
-              <span style="color: #e6a23c; font-weight: bold">
-                - ¥{{ reservation?.vipDiscountAmount?.toFixed(2) }}
-              </span>
-            </el-descriptions-item>
-            <el-descriptions-item label="优惠券折扣" v-if="reservation?.couponId && reservation?.discountAmount > 0">
-              <span style="color: #67c23a; font-weight: bold">
-                - ¥{{ (reservation?.discountAmount - (reservation?.vipDiscountAmount || 0)).toFixed(2) }}
-              </span>
-            </el-descriptions-item>
-            <el-descriptions-item label="实付金额">
-              <span style="color: #f56c6c; font-size: 22px; font-weight: bold">
-                ¥{{ reservation?.actualAmount?.toFixed(2) }}
-              </span>
-              <el-tag v-if="reservation?.vipDiscountAmount > 0" type="success" size="small" style="margin-left:8px">
-                VIP专属优惠
-              </el-tag>
-            </el-descriptions-item>
+            <el-descriptions-item label="房间">{{ reservation?.roomName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="预约时间">{{ reservation?.reservationTime || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="参与人数">{{ reservation?.playerCount || 0 }} 人</el-descriptions-item>
+            <el-descriptions-item label="联系人">{{ reservation?.contactName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="联系电话">{{ reservation?.contactPhone || '-' }}</el-descriptions-item>
             <el-descriptions-item label="状态">
               <el-tag :type="getStatusType(reservation?.status)">
                 {{ getStatusText(reservation?.status) }}
               </el-tag>
             </el-descriptions-item>
+            <el-descriptions-item label="实付金额">
+              <span class="amount-highlight">
+                ￥{{ Number(reservation?.actualAmount || reservation?.totalPrice || 0).toFixed(2) }}
+              </span>
+            </el-descriptions-item>
           </el-descriptions>
-          
+
+          <div class="check-in-panel">
+            <div class="check-in-title">到店核销码</div>
+            <div class="check-in-code">{{ reservation?.checkInCode || '-' }}</div>
+            <div class="check-in-desc">
+              {{ reservation?.payStatus === 1 ? '支付成功后可直接向门店出示此核销码' : '该核销码已生成，支付成功后即可使用' }}
+            </div>
+          </div>
+
           <div class="actions">
-            <el-button type="primary" size="large" @click="handlePay">
-              立即支付
-            </el-button>
-            <el-button size="large" @click="router.push('/user/reservations')">
-              查看我的预约
-            </el-button>
-            <el-button size="large" @click="router.push('/home')">
-              返回首页
-            </el-button>
+            <el-button type="primary" size="large" @click="handlePay">立即支付</el-button>
+            <el-button size="large" @click="router.push('/user/reservations')">查看我的预约</el-button>
+            <el-button size="large" @click="router.push('/home')">返回首页</el-button>
           </div>
         </el-card>
       </template>
@@ -70,7 +51,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getReservationDetail } from '@/api/reservation'
 
@@ -81,54 +62,20 @@ const loading = ref(false)
 const reservation = ref(null)
 
 const getStatusType = (status) => {
-  const types = {
-    0: 'info',
-    1: 'warning',
-    2: 'success',
-    3: 'success',
-    4: 'danger'
-  }
-  return types[status] || 'info'
-}
-
-const getVipDiscountLabel = (discount) => {
-  if (!discount) return 'VIP折扣'
-  const fold = Math.round(discount * 10)
-  return `会员${fold}折`
+  const map = { 1: 'warning', 2: 'success', 3: 'info', 4: 'danger' }
+  return map[status] || 'info'
 }
 
 const getStatusText = (status) => {
-  const texts = {
-    0: '待支付',
-    1: '待确认',
-    2: '已确认',
-    3: '已完成',
-    4: '已取消'
-  }
-  return texts[status] || '未知'
+  const map = { 1: '待确认', 2: '已确认', 3: '已完成', 4: '已取消' }
+  return map[status] || '未知'
 }
 
 const loadReservation = async () => {
   loading.value = true
   try {
     const res = await getReservationDetail(route.params.id)
-    if (res.data) {
-      reservation.value = res.data
-    }
-  } catch (error) {
-    console.error('加载预约信息失败:', error)
-    // 模拟数据
-    reservation.value = {
-      id: route.params.id,
-      scriptName: '迷雾庄园',
-      storeName: '探案密室',
-      roomName: '推理房A',
-      reservationTime: '2024-01-15 14:00',
-      playerCount: 6,
-      contactPhone: '13800138000',
-      totalPrice: 528,
-      status: 0
-    }
+    reservation.value = res.data || null
   } finally {
     loading.value = false
   }
@@ -145,19 +92,53 @@ onMounted(() => {
 
 <style scoped>
 .confirm-container {
-  padding: 40px 20px;
-  max-width: 800px;
+  max-width: 820px;
   margin: 0 auto;
+  padding: 40px 20px;
 }
 
 .reservation-info {
   margin-top: 20px;
 }
 
+.amount-highlight {
+  color: #f56c6c;
+  font-size: 22px;
+  font-weight: bold;
+}
+
+.check-in-panel {
+  margin-top: 20px;
+  padding: 24px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff4e6 0%, #fffaf2 100%);
+  border: 1px solid #f7d8a8;
+  text-align: center;
+}
+
+.check-in-title {
+  color: #8c6a2a;
+  font-size: 14px;
+}
+
+.check-in-code {
+  margin-top: 12px;
+  color: #2c3e50;
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 6px;
+}
+
+.check-in-desc {
+  margin-top: 12px;
+  color: #8c6a2a;
+  font-size: 13px;
+}
+
 .actions {
-  margin-top: 30px;
   display: flex;
   gap: 15px;
   justify-content: center;
+  margin-top: 30px;
 }
 </style>

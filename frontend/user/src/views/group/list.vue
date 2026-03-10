@@ -36,7 +36,7 @@
         </div>
       </div>
       <div class="filter-row" v-if="categories.length > 0">
-        <span class="filter-label">类型</span>
+        <span class="filter-label">剧本类型</span>
         <div class="filter-tags">
           <span class="filter-tag" :class="{ active: filters.categoryId === null }" @click="setFilter('categoryId', null)">全部</span>
           <span class="filter-tag" v-for="cat in categories" :key="cat.id" :class="{ active: filters.categoryId === cat.id }" @click="setFilter('categoryId', cat.id)">{{ cat.name }}</span>

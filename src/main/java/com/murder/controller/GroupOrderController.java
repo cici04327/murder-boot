@@ -29,9 +29,10 @@ public class GroupOrderController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "12") Integer pageSize,
             @RequestParam(required = false) Long scriptId,
+            @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Integer playerCount,
             @RequestParam(required = false) Integer status) {
-        Page<Map<String, Object>> result = groupOrderService.pageQuery(page, pageSize, scriptId, playerCount, status);
+        Page<Map<String, Object>> result = groupOrderService.pageQuery(page, pageSize, scriptId, categoryId, playerCount, status);
         return Result.success(result);
     }
     

@@ -1,807 +1,848 @@
 <template>
-  <div class="statistics-dashboard">
-    <div class="dashboard-header">
-      <h1 class="title">数据统计大屏 - 控制台</h1>
-      <div class="header-actions">
-        <el-button type="primary" :icon="Refresh" circle @click="refreshData" />
-        <el-button type="success" :icon="FullScreen" circle @click="toggleFullScreen" />
+  <div class="workbench-page" v-loading="loading">
+    <section class="hero-card">
+      <div>
+        <p class="eyebrow">Store Workbench</p>
+        <h1>今日工作台</h1>
+        <p class="hero-desc">
+          聚合今天最需要处理的预约、退款、评价和通知，让门店登录后直接开始工作。
+        </p>
       </div>
-    </div>
-
-    <!-- 核心指标卡片 -->
-    <div class="metrics-cards">
-      <div class="metric-card revenue">
-        <div class="metric-icon">💰</div>
-        <div class="metric-content">
-          <div class="metric-label">今日营业额</div>
-          <div class="metric-value">¥{{ formatNumber(overview.todayRevenue) }}</div>
-          <div class="metric-growth" :class="overview.revenueGrowth >= 0 ? 'positive' : 'negative'">
-            <span>{{ overview.revenueGrowth >= 0 ? '↑' : '↓' }}</span>
-            {{ Math.abs(overview.revenueGrowth) }}%
-          </div>
-        </div>
+      <div class="hero-meta">
+        <div class="hero-date">{{ todayLabel }}</div>
+        <el-button type="primary" @click="refreshData">
+          <el-icon><Refresh /></el-icon>
+          刷新数据
+        </el-button>
       </div>
+    </section>
 
-      <div class="metric-card reservations">
-        <div class="metric-icon">📅</div>
-        <div class="metric-content">
-          <div class="metric-label">今日预约数</div>
-          <div class="metric-value">{{ overview.todayReservations }}</div>
-          <div class="metric-growth" :class="overview.reservationGrowth >= 0 ? 'positive' : 'negative'">
-            <span>{{ overview.reservationGrowth >= 0 ? '↑' : '↓' }}</span>
-            {{ Math.abs(overview.reservationGrowth) }}%
+    <section class="summary-grid">
+      <article
+        v-for="card in summaryCards"
+        :key="card.key"
+        class="summary-card"
+        :class="card.tone"
+        @click="goTo(card.route)"
+      >
+        <div class="card-top">
+          <span class="card-title">{{ card.title }}</span>
+          <el-icon class="card-icon">
+            <component :is="card.icon" />
+          </el-icon>
+        </div>
+        <div class="card-value">{{ card.value }}</div>
+        <div class="card-foot">{{ card.description }}</div>
+      </article>
+    </section>
+
+    <section class="content-grid">
+      <el-card class="panel quick-panel" shadow="never">
+        <template #header>
+          <div class="panel-header">
+            <span>快捷入口</span>
           </div>
+        </template>
+        <div class="quick-actions">
+          <button
+            v-for="action in quickActions"
+            :key="action.label"
+            class="quick-action"
+            type="button"
+            @click="goTo(action.route)"
+          >
+            <el-icon class="quick-icon">
+              <component :is="action.icon" />
+            </el-icon>
+            <div>
+              <div class="quick-title">{{ action.label }}</div>
+              <div class="quick-text">{{ action.text }}</div>
+            </div>
+          </button>
         </div>
-      </div>
+      </el-card>
 
-      <div class="metric-card users">
-        <div class="metric-icon">👥</div>
-        <div class="metric-content">
-          <div class="metric-label">今日新增用户</div>
-          <div class="metric-value">{{ overview.todayNewUsers }}</div>
-          <div class="metric-sub">累计 {{ overview.totalUsers }} 人</div>
-        </div>
-      </div>
-
-      <div class="metric-card stores">
-        <div class="metric-icon">🏪</div>
-        <div class="metric-content">
-          <div class="metric-label">在线门店</div>
-          <div class="metric-value">{{ overview.onlineStores }}/{{ overview.totalStores }}</div>
-          <div class="metric-sub">营业中</div>
-        </div>
-      </div>
-
-      <div class="metric-card coupons">
-        <div class="metric-icon">🎫</div>
-        <div class="metric-content">
-          <div class="metric-label">优惠券使用</div>
-          <div class="metric-value">{{ overview.todayCouponUsed }}</div>
-          <div class="metric-sub">使用率 {{ overview.couponUsageRate }}%</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 图表区域 -->
-    <div class="charts-container">
-      <!-- 第一行 -->
-      <div class="chart-row">
-        <div class="chart-box">
-          <div class="chart-header">
-            <span class="chart-title">营业额趋势</span>
-            <el-radio-group v-model="chartPeriod" size="small" @change="loadCharts">
-              <el-radio-button label="7">近7天</el-radio-button>
-              <el-radio-button label="30">近30天</el-radio-button>
-            </el-radio-group>
+      <el-card class="panel room-panel" shadow="never">
+        <template #header>
+          <div class="panel-header">
+            <span>今日房间使用情况</span>
+            <span class="panel-extra">
+              {{ effectiveStoreId ? `${roomUsage.length} 个房间` : '请选择具体门店后查看' }}
+            </span>
           </div>
-          <div ref="revenueChart" class="chart-content"></div>
-        </div>
-
-        <div class="chart-box">
-          <div class="chart-header">
-            <span class="chart-title">门店业绩排行</span>
-          </div>
-          <div ref="storeRankChart" class="chart-content"></div>
-        </div>
-
-        <div class="chart-box">
-          <div class="chart-header">
-            <span class="chart-title">剧本热度 TOP10</span>
-          </div>
-          <div ref="scriptRankChart" class="chart-content"></div>
-        </div>
-      </div>
-
-      <!-- 第二行 -->
-      <div class="chart-row">
-        <div class="chart-box">
-          <div class="chart-header">
-            <span class="chart-title">预约来源分布</span>
-          </div>
-          <div ref="sourceChart" class="chart-content"></div>
-        </div>
-
-        <div class="chart-box">
-          <div class="chart-header">
-            <span class="chart-title">用户增长趋势</span>
-          </div>
-          <div ref="userGrowthChart" class="chart-content"></div>
-        </div>
-
-        <div class="chart-box">
-          <div class="chart-header">
-            <span class="chart-title">会员等级分布</span>
-          </div>
-          <div ref="memberChart" class="chart-content"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 实时数据流 -->
-    <div class="realtime-container">
-      <div class="realtime-box">
-        <div class="realtime-header">
-          <span class="realtime-icon">🔴</span>
-          <span class="realtime-title">实时预约动态</span>
-        </div>
-        <div class="realtime-content scrolling">
-          <div v-if="realtime.recentReservations && realtime.recentReservations.length > 0" class="scroll-wrapper">
-            <div class="scroll-content">
-              <div v-for="(item, index) in realtime.recentReservations" :key="index" class="realtime-item">
-                <span class="item-user">{{ item.userNickname || '匿名用户' }}</span>
-                预约了
-                <span class="item-script">《{{ item.scriptName }}》</span>
-                -
-                <span class="item-store">{{ item.storeName }}</span>
+        </template>
+        <div v-if="roomUsage.length" class="room-list">
+          <div v-for="room in roomUsage" :key="room.roomName" class="room-item">
+            <div class="room-main">
+              <div>
+                <div class="room-name">{{ room.roomName }}</div>
+                <div class="room-meta">
+                  {{ room.firstStart }} - {{ room.lastEnd }} · {{ room.totalSessions }} 场
+                </div>
               </div>
+              <el-tag :type="room.fullSessions > 0 ? 'danger' : 'success'" effect="light">
+                满场 {{ room.fullSessions }}
+              </el-tag>
             </div>
-            <div class="scroll-content" aria-hidden="true">
-              <div v-for="(item, index) in realtime.recentReservations" :key="'copy-' + index" class="realtime-item">
-                <span class="item-user">{{ item.userNickname || '匿名用户' }}</span>
-                预约了
-                <span class="item-script">《{{ item.scriptName }}》</span>
-                -
-                <span class="item-store">{{ item.storeName }}</span>
+            <el-progress
+              :percentage="room.utilization"
+              :stroke-width="10"
+              :show-text="false"
+              :color="room.utilization >= 80 ? '#e67e22' : '#2d6a4f'"
+            />
+            <div class="room-foot">
+              <span>已占用 {{ room.bookedSessions }} 场</span>
+              <span>空闲 {{ room.totalSessions - room.bookedSessions }} 场</span>
+            </div>
+          </div>
+        </div>
+        <el-empty
+          v-else
+          :description="effectiveStoreId ? '今天暂无排期' : '请先在顶部选择具体门店'"
+        />
+      </el-card>
+    </section>
+
+    <section class="timeline-section">
+      <el-card class="panel timeline-panel" shadow="never">
+        <template #header>
+          <div class="panel-header">
+            <span>今日场次时间线</span>
+            <span class="panel-extra">
+              {{ effectiveStoreId ? `${scheduleTimeline.length} 场` : '请选择具体门店后查看' }}
+            </span>
+          </div>
+        </template>
+        <div v-if="scheduleTimeline.length" class="timeline-list">
+          <div
+            v-for="item in scheduleTimeline"
+            :key="`${item.id}-${item.startTime}`"
+            class="timeline-item"
+          >
+            <div class="timeline-time">
+              <div class="time-start">{{ formatClock(item.startTime) }}</div>
+              <div class="time-end">{{ formatClock(item.endTime) }}</div>
+            </div>
+            <div class="timeline-line">
+              <span class="timeline-dot"></span>
+            </div>
+            <div class="timeline-content">
+              <div class="timeline-head">
+                <div>
+                  <div class="timeline-title">{{ item.scriptName || '未命名场次' }}</div>
+                  <div class="timeline-meta">
+                    {{ item.roomName || '未分配房间' }} · {{ item.currentPlayers || 0 }}/{{ item.maxPlayers || 0 }} 人
+                  </div>
+                </div>
+                <el-tag :type="getScheduleTagType(item)" effect="light">
+                  {{ getScheduleLabel(item) }}
+                </el-tag>
               </div>
+              <div v-if="item.remark" class="timeline-remark">{{ item.remark }}</div>
             </div>
           </div>
-          <div v-else class="empty-state">
-            <div class="empty-icon">📭</div>
-            <div class="empty-text">暂无预约动态</div>
-          </div>
         </div>
-      </div>
-
-      <div class="realtime-box">
-        <div class="realtime-header">
-          <span class="realtime-icon">⭐</span>
-          <span class="realtime-title">今日热门剧本</span>
-        </div>
-        <div class="realtime-content">
-          <div v-if="realtime.hotScripts && realtime.hotScripts.length > 0">
-            <div v-for="(item, index) in realtime.hotScripts" :key="index" class="realtime-item">
-              <span class="hot-rank">{{ index + 1 }}.</span>
-              <span class="hot-name">{{ item.name }}</span>
-              <span class="hot-count">{{ item.todayCount }}场</span>
-            </div>
-          </div>
-          <div v-else class="empty-state">
-            <div class="empty-icon">🎭</div>
-            <div class="empty-text">今日暂无热门剧本</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="realtime-box">
-        <div class="realtime-header">
-          <span class="realtime-icon">🎁</span>
-          <span class="realtime-title">优惠券使用</span>
-        </div>
-        <div class="realtime-content">
-          <div v-if="realtime.recentCouponUses && realtime.recentCouponUses.length > 0">
-            <div v-for="(item, index) in realtime.recentCouponUses" :key="index" class="realtime-item">
-              <span class="item-user">{{ item.userNickname || '匿名用户' }}</span>
-              使用了
-              <span class="item-coupon">{{ item.couponName }}</span>
-            </div>
-          </div>
-          <div v-else class="empty-state">
-            <div class="empty-icon">🎫</div>
-            <div class="empty-text">暂无优惠券使用记录</div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <el-empty
+          v-else
+          :description="effectiveStoreId ? '今天暂无场次' : '请先在顶部选择具体门店'"
+        />
+      </el-card>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
-import { Refresh, FullScreen } from '@element-plus/icons-vue'
-import * as echarts from 'echarts'
-import request from '@/utils/request'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import {
+  Bell,
+  Calendar,
+  ChatDotRound,
+  Clock,
+  DataBoard,
+  Money,
+  Refresh,
+  Tickets
+} from '@element-plus/icons-vue'
+import request, { userService } from '@/utils/request'
 
-// 数据
-const overview = reactive({
-  todayRevenue: 0,
-  revenueGrowth: 0,
+const router = useRouter()
+const loading = ref(false)
+const scheduleTimeline = ref([])
+const roomUsage = ref([])
+
+const loginType = localStorage.getItem('admin-login-type') || 'admin'
+const storeAdminStoreId = localStorage.getItem('admin-store-id')
+const selectedStoreId = localStorage.getItem('admin-current-store-id')
+const effectiveStoreId = computed(() => {
+  if (loginType === 'store') {
+    return storeAdminStoreId || ''
+  }
+  if (selectedStoreId && selectedStoreId !== 'all') {
+    return selectedStoreId
+  }
+  return ''
+})
+
+const summary = reactive({
   todayReservations: 0,
-  reservationGrowth: 0,
-  todayNewUsers: 0,
-  totalUsers: 0,
-  onlineStores: 0,
-  totalStores: 0,
-  todayCouponUsed: 0,
-  couponUsageRate: 0
+  pendingArrival: 0,
+  pendingRefunds: 0,
+  pendingReplies: 0,
+  unreadNotifications: 0
 })
 
-const chartPeriod = ref('7')
-const charts = reactive({})
-const rankings = reactive({ storeRankings: [], scriptRankings: [] })
-const realtime = reactive({
-  recentReservations: [],
-  hotScripts: [],
-  recentCouponUses: []
-})
+const today = new Date()
+const todayStr = formatDate(today)
+const todayLabel = computed(() =>
+  today.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long'
+  })
+)
 
-// 图表refs
-const revenueChart = ref(null)
-const storeRankChart = ref(null)
-const scriptRankChart = ref(null)
-const sourceChart = ref(null)
-const userGrowthChart = ref(null)
-const memberChart = ref(null)
-
-let refreshInterval = null
-
-// 加载概览数据
-const loadOverview = async () => {
-  try {
-    const { data } = await request.get('/statistics/overview')
-    Object.assign(overview, data)
-  } catch (error) {
-    console.error('加载概览数据失败', error)
-    // 使用默认值，避免页面崩溃
-    Object.assign(overview, {
-      todayRevenue: 0,
-      revenueGrowth: 0,
-      todayReservations: 0,
-      reservationGrowth: 0,
-      todayNewUsers: 0,
-      totalUsers: 0,
-      onlineStores: 0,
-      totalStores: 0,
-      todayCouponUsed: 0,
-      couponUsageRate: 0
-    })
+const summaryCards = computed(() => [
+  {
+    key: 'todayReservations',
+    title: '今天预约数',
+    value: summary.todayReservations,
+    description: '查看今天全部预约安排',
+    route: '/reservation/list',
+    icon: Calendar,
+    tone: 'tone-blue'
+  },
+  {
+    key: 'pendingArrival',
+    title: '待到店',
+    value: summary.pendingArrival,
+    description: '已支付但尚未完成的今日预约',
+    route: '/reservation/list',
+    icon: Clock,
+    tone: 'tone-green'
+  },
+  {
+    key: 'pendingRefunds',
+    title: '待退款',
+    value: summary.pendingRefunds,
+    description: '需要尽快处理的退款申请',
+    route: '/reservation/refund',
+    icon: Money,
+    tone: 'tone-orange'
+  },
+  {
+    key: 'pendingReplies',
+    title: '待回复评价',
+    value: summary.pendingReplies,
+    description: '尚未回复的门店评价',
+    route: '/store/review',
+    icon: ChatDotRound,
+    tone: 'tone-red'
+  },
+  {
+    key: 'unreadNotifications',
+    title: '未读通知',
+    value: summary.unreadNotifications,
+    description: '系统和门店消息待查看',
+    route: '/notification/index',
+    icon: Bell,
+    tone: 'tone-dark'
   }
-}
+])
 
-// 加载图表数据
-const loadCharts = async () => {
-  try {
-    const { data } = await request.get('/statistics/charts', {
-      params: { days: chartPeriod.value }
-    })
-    Object.assign(charts, data)
-    initCharts()
-  } catch (error) {
-    console.error('加载图表数据失败', error)
-    // 使用空数据，避免页面崩溃
-    Object.assign(charts, {
-      revenueDates: [],
-      revenueAmounts: [],
-      reservationSource: {},
-      userGrowthDates: [],
-      userGrowthCounts: [],
-      memberLevelDistribution: {}
-    })
-    initCharts()
-  }
-}
-
-// 加载排行榜数据
-const loadRankings = async () => {
-  try {
-    const { data } = await request.get('/statistics/rankings', {
-      params: { limit: 10 }
-    })
-    Object.assign(rankings, data)
-    updateRankingCharts()
-  } catch (error) {
-    console.error('加载排行榜数据失败', error)
-    // 使用空数据，避免页面崩溃
-    Object.assign(rankings, {
-      storeRankings: [],
-      scriptRankings: []
-    })
-    updateRankingCharts()
-  }
-}
-
-// 加载实时数据
-const loadRealtime = async () => {
-  try {
-    const { data } = await request.get('/statistics/realtime', {
-      params: { limit: 10 }
-    })
-    Object.assign(realtime, data)
-  } catch (error) {
-    console.error('加载实时数据失败', error)
-    // 使用空数据，避免页面崩溃
-    Object.assign(realtime, {
-      recentReservations: [],
-      hotScripts: [],
-      recentCouponUses: []
-    })
-  }
-}
-
-// 初始化图表
-const initCharts = () => {
-  // 营业额趋势图
-  if (revenueChart.value) {
-    const chart = echarts.init(revenueChart.value)
-    chart.setOption({
-      tooltip: { trigger: 'axis' },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: charts.revenueDates || [],
-        axisLine: { lineStyle: { color: '#666' } }
-      },
-      yAxis: {
-        type: 'value',
-        axisLine: { lineStyle: { color: '#666' } }
-      },
-      series: [{
-        data: charts.revenueAmounts || [],
-        type: 'line',
-        smooth: true,
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: 'rgba(102, 126, 234, 0.6)' },
-            { offset: 1, color: 'rgba(102, 126, 234, 0.1)' }
-          ])
-        },
-        lineStyle: { color: '#667eea', width: 3 },
-        itemStyle: { color: '#667eea' }
-      }]
-    })
-  }
-
-  // 预约来源分布
-  if (sourceChart.value) {
-    const chart = echarts.init(sourceChart.value)
-    const sourceData = Object.entries(charts.reservationSource || {}).map(([name, value]) => ({
-      name, value
-    }))
-    chart.setOption({
-      tooltip: { trigger: 'item' },
-      legend: { bottom: 10, textStyle: { color: '#666' } },
-      series: [{
-        type: 'pie',
-        radius: ['40%', '70%'],
-        avoidLabelOverlap: false,
-        label: { show: true },
-        data: sourceData,
-        color: ['#667eea', '#764ba2', '#f093fb']
-      }]
-    })
-  }
-
-  // 用户增长趋势
-  if (userGrowthChart.value) {
-    const chart = echarts.init(userGrowthChart.value)
-    const hasData = charts.userGrowthDates && charts.userGrowthDates.length > 0
-
-    if (hasData) {
-      chart.setOption({
-        tooltip: { trigger: 'axis' },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-        xAxis: {
-          type: 'category',
-          data: charts.userGrowthDates || [],
-          axisLine: { lineStyle: { color: '#666' } }
-        },
-        yAxis: {
-          type: 'value',
-          axisLine: { lineStyle: { color: '#666' } }
-        },
-        series: [{
-          data: charts.userGrowthCounts || [],
-          type: 'line',
-          smooth: true,
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: 'rgba(118, 75, 162, 0.6)' },
-              { offset: 1, color: 'rgba(118, 75, 162, 0.1)' }
-            ])
-          },
-          lineStyle: { color: '#764ba2', width: 3 },
-          itemStyle: { color: '#764ba2' }
-        }]
-      })
-    } else {
-      // 显示空数据提示
-      chart.setOption({
-        title: {
-          text: '暂无数据',
-          subtext: '近期没有新用户注册',
-          left: 'center',
-          top: 'center',
-          textStyle: { color: '#999', fontSize: 16 },
-          subtextStyle: { color: '#999', fontSize: 12 }
-        }
-      })
+const quickActions = computed(() => {
+  const actions = [
+    {
+      label: '预约列表',
+      text: '处理今天订单与到店状态',
+      route: '/reservation/list',
+      icon: Tickets
+    },
+    {
+      label: '退款管理',
+      text: '优先处理退款申请',
+      route: '/reservation/refund',
+      icon: Money
+    },
+    {
+      label: '评价回复',
+      text: '及时跟进用户反馈',
+      route: '/store/review',
+      icon: ChatDotRound
+    },
+    {
+      label: '排期管理',
+      text: '查看并调整今日场次',
+      route: '/script/schedule',
+      icon: DataBoard
     }
+  ]
+
+  return loginType === 'store'
+    ? actions
+    : actions.filter(action => action.route !== '/script/schedule')
+})
+
+function formatDate(date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, '0')
+  const day = `${date.getDate()}`.padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
+function isSameDay(value) {
+  if (!value) return false
+  return String(value).slice(0, 10) === todayStr
+}
+
+function formatClock(value) {
+  if (!value) return '--:--'
+  return String(value).slice(0, 5)
+}
+
+function getScheduleTagType(item) {
+  if ((item.currentPlayers || 0) >= (item.maxPlayers || 0) && (item.maxPlayers || 0) > 0) {
+    return 'danger'
+  }
+  if ((item.currentPlayers || 0) > 0) {
+    return 'warning'
+  }
+  return item.status === 2 ? 'info' : 'success'
+}
+
+function getScheduleLabel(item) {
+  if ((item.currentPlayers || 0) >= (item.maxPlayers || 0) && (item.maxPlayers || 0) > 0) {
+    return '已满'
+  }
+  if ((item.currentPlayers || 0) > 0) {
+    return '已预订'
+  }
+  if (item.status === 2) {
+    return '已关闭'
+  }
+  return '可预约'
+}
+
+async function fetchAllRecords(url, baseParams = {}, maxPages = 20) {
+  const pageSize = 100
+  let page = 1
+  let total = 0
+  const records = []
+
+  while (page <= maxPages) {
+    const res = await request.get(url, {
+      params: {
+        ...baseParams,
+        page,
+        pageSize
+      }
+    })
+
+    const payload = res.data || {}
+    const pageRecords = payload.records || []
+    total = payload.total || 0
+    records.push(...pageRecords)
+
+    if (!pageRecords.length || records.length >= total) {
+      break
+    }
+
+    page += 1
   }
 
-  // 会员等级分布
-  if (memberChart.value) {
-    const chart = echarts.init(memberChart.value)
-    const memberData = Object.entries(charts.memberLevelDistribution || {}).map(([name, value]) => ({
-      name, value
+  return { records, total }
+}
+
+function buildRoomUsage(schedules) {
+  const grouped = schedules.reduce((acc, item) => {
+    const key = item.roomName || `房间-${item.roomId || 'unknown'}`
+    if (!acc[key]) {
+      acc[key] = {
+        roomName: key,
+        totalSessions: 0,
+        bookedSessions: 0,
+        fullSessions: 0,
+        firstStart: formatClock(item.startTime),
+        lastEnd: formatClock(item.endTime)
+      }
+    }
+
+    const room = acc[key]
+    room.totalSessions += 1
+    if ((item.currentPlayers || 0) > 0) {
+      room.bookedSessions += 1
+    }
+    if ((item.currentPlayers || 0) >= (item.maxPlayers || 0) && (item.maxPlayers || 0) > 0) {
+      room.fullSessions += 1
+    }
+    room.firstStart = room.firstStart < formatClock(item.startTime) ? room.firstStart : formatClock(item.startTime)
+    room.lastEnd = room.lastEnd > formatClock(item.endTime) ? room.lastEnd : formatClock(item.endTime)
+    return acc
+  }, {})
+
+  return Object.values(grouped)
+    .map(room => ({
+      ...room,
+      utilization: room.totalSessions ? Math.round((room.bookedSessions / room.totalSessions) * 100) : 0
     }))
-    chart.setOption({
-      tooltip: { trigger: 'item' },
-      legend: { bottom: 10, textStyle: { color: '#666' } },
-      series: [{
-        type: 'pie',
-        radius: ['50%', '80%'],
-        data: memberData,
-        color: ['#cd7f32', '#c0c0c0', '#ffd700', '#b9f2ff']
-      }]
-    })
+    .sort((a, b) => a.roomName.localeCompare(b.roomName, 'zh-CN'))
+}
+
+async function loadSummary() {
+  const requests = [
+    fetchAllRecords('/reservation/page'),
+    request.get('/reservation/page', { params: { page: 1, pageSize: 1, hasRefund: true } }),
+    fetchAllRecords('/store/review/page'),
+    userService.get('/admin/notification/unread-count')
+  ]
+
+  if (effectiveStoreId.value) {
+    requests.push(request.get('/script/schedule/list', { params: { date: todayStr } }))
+  }
+
+  const responseList = await Promise.all(requests)
+  const [{ records: reservations }, refundRes, { records: reviews }, unreadRes, scheduleRes] = responseList
+
+  const createdTodayReservations = reservations.filter(item => isSameDay(item.createTime))
+  const todayReservations = reservations.filter(item => isSameDay(item.reservationTime))
+  summary.todayReservations = createdTodayReservations.length
+  summary.pendingArrival = todayReservations.filter(item =>
+    Number(item.payStatus) === 1
+      && Number(item.status) === 2
+      && Number(item.checkInStatus || 0) !== 1
+  ).length
+  summary.pendingRefunds = refundRes.data?.total || 0
+  summary.pendingReplies = reviews.filter(item => !item.reply || !String(item.reply).trim()).length
+  summary.unreadNotifications = unreadRes.data || 0
+
+  const schedules = scheduleRes?.data || []
+  scheduleTimeline.value = schedules.slice().sort((a, b) => {
+    const left = `${a.scheduleDate || ''} ${a.startTime || ''}`
+    const right = `${b.scheduleDate || ''} ${b.startTime || ''}`
+    return left.localeCompare(right)
+  })
+  roomUsage.value = buildRoomUsage(scheduleTimeline.value)
+}
+
+function goTo(path) {
+  router.push(path)
+}
+
+async function refreshData() {
+  loading.value = true
+  try {
+    await loadSummary()
+  } finally {
+    loading.value = false
   }
 }
 
-// 更新排行榜图表
-const updateRankingCharts = () => {
-  // 门店业绩排行
-  if (storeRankChart.value && rankings.storeRankings) {
-    const chart = echarts.init(storeRankChart.value)
-    chart.setOption({
-      tooltip: { trigger: 'axis' },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: {
-        type: 'value',
-        axisLine: { lineStyle: { color: '#666' } }
-      },
-      yAxis: {
-        type: 'category',
-        data: rankings.storeRankings.map(item => item.name).reverse(),
-        axisLine: { lineStyle: { color: '#666' } }
-      },
-      series: [{
-        type: 'bar',
-        data: rankings.storeRankings.map(item => item.revenue).reverse(),
-        itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: '#667eea' },
-            { offset: 1, color: '#764ba2' }
-          ])
-        },
-        barWidth: '60%'
-      }]
-    })
-  }
-
-  // 剧本热度排行
-  if (scriptRankChart.value && rankings.scriptRankings) {
-    const chart = echarts.init(scriptRankChart.value)
-    chart.setOption({
-      tooltip: { trigger: 'axis' },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: {
-        type: 'value',
-        axisLine: { lineStyle: { color: '#666' } }
-      },
-      yAxis: {
-        type: 'category',
-        data: rankings.scriptRankings.map(item => item.name).reverse(),
-        axisLine: { lineStyle: { color: '#666' } }
-      },
-      series: [{
-        type: 'bar',
-        data: rankings.scriptRankings.map(item => item.bookingCount).reverse(),
-        itemStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-            { offset: 0, color: '#f093fb' },
-            { offset: 1, color: '#f5576c' }
-          ])
-        },
-        barWidth: '60%'
-      }]
-    })
-  }
+function handleWindowFocus() {
+  refreshData()
 }
 
-// 刷新所有数据
-const refreshData = () => {
-  loadOverview()
-  loadCharts()
-  loadRankings()
-  loadRealtime()
-}
-
-// 全屏切换
-const toggleFullScreen = () => {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen()
-  } else {
-    document.exitFullscreen()
+function handleVisibilityChange() {
+  if (!document.hidden) {
+    refreshData()
   }
-}
-
-// 格式化数字
-const formatNumber = (num) => {
-  return (num || 0).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 onMounted(() => {
   refreshData()
-  // 每30秒自动刷新
-  refreshInterval = setInterval(refreshData, 30000)
+  window.addEventListener('focus', handleWindowFocus)
+  document.addEventListener('visibilitychange', handleVisibilityChange)
 })
 
 onUnmounted(() => {
-  if (refreshInterval) {
-    clearInterval(refreshInterval)
-  }
+  window.removeEventListener('focus', handleWindowFocus)
+  document.removeEventListener('visibilitychange', handleVisibilityChange)
 })
 </script>
 
 <style scoped>
-.statistics-dashboard {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 20px;
+.workbench-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 28px 32px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at top right, rgba(255, 214, 102, 0.35), transparent 28%),
+    linear-gradient(135deg, #133c55 0%, #1f6f78 55%, #2d936c 100%);
   color: #fff;
 }
 
-.dashboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.title {
-  font-size: 32px;
-  font-weight: bold;
-  margin: 0;
-  text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-}
-
-.header-actions {
-  display: flex;
-  gap: 10px;
-}
-
-/* 指标卡片 */
-.metrics-cards {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
-}
-
-.metric-card {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  transition: transform 0.3s;
-}
-
-.metric-card:hover {
-  transform: translateY(-5px);
-}
-
-.metric-icon {
-  font-size: 48px;
-}
-
-.metric-content {
-  flex: 1;
-}
-
-.metric-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.metric-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 5px;
-}
-
-.metric-growth {
-  font-size: 14px;
-  font-weight: bold;
-}
-
-.metric-growth.positive {
-  color: #67c23a;
-}
-
-.metric-growth.negative {
-  color: #f56c6c;
-}
-
-.metric-sub {
+.eyebrow {
+  margin: 0 0 8px;
   font-size: 12px;
-  color: #999;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  opacity: 0.8;
 }
 
-/* 图表容器 */
-.charts-container {
-  margin-bottom: 20px;
+.hero-card h1 {
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
 }
 
-.chart-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 20px;
+.hero-desc {
+  margin: 12px 0 0;
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.86);
+  line-height: 1.7;
 }
 
-.chart-box {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-}
-
-.chart-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
-}
-
-.chart-content {
-  height: 300px;
-}
-
-/* 实时数据流 */
-.realtime-container {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-}
-
-.realtime-box {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-  height: 280px;
+.hero-meta {
   display: flex;
   flex-direction: column;
+  align-items: flex-end;
+  justify-content: space-between;
+  min-width: 180px;
 }
 
-.realtime-header {
+.hero-date {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  font-size: 14px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.summary-card {
+  border: 0;
+  border-radius: 20px;
+  padding: 20px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: #fff;
+  box-shadow: 0 14px 30px rgba(19, 60, 85, 0.12);
+}
+
+.summary-card:hover {
+  transform: translateY(-4px);
+}
+
+.card-top {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid #f0f0f0;
+  justify-content: space-between;
 }
 
-.realtime-icon {
+.card-title {
+  font-size: 14px;
+  opacity: 0.92;
+}
+
+.card-icon {
   font-size: 20px;
 }
 
-.realtime-title {
-  font-size: 16px;
-  font-weight: bold;
-  color: #333;
+.card-value {
+  margin-top: 18px;
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.realtime-content {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  padding: 0 15px;
+.card-foot {
+  margin-top: 10px;
+  font-size: 13px;
+  opacity: 0.88;
+  line-height: 1.6;
 }
 
-.realtime-item {
-  padding: 10px;
-  margin-bottom: 8px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #333;
+.tone-blue {
+  background: linear-gradient(135deg, #20639b, #3caea3);
 }
 
-.item-user, .item-script, .item-store, .item-coupon {
-  font-weight: bold;
-  color: #667eea;
+.tone-green {
+  background: linear-gradient(135deg, #2d6a4f, #52b788);
 }
 
-.hot-rank {
-  font-weight: bold;
-  color: #f5576c;
-  margin-right: 8px;
+.tone-orange {
+  background: linear-gradient(135deg, #bc6c25, #dda15e);
 }
 
-.hot-name {
-  color: #333;
-  margin-right: 10px;
+.tone-red {
+  background: linear-gradient(135deg, #9d0208, #dc2f02);
 }
 
-.hot-count {
-  color: #667eea;
-  font-weight: bold;
-  float: right;
+.tone-dark {
+  background: linear-gradient(135deg, #283618, #606c38);
 }
 
-/* 空状态样式 */
-.empty-state {
+.content-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1.35fr;
+  gap: 20px;
+}
+
+.panel {
+  border: none;
+  border-radius: 20px;
+}
+
+:deep(.panel .el-card__header) {
+  border-bottom: 1px solid #eef2f4;
+  padding-bottom: 16px;
+}
+
+.panel-header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 200px;
-  opacity: 0.6;
+  font-size: 17px;
+  font-weight: 600;
+  color: #133c55;
 }
 
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 10px;
+.panel-extra {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7c85;
 }
 
-.empty-text {
-  font-size: 14px;
-  color: #999;
+.quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
-/* 滚动动画 */
-.realtime-content.scrolling {
-  overflow: hidden !important;
-  position: relative;
-  padding: 0 !important;
+.quick-action {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  width: 100%;
+  padding: 16px;
+  border: 1px solid #e7edef;
+  border-radius: 16px;
+  background: #fbfdfd;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.scroll-wrapper {
+.quick-action:hover {
+  border-color: #2d936c;
+  transform: translateY(-2px);
+}
+
+.quick-icon {
+  margin-top: 2px;
+  font-size: 20px;
+  color: #2d936c;
+}
+
+.quick-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #17324d;
+}
+
+.quick-text {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #667085;
+  line-height: 1.6;
+}
+
+.room-list {
   display: flex;
   flex-direction: column;
-  animation: scroll-up 30s linear infinite;
-  will-change: transform;
+  gap: 14px;
 }
 
-.realtime-content.scrolling:hover .scroll-wrapper {
-  animation-play-state: paused;
+.room-item {
+  padding: 16px;
+  border-radius: 16px;
+  background: #f8fbfb;
+  border: 1px solid #edf3f3;
 }
 
-.scroll-content {
-  flex-shrink: 0;
-  padding: 15px;
+.room-main {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
 }
 
-.scroll-content .realtime-item {
-  margin-bottom: 10px;
+.room-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #17324d;
 }
 
-@keyframes scroll-up {
-  0% {
-    transform: translateY(0);
+.room-meta,
+.room-foot {
+  color: #667085;
+  font-size: 13px;
+}
+
+.room-meta {
+  margin-top: 4px;
+}
+
+.room-foot {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.timeline-section {
+  display: block;
+}
+
+.timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 88px 20px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.timeline-time {
+  padding-top: 2px;
+  text-align: right;
+}
+
+.time-start {
+  font-size: 15px;
+  font-weight: 700;
+  color: #17324d;
+}
+
+.time-end {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #667085;
+}
+
+.timeline-line {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  min-height: 100%;
+}
+
+.timeline-line::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: -20px;
+  left: 50%;
+  width: 2px;
+  background: linear-gradient(180deg, #2d936c 0%, #d8ece3 100%);
+  transform: translateX(-50%);
+}
+
+.timeline-item:last-child .timeline-line::before {
+  bottom: 0;
+}
+
+.timeline-dot {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #2d936c;
+  box-shadow: 0 0 0 4px rgba(45, 147, 108, 0.15);
+}
+
+.timeline-content {
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: #fbfdfd;
+  border: 1px solid #ecf1f3;
+}
+
+.timeline-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.timeline-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #17324d;
+}
+
+.timeline-meta {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #667085;
+}
+
+.timeline-remark {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #dfe7ea;
+  color: #51606b;
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+@media (max-width: 1400px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-  100% {
-    transform: translateY(-50%);
-  }
-}
 
-/* 响应式 */
-@media (max-width: 1600px) {
-  .metrics-cards {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 1200px) {
-  .chart-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .realtime-container {
+  .content-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .hero-card {
+    flex-direction: column;
+  }
+
+  .hero-meta {
+    align-items: flex-start;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-item {
+    grid-template-columns: 72px 16px minmax(0, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (max-width: 640px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-card {
+    padding: 22px;
   }
 }
 </style>

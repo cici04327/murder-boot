@@ -41,5 +41,12 @@ public interface PaymentService {
      * @param adminRemark 管理员备注
      */
     void processRefund(Long reservationId, Integer approved, String adminRemark);
+
+    /**
+     * 系统自动退款
+     * @param reservationId 预约ID
+     * @param reason 退款原因
+     */
+    void autoRefund(Long reservationId, String reason);
 }
 

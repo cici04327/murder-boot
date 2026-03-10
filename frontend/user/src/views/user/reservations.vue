@@ -57,19 +57,28 @@
           </template>
         </el-tab-pane>
       </el-tabs>
-      
+
       <div class="reservations-list" v-loading="loading">
         <div class="reservation-item mystery-item" :class="getItemClass(item)" v-for="item in reservations" :key="item.id">
           <div class="item-header">
             <div class="order-info">
-              <span class="case-icon">{{ getStatusEmoji(item.status) }}</span>
+              <span class="case-icon">{{ getStatusEmoji(item) }}</span>
               <span class="order-no">案件编号：#{{ item.id }}</span>
             </div>
-            <el-tag :type="getStatusType(item.status)" class="status-tag" effect="dark">
-              {{ getStatusText(item.status) }}
-            </el-tag>
+            <div class="header-tags">
+              <el-tag :type="getStatusType(item)" class="status-tag" effect="dark">
+                {{ getStatusText(item) }}
+              </el-tag>
+              <el-tag
+                :type="item.checkInStatus === 1 ? 'success' : 'info'"
+                class="status-tag"
+                effect="dark"
+              >
+                {{ item.checkInStatus === 1 ? '已核销' : '未核销' }}
+              </el-tag>
+            </div>
           </div>
-          
+
           <el-row :gutter="20" class="item-content">
             <el-col :span="16">
               <div class="info-row">
@@ -92,12 +101,16 @@
                 <span class="label">👥 人数：</span>
                 <span class="value">{{ item.playerCount }}位侦探</span>
               </div>
+              <div class="info-row" v-if="item.payStatus === 1 || item.checkInCode">
+                <span class="label">🔐 核销码：</span>
+                <span class="value">{{ item.checkInCode || '-' }}</span>
+              </div>
             </el-col>
-            
+
             <el-col :span="8" class="price-actions">
               <div class="price">
                 <span class="label">报酬：</span>
-                <span class="value">¥{{ item.totalPrice }}</span>
+                <span class="value">¥{{ Number(item.actualAmount || item.totalPrice || 0).toFixed(2) }}</span>
               </div>
               <div class="actions">
                 <el-button
@@ -110,7 +123,7 @@
                   💰 支付报酬
                 </el-button>
                 <el-button
-                  v-if="item.payStatus === 1 && item.status < 3 && (!item.refundStatus || item.refundStatus === 0 || item.refundStatus === 3)"
+                  v-if="canRefund(item)"
                   type="warning"
                   size="small"
                   class="action-btn"
@@ -155,7 +168,7 @@
                   ✅ 已评价
                 </el-tag>
                 <el-button
-                  v-if="item.payStatus === 0 && item.status < 2"
+                  v-if="item.payStatus === 0 && getDerivedStatus(item) < 2"
                   size="small"
                   class="action-btn cancel-btn"
                   @click="handleCancel(item)"
@@ -169,14 +182,14 @@
             </el-col>
           </el-row>
         </div>
-        
+
         <EmptyState
           v-if="!loading && reservations.length === 0"
           type="no-reservation"
           @action="$router.push('/reservation/create')"
         />
       </div>
-      
+
       <el-pagination
         v-if="total > 0"
         class="pagination"
@@ -189,7 +202,7 @@
         @current-change="handlePageChange"
       />
     </el-card>
-    
+
     <!-- 取消预约对话框 -->
     <el-dialog v-model="showCancelDialog" title="取消预约" width="400px">
       <el-form>
@@ -214,8 +227,7 @@
 import { ref, onMounted, onActivated } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/components/EmptyState.vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
 import { getMyReservations, cancelReservation } from '@/api/reservation'
 
 const router = useRouter()
@@ -230,7 +242,13 @@ const showCancelDialog = ref(false)
 const cancelReason = ref('')
 const currentCancelItem = ref(null)
 
-const getStatusType = (status) => {
+const getDerivedStatus = (item) => {
+  if (item.payStatus === 0) return 0
+  return item.status ?? 0
+}
+
+const getStatusType = (item) => {
+  const status = getDerivedStatus(item)
   const types = {
     0: 'warning',
     1: 'info',
@@ -241,7 +259,8 @@ const getStatusType = (status) => {
   return types[status] || 'info'
 }
 
-const getStatusText = (status) => {
+const getStatusText = (item) => {
+  const status = getDerivedStatus(item)
   const texts = {
     0: '待支付',
     1: '待确认',
@@ -252,8 +271,8 @@ const getStatusText = (status) => {
   return texts[status] || '未知'
 }
 
-// 获取状态对应的emoji
-const getStatusEmoji = (status) => {
+const getStatusEmoji = (item) => {
+  const status = getDerivedStatus(item)
   const emojis = {
     0: '💰',
     1: '⏳',
@@ -264,23 +283,28 @@ const getStatusEmoji = (status) => {
   return emojis[status] || '📋'
 }
 
-// 获取预约项的样式类
 const getItemClass = (item) => {
   const classes = []
-  if (item.status === 3) classes.push('completed')
-  if (item.status === 4) classes.push('cancelled')
-  if (item.payStatus === 0) classes.push('unpaid')
+  const status = getDerivedStatus(item)
+  if (status === 3) classes.push('completed')
+  if (status === 4) classes.push('cancelled')
+  if (status === 0) classes.push('unpaid')
   return classes.join(' ')
 }
 
+const canRefund = (item) => {
+  return item.payStatus === 1
+    && item.status < 3
+    && item.checkInStatus !== 1
+    && (!item.refundStatus || item.refundStatus === 0 || item.refundStatus === 3)
+}
+
 const handlePageChange = (newPage) => {
-  console.log('预约列表页码变化:', newPage)
   page.value = newPage
   loadReservations()
 }
 
 const handleSizeChange = (newSize) => {
-  console.log('预约列表每页大小变化:', newSize)
   pageSize.value = newSize
   page.value = 1
   loadReservations()
@@ -289,15 +313,17 @@ const handleSizeChange = (newSize) => {
 const loadReservations = async () => {
   loading.value = true
   try {
-    console.log('加载预约列表，参数:', { page: page.value, pageSize: pageSize.value })
     const params = {
       page: page.value,
       pageSize: pageSize.value
     }
-    if (activeTab.value !== 'all') {
-      params.status = parseInt(activeTab.value)
+
+    if (activeTab.value === '0') {
+      params.payStatus = 0
+    } else if (activeTab.value !== 'all') {
+      params.status = parseInt(activeTab.value, 10)
     }
-    
+
     const res = await getMyReservations(params)
     if (res.data) {
       if (Array.isArray(res.data)) {
@@ -309,31 +335,7 @@ const loadReservations = async () => {
       }
     }
   } catch (error) {
-    console.error('加载预约列表失败:', error)
-    // 模拟数据
-    reservations.value = [
-      {
-        id: 1001,
-        scriptName: '迷雾庄园',
-        storeName: '探案密室',
-        roomName: '推理房A',
-        reservationTime: '2024-01-15 14:00',
-        playerCount: 6,
-        totalPrice: 528,
-        status: 0
-      },
-      {
-        id: 1002,
-        scriptName: '时光旅人',
-        storeName: '时空剧本馆',
-        roomName: '沉浸房B',
-        reservationTime: '2024-01-16 15:00',
-        playerCount: 5,
-        totalPrice: 340,
-        status: 2
-      }
-    ]
-    total.value = 2
+    ElMessage.error(error.message || '加载预约列表失败')
   } finally {
     loading.value = false
   }
@@ -358,23 +360,19 @@ const confirmCancel = async () => {
     ElMessage.warning('请输入取消原因')
     return
   }
-  
+
   try {
-    const res = await cancelReservation(currentCancelItem.value.id, cancelReason.value)
-    if (res.code === 1 || res.code === 200) {
-      ElMessage.success('取消成功')
-      showCancelDialog.value = false
-      cancelReason.value = ''
-      loadReservations()
-    }
+    await cancelReservation(currentCancelItem.value.id, cancelReason.value)
+    ElMessage.success('取消成功')
+    showCancelDialog.value = false
+    cancelReason.value = ''
+    loadReservations()
   } catch (error) {
-    console.error('取消预约失败:', error)
+    ElMessage.error(error.message || '取消预约失败')
   }
 }
 
 const handleReview = (item) => {
-  // 检查是否已经评价过
-  // TODO: 调用API检查是否已评价
   router.push(`/reservation/review/${item.id}`)
 }
 
@@ -393,9 +391,7 @@ onMounted(() => {
   loadReservations()
 })
 
-// 页面激活时刷新数据（从其他页面返回时）
 onActivated(() => {
-  console.log('预约列表页面被激活，刷新数据')
   loadReservations()
 })
 </script>
@@ -602,6 +598,12 @@ onActivated(() => {
   font-size: 15px;
 }
 
+.header-tags {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .status-tag {
   font-size: 13px;
   padding: 6px 14px;
@@ -717,33 +719,38 @@ onActivated(() => {
     gap: 15px;
     text-align: center;
   }
-  
+
   .header-left {
     flex-direction: column;
   }
-  
+
   .header-emoji {
     font-size: 40px;
   }
-  
+
   .header-text h1 {
     font-size: 22px;
   }
-  
+
   .create-btn {
     width: 100%;
   }
-  
+
   .item-content .el-col {
     margin-bottom: 15px;
   }
-  
+
   .price-actions {
     align-items: stretch;
   }
-  
+
   .price {
     text-align: center;
+  }
+
+  .header-tags {
+    flex-direction: column;
+    align-items: flex-end;
   }
 }
 </style>

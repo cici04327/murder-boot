@@ -17,7 +17,7 @@ const routes = [
         path: 'dashboard',
         name: 'Dashboard',
         component: () => import('@/views/dashboard/index.vue'),
-        meta: { title: '首页', icon: 'HomeFilled', roles: ['admin', 'store'] }
+        meta: { title: '工作台', icon: 'HomeFilled', roles: ['admin', 'store'] }
       }
     ]
   },
@@ -44,7 +44,7 @@ const routes = [
         path: 'statistics',
         name: 'StoreStatistics',
         component: () => import('@/views/store/statistics.vue'),
-        meta: { title: '门店统计', icon: 'DataAnalysis', roles: ['admin', 'store'] }
+        meta: { title: '门店统计', icon: 'DataAnalysis', roles: ['admin'] }
       },
       {
         path: 'room',
@@ -270,34 +270,32 @@ const router = createRouter({
   routes
 })
 
-// 检查路由权限
 const hasPermission = (route, role) => {
   if (!route.meta?.roles) return true
   return route.meta.roles.includes(role)
 }
 
-// 路由守卫
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('admin-token')
-  
+
   if (to.path === '/login') {
     next()
+    return
+  }
+
+  if (!token) {
+    next('/login')
+    return
+  }
+
+  const loginType = localStorage.getItem('admin-login-type') || 'admin'
+  const currentRole = loginType === 'store' ? 'store' : 'admin'
+
+  if (hasPermission(to, currentRole)) {
+    next()
   } else {
-    if (token) {
-      // 检查权限
-      const loginType = localStorage.getItem('admin-login-type') || 'admin'
-      const currentRole = loginType === 'store' ? 'store' : 'admin'
-      
-      if (hasPermission(to, currentRole)) {
-        next()
-      } else {
-        // 无权限，跳转到首页
-        console.warn('无权限访问:', to.path)
-        next('/dashboard')
-      }
-    } else {
-      next('/login')
-    }
+    console.warn('无权限访问:', to.path)
+    next('/dashboard')
   }
 })
 

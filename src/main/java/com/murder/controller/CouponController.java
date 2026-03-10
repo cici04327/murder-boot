@@ -22,7 +22,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/coupon")
-@Tag(name = "优惠券接�?")
+@Tag(name = "优惠券接口")
 @Slf4j
 public class CouponController {
 

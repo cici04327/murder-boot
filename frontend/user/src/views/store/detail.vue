@@ -470,7 +470,7 @@ const getDefaultDescription = (storeName = '本店') => {
       <p>门店现有<strong>200+优质剧本</strong>，涵盖本格推理、情感沉浸、恐怖惊悚、欢乐互动、机制硬核、还原阵营等多种类型，<strong>每月更新10+新本</strong>，紧跟市场潮流。</p>
       <p><strong>热门剧本推荐：</strong></p>
       <ul>
-        <li>🔍 <strong>本格推理：</strong>《云使》《年轮》《魔术杀人事件》等经典本格</li>
+        <li>🔍 <strong>本格推理：</strong>《东方快车谋杀案》《无人生还》《罗生门》等经典本格</li>
         <li>💔 <strong>情感沉浸：</strong>《雾中回忆》《时光代理人》《余生请多指教》</li>
         <li>👻 <strong>恐怖惊悚：</strong>《午夜出租车》《诡宅》《死亡循环》</li>
         <li>😄 <strong>欢乐互动：</strong>《饭局狼人杀》《谁是卧底》《剧本杀派对》</li>
@@ -651,7 +651,7 @@ const loadStoreDetail = async () => {
           <p>门店现有<strong>200+优质剧本</strong>，涵盖本格推理、情感沉浸、恐怖惊悚、欢乐互动、机制硬核、还原阵营等多种类型，<strong>每月更新10+新本</strong>，紧跟市场潮流。</p>
           <p><strong>热门剧本推荐：</strong></p>
           <ul>
-            <li>🔍 <strong>本格推理：</strong>《云使》《年轮》《魔术杀人事件》等经典本格</li>
+            <li>🔍 <strong>本格推理：</strong>《东方快车谋杀案》《无人生还》《罗生门》等经典本格</li>
             <li>💔 <strong>情感沉浸：</strong>《雾中回忆》《时光代理人》《余生请多指教》</li>
             <li>👻 <strong>恐怖惊悚：</strong>《午夜出租车》《诡宅》《死亡循环》</li>
             <li>😄 <strong>欢乐互动：</strong>《饭局狼人杀》《谁是卧底》《剧本杀派对》</li>

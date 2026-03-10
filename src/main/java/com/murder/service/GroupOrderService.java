@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.murder.entity.GroupOrder;
 import com.murder.entity.GroupMember;
+
 import java.util.List;
 import java.util.Map;
 
@@ -12,7 +13,7 @@ public interface GroupOrderService extends IService<GroupOrder> {
     /**
      * 分页查询拼单
      */
-    Page<Map<String, Object>> pageQuery(Integer page, Integer pageSize, Long scriptId, Integer playerCount, Integer status);
+    Page<Map<String, Object>> pageQuery(Integer page, Integer pageSize, Long scriptId, Long categoryId, Integer playerCount, Integer status);
     
     /**
      * 获取热门拼单
@@ -53,4 +54,9 @@ public interface GroupOrderService extends IService<GroupOrder> {
      * 获取拼单成员
      */
     List<GroupMember> getGroupMembers(Long groupId);
+
+    /**
+     * 处理超时未成团的拼单
+     */
+    void processExpiredGroups();
 }

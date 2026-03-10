@@ -413,8 +413,8 @@ const placeholderText = computed(() => placeholders[placeholderIndex.value])
 const searchHistory = ref([])
 const hotSearches = ref([
   { keyword: '年轮', count: 12580, isHot: true },
-  { keyword: '云使', count: 9820, isHot: true },
-  { keyword: '古木吟', count: 8650 },
+  { keyword: '东方快车谋杀案', count: 9820, isHot: true },
+  { keyword: '无人生还', count: 8650 },
   { keyword: '红蝶', count: 7230, isNew: true },
   { keyword: '机械迷城', count: 6890 },
   { keyword: '长安', count: 5670 },

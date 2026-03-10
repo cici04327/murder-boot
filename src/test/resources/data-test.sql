@@ -33,9 +33,9 @@ INSERT INTO store_room (id, store_id, name, capacity, price, status) VALUES
 (4, 2, 'B02包间', 12, 200.00, 1);
 
 -- 插入测试预约
-INSERT INTO reservation (id, reservation_no, user_id, store_id, room_id, script_id, reservation_time, duration, player_count, total_price, status, pay_status) VALUES
-(1, 'RSV202601230001', 1, 1, 1, 1, '2026-01-25 14:00:00', 4.0, 6, 198.00, 1, 1),
-(2, 'RSV202601230002', 1, 2, 3, 2, '2026-01-26 19:00:00', 3.5, 5, 168.00, 0, 0);
+INSERT INTO reservation (id, reservation_no, user_id, store_id, room_id, script_id, reservation_time, duration, player_count, total_price, status, pay_status, check_in_code, check_in_status) VALUES
+(1, 'RSV202601230001', 1, 1, 1, 1, '2026-01-25 14:00:00', 4.0, 6, 198.00, 1, 1, '123456', 0),
+(2, 'RSV202601230002', 1, 2, 3, 2, '2026-01-26 19:00:00', 3.5, 5, 168.00, 0, 0, '654321', 0);
 
 -- 插入优惠券
 INSERT INTO coupon (id, name, type, value, min_amount, start_time, end_time, total_count, status) VALUES
