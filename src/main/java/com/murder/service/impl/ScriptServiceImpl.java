@@ -130,10 +130,9 @@ public class ScriptServiceImpl implements ScriptService {
     }
     
     /**
-     * 获取热门剧本（启用缓存 - 1小时过期）
+     * 获取热门剧本（去掉 @Cacheable 避免 Redis 序列化问题导致 500）
      */
     @Override
-    @org.springframework.cache.annotation.Cacheable(value = "hot:scripts", unless = "#result == null || #result.isEmpty()")
     public List<Script> getHotScripts() {
         log.info("获取热门剧本...");
         try {
@@ -147,15 +146,14 @@ public class ScriptServiceImpl implements ScriptService {
             return scripts;
         } catch (Exception e) {
             log.error("获取热门剧本失败", e);
-            throw e;
+            return new java.util.ArrayList<>();
         }
     }
     
     /**
-     * 获取推荐剧本（启用缓存 - 1小时过期）
+     * 获取推荐剧本（去掉 @Cacheable 避免 Redis 序列化问题导致 500）
      */
     @Override
-    @org.springframework.cache.annotation.Cacheable(value = "recommended:scripts", unless = "#result == null || #result.isEmpty()")
     public List<Script> getRecommendedScripts() {
         log.info("获取推荐剧本...");
         try {
@@ -169,7 +167,7 @@ public class ScriptServiceImpl implements ScriptService {
             return scripts;
         } catch (Exception e) {
             log.error("获取推荐剧本失败", e);
-            throw e;
+            return new java.util.ArrayList<>();
         }
     }
 

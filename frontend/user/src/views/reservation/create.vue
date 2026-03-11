@@ -10,8 +10,27 @@
       </div>
     </div>
 
-    <!-- 步骤指示器 -->
-    <div class="steps-container">
+    <!-- 排期驱动模式：场次信息横幅（有 scheduleId 时显示） -->
+    <div class="schedule-banner" v-if="selectedSchedule">
+      <div class="schedule-banner-inner">
+        <div class="sb-icon">🎭</div>
+        <div class="sb-info">
+          <div class="sb-title">您已选择以下场次</div>
+          <div class="sb-detail">
+            <span class="sb-date">📅 {{ selectedSchedule.scheduleDate }}</span>
+            <span class="sb-time">🕐 {{ formatTime(selectedSchedule.startTime) }} — {{ formatTime(selectedSchedule.endTime) }}</span>
+            <span class="sb-room" v-if="selectedSchedule.roomName">🚪 {{ selectedSchedule.roomName }}</span>
+            <span class="sb-remain" :class="getRemainClass(selectedSchedule)">{{ getRemainText(selectedSchedule) }}</span>
+          </div>
+        </div>
+        <el-button class="sb-change-btn" text @click="router.back()">
+          更换场次 →
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 步骤指示器（无排期驱动时显示） -->
+    <div class="steps-container" v-else>
       <div class="step-item" :class="{ active: currentStep >= 1, completed: currentStep > 1 }">
         <div class="step-icon">📜</div>
         <div class="step-label">选择剧本</div>
@@ -47,10 +66,30 @@
           <div class="form-card">
             <div class="card-header">
               <span class="card-icon">📜</span>
-              <span class="card-title">选择剧本</span>
+              <span class="card-title">{{ selectedSchedule ? '剧本信息' : '选择剧本' }}</span>
             </div>
             <div class="card-body">
-              <el-form-item prop="scriptId">
+              <!-- 排期驱动：只读展示 -->
+              <div v-if="selectedSchedule && selectedScript" class="readonly-info-box">
+                <div class="readonly-row">
+                  <span class="ri-label">剧本名称</span>
+                  <span class="ri-value">{{ selectedScript.name }}</span>
+                </div>
+                <div class="readonly-row">
+                  <span class="ri-label">推荐人数</span>
+                  <span class="ri-value">{{ selectedScript.playerCount }} 人</span>
+                </div>
+                <div class="readonly-row">
+                  <span class="ri-label">单价</span>
+                  <span class="ri-value" style="color:#ff6b6b;font-weight:700">¥{{ selectedScript.price }}/人</span>
+                </div>
+                <div class="readonly-row" v-if="selectedScript.duration">
+                  <span class="ri-label">游戏时长</span>
+                  <span class="ri-value">约 {{ selectedScript.duration }} 小时</span>
+                </div>
+              </div>
+              <!-- 自由模式：下拉选择 -->
+              <el-form-item prop="scriptId" v-else>
                 <el-select
                   v-model="form.scriptId"
                   placeholder="请选择想要体验的剧本"
@@ -88,6 +127,39 @@
                     </div>
                   </div>
                 </div>
+                
+                <!-- 智能提示区域 -->
+                <div class="script-tips">
+                  <!-- 人数范围提示 -->
+                  <div class="tip-item people-tip">
+                    <span class="tip-icon">👥</span>
+                    <span class="tip-text">推荐 {{ selectedScript.playerCount }} 人参与</span>
+                  </div>
+                  
+                  <!-- 难度警告 -->
+                  <div class="tip-item difficulty-warning" v-if="selectedScript.difficulty >= 3">
+                    <span class="tip-icon">⚠️</span>
+                    <span class="tip-text">
+                      {{ selectedScript.difficulty === 4 ? '硬核' : '困难' }}剧本，建议有一定推理经验的玩家体验
+                    </span>
+                  </div>
+                  
+                  <!-- 拼车情况 -->
+                  <div class="tip-item grouping-tip" v-if="groupCount !== null">
+                    <span class="tip-icon">🚗</span>
+                    <div class="tip-text grouping-content">
+                      <span v-if="groupCount > 0">
+                        当前有 <strong>{{ groupCount }}</strong> 个拼车等待，
+                        <a href="javascript:void(0)" @click="jumpToGroup" class="group-link">可直接加入</a>
+                      </span>
+                      <span v-else>暂无拼车，您可以发起一个新的拼车组队</span>
+                    </div>
+                  </div>
+                  <div class="tip-item grouping-tip" v-else>
+                    <span class="tip-icon">⏳</span>
+                    <span class="tip-text">正在查询拼车情况...</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -96,10 +168,22 @@
           <div class="form-card">
             <div class="card-header">
               <span class="card-icon">🏠</span>
-              <span class="card-title">选择门店</span>
+              <span class="card-title">{{ selectedSchedule ? '门店与房间' : '选择门店' }}</span>
             </div>
             <div class="card-body">
-              <el-form-item prop="storeId">
+              <!-- 排期驱动：只读展示 -->
+              <div v-if="selectedSchedule" class="readonly-info-box">
+                <div class="readonly-row">
+                  <span class="ri-label">门店</span>
+                  <span class="ri-value">{{ stores.find(s => s.id === form.storeId)?.name || '—' }}</span>
+                </div>
+                <div class="readonly-row" v-if="selectedSchedule.roomName">
+                  <span class="ri-label">房间</span>
+                  <span class="ri-value">🚪 {{ selectedSchedule.roomName }}</span>
+                </div>
+              </div>
+              <!-- 自由模式：下拉选择 -->
+              <el-form-item prop="storeId" v-else>
                 <el-select
                   v-model="form.storeId"
                   placeholder="请选择门店"
@@ -122,8 +206,8 @@
                 </el-select>
               </el-form-item>
               
-              <!-- 房间选择 -->
-              <el-form-item prop="roomId" v-if="rooms.length > 0">
+              <!-- 房间选择（自由模式才显示） -->
+              <el-form-item prop="roomId" v-if="!selectedSchedule && rooms.length > 0">
                 <div class="room-label">选择房间</div>
                 <div class="room-grid">
                   <div 
@@ -143,41 +227,65 @@
             </div>
           </div>
 
-          <!-- 时间选择卡片 -->
-          <div class="form-card">
+          <!-- 时间选择卡片（排期驱动时隐藏，时间已固定） -->
+          <div class="form-card" v-if="!selectedSchedule">
             <div class="card-header">
               <span class="card-icon">⏰</span>
               <span class="card-title">预约时间</span>
             </div>
             <div class="card-body">
-              <div class="time-picker-group">
-                <el-form-item prop="reservationDate" class="date-picker">
-                  <template #label><span class="form-label">选择日期</span></template>
-                  <el-date-picker
-                    v-model="form.reservationDate"
-                    type="date"
-                    placeholder="选择日期"
-                    :disabled-date="disabledDate"
-                    format="YYYY-MM-DD"
-                    value-format="YYYY-MM-DD"
-                    size="large"
-                    class="full-width"
-                  />
-                </el-form-item>
-                
-                <el-form-item prop="reservationTime" class="time-picker">
-                  <template #label><span class="form-label">选择时段</span></template>
-                  <el-time-select
-                    v-model="form.reservationTime"
-                    start="09:00"
-                    step="00:30"
-                    end="21:00"
-                    placeholder="选择时间"
-                    size="large"
-                    class="full-width"
-                  />
-                </el-form-item>
-              </div>
+              <el-form-item prop="reservationDate" class="date-picker-wrapper">
+                <template #label><span class="form-label">选择日期</span></template>
+                <el-date-picker
+                  v-model="form.reservationDate"
+                  type="date"
+                  placeholder="选择日期"
+                  :disabled-date="disabledDate"
+                  format="YYYY-MM-DD"
+                  value-format="YYYY-MM-DD"
+                  size="large"
+                  class="full-width"
+                  @change="handleDateChange"
+                />
+              </el-form-item>
+              
+              <!-- 时段可视化选择 -->
+              <el-form-item prop="reservationTime" v-if="form.reservationDate">
+                <template #label><span class="form-label">选择时段</span></template>
+                <div class="time-slots-container">
+                  <div class="time-slots-loading" v-if="loadingTimeSlots">
+                    <span>正在加载时段可用性...</span>
+                  </div>
+                  <div class="time-slots-grid" v-else>
+                    <button
+                      v-for="slot in timeSlots"
+                      :key="slot"
+                      type="button"
+                      class="time-slot-button"
+                      :class="{
+                        selected: form.reservationTime === slot,
+                        disabled: unavailableSlots.includes(slot)
+                      }"
+                      @click="selectTimeSlot(slot)"
+                      :disabled="unavailableSlots.includes(slot)"
+                    >
+                      <span class="slot-time">{{ slot }}</span>
+                      <span v-if="unavailableSlots.includes(slot)" class="slot-status slot-unavailable">已约满</span>
+                      <span v-else-if="form.reservationTime === slot" class="slot-status slot-selected">已选</span>
+                      <span v-else class="slot-status slot-available">可约</span>
+                    </button>
+                  </div>
+                  <!-- 实时可用性状态栏 -->
+                  <div class="availability-status-bar" v-if="form.reservationTime">
+                    <div v-if="unavailableSlots.includes(form.reservationTime)" class="status-bar-error">
+                      ⚠️ 该时段已被预约，请重新选择可用时段
+                    </div>
+                    <div v-else class="status-bar-ok">
+                      ✅ {{ form.reservationTime }} 时段可预约，请继续填写信息
+                    </div>
+                  </div>
+                </div>
+              </el-form-item>
               
               <!-- 时间段显示提示 -->
               <div class="time-range-display" v-if="form.reservationTime && selectedScript?.duration">
@@ -376,7 +484,7 @@
                   ¥{{ totalPrice }}
                 </span>
               </div>
-              <div class="price-row vip-discount" v-if="vipDiscountRate">
+              <div class="price-row vip-discount" v-if="vipInfo && vipInfo.isVip">
                 <span>
                   <el-tag size="small" type="warning" style="margin-right:4px">💎{{ vipLevelName }}</el-tag>
                   {{ Math.round(vipDiscountRate * 10) }}折
@@ -394,7 +502,11 @@
               <span class="total-value">¥{{ finalPrice }}</span>
             </div>
             <div class="vip-saved-tip" v-if="vipDiscountAmount > 0">
-              💎 VIP专属优惠已为您节省 ¥{{ vipDiscountAmount }}
+              {{ getVipBadge(vipInfo?.level) }} {{ getVipDiscountText(vipInfo?.level) }} 专属优惠，已为您节省 ¥{{ vipDiscountAmount }}
+            </div>
+            <div class="vip-upsell-tip" v-else-if="!vipInfo?.isVip && selectedScript">
+              💎 开通VIP最高享 <strong>8折</strong> 优惠，
+              <span class="vip-upsell-link" @click="router.push('/vip')">立即开通 →</span>
             </div>
           </div>
           
@@ -405,6 +517,7 @@
               class="submit-btn"
               @click="handleSubmit" 
               :loading="submitting"
+              :disabled="!!(form.reservationTime && unavailableSlots.includes(form.reservationTime))"
             >
               <span class="btn-icon">🎟️</span>
               {{ needGroup ? '提交预约并发起拼单' : '立即预约' }}
@@ -428,10 +541,10 @@
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { getScriptList } from '@/api/script'
+import { getScriptList, getAvailableSchedules } from '@/api/script'
 import { getStoreList, getStoreRooms } from '@/api/store'
 import { createReservation, checkRoomAvailability } from '@/api/reservation'
-import { createGroup } from '@/api/group'
+import { createGroup, getGroupList } from '@/api/group'
 import { getMyCoupons } from '@/api/coupon'
 import { getUserVipInfo } from '@/api/vip'
 import { useUserStore } from '@/store/user'
@@ -448,6 +561,23 @@ const currentStep = computed(() => {
   return 4
 })
 
+// 排期驱动：余量辅助方法（场次横幅用）
+const getRemainText = (s) => {
+  if (!s) return ''
+  const r = (s.maxPlayers || 0) - (s.currentPlayers || 0)
+  if (r <= 0) return '已满'
+  if (r === 1) return '差1人成团'
+  return `余 ${r} 位`
+}
+const getRemainClass = (s) => {
+  if (!s) return ''
+  const r = (s.maxPlayers || 0) - (s.currentPlayers || 0)
+  if (r <= 0) return 'sb-remain-full'
+  if (r <= 2) return 'sb-remain-few'
+  return 'sb-remain-ok'
+}
+const formatTime = (t) => t ? String(t).substring(0, 5) : ''
+
 const formRef = ref(null)
 const submitting = ref(false)
 const checkingAvailability = ref(false)
@@ -456,6 +586,25 @@ const stores = ref([])
 const rooms = ref([])
 const availableCoupons = ref([])
 const selectedCoupon = ref(null)
+
+// 时段可视化相关
+const loadingTimeSlots = ref(false)
+const unavailableSlots = ref([])
+const timeSlots = computed(() => {
+  const slots = []
+  for (let hour = 9; hour < 21; hour++) {
+    for (let minute = 0; minute < 60; minute += 30) {
+      const hourStr = String(hour).padStart(2, '0')
+      const minuteStr = String(minute).padStart(2, '0')
+      slots.push(`${hourStr}:${minuteStr}`)
+    }
+  }
+  return slots
+})
+
+// 拼车查询相关
+const groupCount = ref(null)
+let groupCheckTimer = null
 
 // VIP折扣相关
 const vipDiscountRate = ref(null)   // 折扣率，如 0.9 表示9折
@@ -479,6 +628,9 @@ const loadVipInfo = async () => {
   }
 }
 
+// 当前选中的排期对象（从可约场次列表点击进来时填充）
+const selectedSchedule = ref(null)
+
 const form = reactive({
   scriptId: null,
   storeId: null,
@@ -489,25 +641,37 @@ const form = reactive({
   contactPhone: '',
   contactName: '',
   remark: '',
-  userCouponId: null
+  userCouponId: null,
+  scheduleId: null  // 关联排期ID，用于同步 currentPlayers
 })
 
-const rules = {
-  scriptId: [{ required: true, message: '请选择剧本', trigger: 'change' }],
-  storeId: [{ required: true, message: '请选择门店', trigger: 'change' }],
-  roomId: [{ required: true, message: '请选择房间', trigger: 'change' }],
-  reservationDate: [{ required: true, message: '请选择日期', trigger: 'change' }],
-  reservationTime: [{ required: true, message: '请选择时间', trigger: 'change' }],
-  playerCount: [{ required: true, message: '请输入人数', trigger: 'blur' }],
-  contactName: [{ required: true, message: '请输入联系人', trigger: 'blur' }],
-  contactPhone: [
-    { required: true, message: '请输入联系电话', trigger: 'blur' },
-    { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
-  ]
-}
+// 排期驱动模式下，验证规则动态调整（时间/门店/房间/剧本无需用户填写）
+const rules = computed(() => {
+  const isScheduleMode = !!selectedSchedule.value
+  return {
+    scriptId: isScheduleMode ? [] : [{ required: true, message: '请选择剧本', trigger: 'change' }],
+    storeId: isScheduleMode ? [] : [{ required: true, message: '请选择门店', trigger: 'change' }],
+    roomId: isScheduleMode ? [] : [{ required: true, message: '请选择房间', trigger: 'change' }],
+    reservationDate: isScheduleMode ? [] : [{ required: true, message: '请选择日期', trigger: 'change' }],
+    reservationTime: isScheduleMode ? [] : [{ required: true, message: '请选择时间', trigger: 'change' }],
+    playerCount: [{ required: true, message: '请输入人数', trigger: 'blur' }],
+    contactName: [{ required: true, message: '请输入联系人', trigger: 'blur' }],
+    contactPhone: [
+      { required: true, message: '请输入联系电话', trigger: 'blur' },
+      { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
+    ]
+  }
+})
+
+// 监听房间变化，检查时段可用性
+watch(() => form.roomId, () => {
+  if (form.roomId && form.reservationDate) {
+    checkTimeSlotAvailability()
+  }
+})
 
 // 监听时间变化，自动检查可用性
-watch([() => form.roomId, () => form.reservationDate, () => form.reservationTime], () => {
+watch([() => form.reservationDate, () => form.reservationTime], () => {
   if (form.roomId && form.reservationDate && form.reservationTime) {
     checkAvailability()
   }
@@ -649,6 +813,109 @@ const handleScriptChange = (scriptId) => {
   }
   // 加载可用优惠券
   loadAvailableCoupons()
+  // 查询拼车数量
+  loadGroupCount(scriptId)
+}
+
+const handleDateChange = async () => {
+  // 日期变化时，清空已选时段和不可用时段列表
+  form.reservationTime = ''
+  unavailableSlots.value = []
+  
+  // 如果已选择房间和日期，检查时段可用性
+  if (form.roomId && form.reservationDate) {
+    await checkTimeSlotAvailability()
+  }
+}
+
+const selectTimeSlot = (slot) => {
+  if (!unavailableSlots.value.includes(slot)) {
+    form.reservationTime = slot
+  }
+}
+
+// 防抖定时器
+let checkTimeSlotDebounceTimer = null
+const checkTimeSlotAvailability = async () => {
+  // 清除上一次的防抖
+  if (checkTimeSlotDebounceTimer) {
+    clearTimeout(checkTimeSlotDebounceTimer)
+  }
+  
+  loadingTimeSlots.value = true
+  
+  // 防抖处理，300ms后执行
+  checkTimeSlotDebounceTimer = setTimeout(async () => {
+    if (!form.roomId || !form.reservationDate) {
+      loadingTimeSlots.value = false
+      return
+    }
+    
+    try {
+      unavailableSlots.value = []
+      
+      // 批量检查所有时段的可用性
+      for (const slot of timeSlots.value) {
+        try {
+          const res = await checkRoomAvailability({
+            roomId: form.roomId,
+            reservationTime: `${form.reservationDate} ${slot}`,
+            duration: selectedScript.value?.duration || 3
+          })
+          
+          if (res.data === false || res.code === 0) {
+            unavailableSlots.value.push(slot)
+          }
+        } catch (error) {
+          console.error(`检查时段 ${slot} 失败:`, error)
+        }
+      }
+    } catch (error) {
+      console.error('检查时段可用性失败:', error)
+    } finally {
+      loadingTimeSlots.value = false
+    }
+  }, 300)
+}
+
+const loadGroupCount = async (scriptId) => {
+  if (!scriptId) {
+    groupCount.value = null
+    return
+  }
+  
+  // 清除上一次的定时器
+  if (groupCheckTimer) {
+    clearTimeout(groupCheckTimer)
+  }
+  
+  // 防抖：300ms后查询一次
+  groupCheckTimer = setTimeout(async () => {
+    try {
+      const res = await getGroupList({
+        scriptId,
+        status: 1,
+        page: 1,
+        pageSize: 3
+      })
+      
+      if ((res.code === 1 || res.code === 200) && res.data) {
+        const records = res.data.records || res.data.list || []
+        groupCount.value = records.length
+      } else {
+        groupCount.value = 0
+      }
+    } catch (error) {
+      console.error('查询拼车数量失败:', error)
+      groupCount.value = 0
+    }
+  }, 300)
+}
+
+const jumpToGroup = () => {
+  if (form.scriptId) {
+    router.push(`/group?scriptId=${form.scriptId}`)
+  }
 }
 
 const handleCouponChange = (couponId) => {
@@ -714,6 +981,14 @@ const checkAvailability = async () => {
   }
 }
 
+// VIP 徽章和折扣文字
+const getVipBadge = (level) => {
+  return { 1: '🔰', 2: '🥈', 3: '🥇', 4: '👑' }[level] || '💎'
+}
+const getVipDiscountText = (level) => {
+  return { 1: '9.5折', 2: '9折', 3: '8.5折', 4: '8折' }[level] || '专属折扣'
+}
+
 // 判断是否需要拼单
 const needGroup = computed(() => {
   if (!selectedScript.value) return false
@@ -754,7 +1029,8 @@ const handleSubmit = async () => {
           contactPhone: form.contactPhone,
           remark: form.remark,
           userId: userStore.userInfo?.id,
-          userCouponId: form.userCouponId || null
+          userCouponId: form.userCouponId || null,
+          scheduleId: form.scheduleId || null  // 关联排期ID，后端用于同步 currentPlayers
         }
         console.log('预约提交数据:', reservationData)
         
@@ -820,20 +1096,32 @@ const handleSubmit = async () => {
 
 // 监听房间列表变化，自动选择预约的房间
 watch(rooms, (newRooms) => {
-  // 如果URL中有roomId参数，自动选中该房间
-  if (route.query.roomId && newRooms.length > 0) {
+  if (newRooms.length === 0) return
+
+  // 优先：排期带来的房间ID（scheduleId 驱动）
+  const pendingRoomId = form._pendingRoomId
+  if (pendingRoomId) {
+    const room = newRooms.find(r => r.id === pendingRoomId)
+    if (room) {
+      form.roomId = pendingRoomId
+      delete form._pendingRoomId
+      if (room.status !== 1) {
+        ElMessage.warning(`排期房间"${room.name}"当前不可预约，请选择其他房间`)
+      }
+    }
+    return
+  }
+
+  // 其次：URL roomId 参数
+  if (route.query.roomId) {
     const roomId = parseInt(route.query.roomId)
     const targetRoom = newRooms.find(r => r.id === roomId)
-    
     if (targetRoom) {
       form.roomId = roomId
-      
-      // 如果房间不可用，给出提示
       if (targetRoom.status !== 1) {
         ElMessage.warning(`房间"${targetRoom.name}"当前不可预约，请选择其他房间`)
       } else {
-        const roomName = route.query.roomName || targetRoom.name
-        ElMessage.success(`已自动选择房间：${roomName}`)
+        ElMessage.success(`已自动选择房间：${route.query.roomName || targetRoom.name}`)
       }
     }
   }
@@ -854,6 +1142,45 @@ onMounted(async () => {
     form.storeId = parseInt(route.query.storeId)
     await handleStoreChange(form.storeId)
     // 房间列表加载后，watch会自动处理roomId的选择
+  }
+
+  // ===== 排期驱动：从可约场次点击进来时自动预填 =====
+  // URL 格式示例：/reservation/create?scheduleId=5&scriptId=2&storeId=1
+  if (route.query.scheduleId) {
+    const scheduleId = parseInt(route.query.scheduleId)
+    form.scheduleId = scheduleId
+    try {
+      // 通过可约场次接口拉取排期详情，找到对应排期
+      const res = await getAvailableSchedules({
+        scriptId: form.scriptId || undefined,
+        storeId: form.storeId || undefined,
+        days: 30
+      })
+      if (res.code === 1 || res.code === 200) {
+        const list = Array.isArray(res.data) ? res.data : []
+        const schedule = list.find(s => s.id === scheduleId)
+        if (schedule) {
+          selectedSchedule.value = schedule
+          // 自动填入排期的日期和开始时间
+          form.reservationDate = schedule.scheduleDate
+          form.reservationTime = schedule.startTime
+            ? String(schedule.startTime).substring(0, 5)
+            : ''
+          // 自动填入房间（若房间列表已加载）
+          if (schedule.roomId && rooms.value.length > 0) {
+            form.roomId = schedule.roomId
+          } else if (schedule.roomId) {
+            // 等房间列表加载后再设置（watch 兜底）
+            form._pendingRoomId = schedule.roomId
+          }
+          ElMessage.success(
+            `已自动填入排期时间：${schedule.scheduleDate} ${form.reservationTime}`
+          )
+        }
+      }
+    } catch (e) {
+      console.warn('加载排期详情失败，请手动选择时间', e)
+    }
   }
   
   // 预填联系信息
@@ -878,6 +1205,93 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 20px;
   min-height: 100vh;
+}
+
+/* 排期驱动横幅 */
+.schedule-banner {
+  background: linear-gradient(135deg, rgba(26,46,26,0.98) 0%, rgba(22,62,33,0.98) 100%);
+  border: 1.5px solid rgba(103,194,58,0.35);
+  border-radius: 14px;
+  margin-bottom: 20px;
+  padding: 18px 24px;
+}
+
+.schedule-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.sb-icon { font-size: 32px; flex-shrink: 0; }
+
+.sb-info { flex: 1; }
+
+.sb-title {
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 8px;
+}
+
+.sb-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.sb-date, .sb-time, .sb-room {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.sb-remain {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+
+.sb-remain-ok { background: rgba(103,194,58,0.2); color: #67c23a; }
+.sb-remain-few { background: rgba(230,162,60,0.2); color: #e6a23c; }
+.sb-remain-full { background: rgba(245,108,108,0.2); color: #f56c6c; }
+
+.sb-change-btn {
+  color: rgba(255,255,255,0.6) !important;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.sb-change-btn:hover { color: #fff !important; }
+
+/* 只读信息展示框 */
+.readonly-info-box {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.readonly-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ri-label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.ri-value {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 500;
 }
 
 /* 页面头部 */
@@ -1119,6 +1533,72 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+/* 智能提示区域 */
+.script-tips {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed rgba(139, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(35, 35, 60, 0.6);
+  border: 1px solid rgba(139, 0, 0, 0.2);
+}
+
+.tip-item.people-tip {
+  background: rgba(139, 0, 0, 0.1);
+  border-color: rgba(139, 0, 0, 0.3);
+}
+
+.tip-item.difficulty-warning {
+  background: rgba(230, 162, 60, 0.15);
+  border-color: rgba(230, 162, 60, 0.4);
+}
+
+.tip-item.grouping-tip {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.tip-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.tip-text {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.tip-text.grouping-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.group-link {
+  color: #4CAF50;
+  text-decoration: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.group-link:hover {
+  color: #66BB6A;
+  text-decoration: underline;
+}
+
 /* 门店选项样式 */
 .store-option {
   padding: 4px 0;
@@ -1184,6 +1664,68 @@ onMounted(async () => {
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* 时段按钮状态标签 */
+.time-slot-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.slot-time {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.slot-status {
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.slot-available {
+  background: rgba(103,194,58,0.15);
+  color: #67c23a;
+}
+
+.slot-unavailable {
+  background: rgba(245,108,108,0.15);
+  color: #f56c6c;
+}
+
+.slot-selected {
+  background: rgba(64,158,255,0.2);
+  color: #409eff;
+}
+
+/* 实时可用性状态栏 */
+.availability-status-bar {
+  margin-top: 12px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.status-bar-error {
+  background: rgba(245,108,108,0.1);
+  border: 1px solid rgba(245,108,108,0.3);
+  color: #f56c6c;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.status-bar-ok {
+  background: rgba(103,194,58,0.1);
+  border: 1px solid rgba(103,194,58,0.3);
+  color: #67c23a;
+  padding: 10px 14px;
+  font-size: 13px;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
 .room-check {
   position: absolute;
   top: 8px;
@@ -1200,10 +1742,59 @@ onMounted(async () => {
 }
 
 /* 时间选择 */
-.time-picker-group {
+.date-picker-wrapper {
+  width: 100%;
+}
+
+.time-slots-container {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.time-slots-loading {
+  padding: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.time-slots-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+  gap: 8px;
+}
+
+.time-slot-button {
+  padding: 12px 8px;
+  border: 2px solid rgba(139, 0, 0, 0.3);
+  border-radius: 8px;
+  background: rgba(35, 35, 60, 0.8);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+  text-align: center;
+}
+
+.time-slot-button:hover:not(:disabled) {
+  border-color: rgba(139, 0, 0, 0.6);
+  background: rgba(45, 45, 75, 0.9);
+  color: #fff;
+}
+
+.time-slot-button.selected {
+  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
+  border-color: #8B0000;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+}
+
+.time-slot-button.disabled,
+.time-slot-button:disabled {
+  background: rgba(100, 100, 120, 0.5);
+  border-color: rgba(100, 100, 120, 0.3);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
 }
 
 /* 时间段显示 */
@@ -1428,6 +2019,24 @@ onMounted(async () => {
 .price-row.discount span:last-child {
   color: #7ddc7a;
 }
+
+.vip-upsell-tip {
+  background: rgba(155,89,182,0.08);
+  border: 1px dashed rgba(155,89,182,0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+  margin-top: 6px;
+}
+
+.vip-upsell-link {
+  color: #b39ddb;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.vip-upsell-link:hover { text-decoration: underline; }
 
 .price-row.vip-discount {
   background: rgba(230, 162, 60, 0.1);

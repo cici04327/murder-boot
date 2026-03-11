@@ -59,4 +59,7 @@ public class ReservationDTO implements Serializable {
 
     @Schema(description = "前端预计算的实付金额")
     private BigDecimal actualAmount;
+
+    @Schema(description = "排期ID（用于同步 ScriptSchedule.currentPlayers）")
+    private Long scheduleId;
 }

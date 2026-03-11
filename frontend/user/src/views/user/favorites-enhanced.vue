@@ -346,8 +346,7 @@
           v-model:current-page="queryParams.page"
           v-model:page-size="queryParams.pageSize"
           :total="total"
-          :page-sizes="[12, 24, 36, 48]"
-          layout="total, sizes, prev, pager, next, jumper"
+          layout="total, prev, pager, next, jumper"
           @size-change="handleSizeChange"
           @current-change="handlePageChange"
         />
@@ -506,7 +505,10 @@ const loadFavorites = async () => {
         }
         
         scriptList.value = list
-        total.value = res.data.total || list.length
+        // 如果有前端筛选条件，用筛选后的数量；否则用后端返回的总数
+        const hasFilter = filters.category || filters.playerCount || filters.difficulty ||
+          filters.minRating > 0 || (filters.priceRange[0] > 0 || filters.priceRange[1] < 500)
+        total.value = hasFilter ? list.length : (res.data.total || list.length)
       } else {
         scriptList.value = []
         total.value = 0

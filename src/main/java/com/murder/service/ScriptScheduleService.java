@@ -56,4 +56,23 @@ public interface ScriptScheduleService {
     void generateSchedules(Long storeId, Long scriptId, Long roomId, 
                            LocalDate startDate, LocalDate endDate,
                            List<String> timeSlots, Integer maxPlayers);
+
+    /**
+     * 增加排期已预约人数（预约创建时调用）
+     */
+    void incrementCurrentPlayers(Long scheduleId, int count);
+
+    /**
+     * 减少排期已预约人数（预约取消时调用）
+     */
+    void decrementCurrentPlayers(Long scheduleId, int count);
+
+    /**
+     * 查询指定剧本在指定门店近N天的可约场次（含余量），供用户端展示
+     * @param scriptId 剧本ID（可选）
+     * @param storeId  门店ID（可选）
+     * @param days     查询未来天数（默认7天）
+     * @return 可约场次列表（status=1 且 currentPlayers < maxPlayers）
+     */
+    List<ScriptSchedule> getAvailableSchedules(Long scriptId, Long storeId, Integer days);
 }

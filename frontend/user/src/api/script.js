@@ -121,3 +121,13 @@ export const getRecommendedScripts = (limit = 4) => {
     params: { limit }
   })
 }
+
+// 查询可约场次（含余量），供剧本详情页/门店详情页展示
+// scriptId: 剧本ID（可选），storeId: 门店ID（可选），days: 查询未来天数（默认7）
+export const getAvailableSchedules = (params) => {
+  return request({
+    url: '/script/schedule/available',
+    method: 'get',
+    params
+  })
+}

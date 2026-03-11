@@ -67,4 +67,16 @@ public class StatisticsController {
         StatisticsRealtimeVO realtime = statisticsService.getRealtime(limit);
         return Result.success(realtime);
     }
+
+    /**
+     * 获取经营看板数据（转化率、房间利用率、复购率等核心经营指标）
+     */
+    @GetMapping("/operation-board")
+    @Operation(summary = "经营看板", description = "返回转化率、房间利用率、复购率、取消率等核心经营指标")
+    public Result<java.util.Map<String, Object>> getOperationBoard(
+            @RequestParam(defaultValue = "30") Integer days,
+            @RequestParam(required = false) Long storeId) {
+        log.info("获取经营看板数据: days={}, storeId={}", days, storeId);
+        return Result.success(statisticsService.getOperationBoard(days, storeId));
+    }
 }

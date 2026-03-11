@@ -33,7 +33,16 @@ public class StoreReviewVO implements Serializable {
     
     @Schema(description = "用户昵称")
     private String userNickname;
-    
+
+    @Schema(description = "用户头像")
+    private String userAvatar;
+
+    @Schema(description = "是否匿名：1是，0否")
+    private Integer isAnonymous;
+
+    @Schema(description = "评价图片，逗号分隔")
+    private String images;
+
     @Schema(description = "预约ID")
     private Long reservationId;
     

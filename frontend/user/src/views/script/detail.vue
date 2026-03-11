@@ -93,6 +93,35 @@
                 <span class="guarantee-item">✅ 真实评价</span>
               </div>
             </div>
+            
+            <!-- 可约场次余量模块 -->
+            <div class="schedule-availability-card">
+              <div class="schedule-card-header">
+                <span class="schedule-title">📅 近7天可约场次</span>
+                <span class="schedule-hint" v-if="!loadingSchedules">
+                  {{ availableSchedules.length > 0 ? `共 ${availableSchedules.length} 个场次` : '暂无排期' }}
+                </span>
+              </div>
+              <div v-if="loadingSchedules" class="schedule-loading">加载中...</div>
+              <div v-else-if="availableSchedules.length === 0" class="schedule-empty">
+                <span>🕰️ 暂无可约场次，可联系门店咨询</span>
+              </div>
+              <div v-else class="schedule-list">
+                <div
+                  v-for="s in availableSchedules.slice(0, 6)"
+                  :key="s.id"
+                  class="schedule-item"
+                  @click="handleReserve"
+                >
+                  <div class="schedule-date">{{ formatScheduleDate(s.scheduleDate) }}</div>
+                  <div class="schedule-time">{{ formatTime(s.startTime) }}</div>
+                  <div class="schedule-remain" :class="getRemainClass(s)">{{ getRemainText(s) }}</div>
+                </div>
+              </div>
+              <div v-if="availableSchedules.length > 6" class="schedule-more" @click="handleReserve">
+                查看更多场次 →
+              </div>
+            </div>
           </div>
           
           <!-- 右侧：剧本详情 -->
@@ -249,7 +278,7 @@
         
         <!-- 查看更多评价按钮 -->
         <div class="more-reviews-btn" v-if="reviews.length > 0">
-          <button class="btn-more" @click="showReviewDialog = true">
+          <button class="btn-more" @click="showAllReviewsDialog = true">
             查看全部 {{ actualReviewCount }} 条评价 →
           </button>
         </div>
@@ -330,6 +359,46 @@
       </div>
     </section>
     
+    <!-- 查看全部评价对话框 -->
+    <el-dialog v-model="showAllReviewsDialog" title="全部评价" width="700px" class="all-reviews-dialog" :append-to-body="false">
+      <div class="all-reviews-list">
+        <div class="review-item" v-for="review in reviews" :key="review.id" style="margin-bottom: 16px;">
+          <div class="review-top">
+            <img :src="review.userAvatar || 'https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png'"
+                 :alt="review.username" class="reviewer-avatar">
+            <div class="reviewer-info">
+              <h4 class="reviewer-name">{{ review.username }}</h4>
+              <el-rate v-model="review.rating" disabled size="small" />
+            </div>
+            <span class="review-date" style="margin-left: auto; font-size: 12px; color: rgba(255,255,255,0.5);">
+              🕐 {{ review.createTime }}
+            </span>
+          </div>
+          <p class="review-content" style="margin-top: 12px;">{{ review.content }}</p>
+          <!-- 评价图片 -->
+          <div v-if="review.images" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+            <el-image
+              v-for="(img, idx) in review.images.split(',')"
+              :key="idx"
+              :src="img.trim()"
+              :preview-src-list="review.images.split(',').map(i => i.trim())"
+              :initial-index="idx"
+              fit="cover"
+              style="width: 80px; height: 80px; border-radius: 6px; cursor: pointer;"
+              preview-teleported
+            />
+          </div>
+        </div>
+        <el-empty v-if="reviews.length === 0" description="暂无评价" />
+      </div>
+      <template #footer>
+        <el-button type="primary" @click="showAllReviewsDialog = false; showReviewDialog = true">
+          ✍️ 我要评价
+        </el-button>
+        <el-button @click="showAllReviewsDialog = false">关闭</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 评价对话框 -->
     <el-dialog v-model="showReviewDialog" title="评价剧本" width="500px">
       <el-form :model="reviewForm" label-width="80px">
@@ -356,7 +425,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getScriptDetail, getScriptRoles, getScriptReviews, addScriptReview, getScriptCategories, favoriteScript, unfavoriteScript, checkScriptFavoriteStatus, getRecommendedScripts } from '@/api/script'
+import { getScriptDetail, getScriptRoles, getScriptReviews, addScriptReview, getScriptCategories, favoriteScript, unfavoriteScript, checkScriptFavoriteStatus, getRecommendedScripts, getAvailableSchedules } from '@/api/script'
 import request from '@/utils/request'
 import { checkFavoriteTask } from '@/api/user'
 import { recordBrowseHistory } from '@/api/recommendation'
@@ -374,10 +443,13 @@ const script = ref(null)
 const roles = ref([])
 const reviews = ref([])
 const showReviewDialog = ref(false)
+const showAllReviewsDialog = ref(false)
 const categories = ref([])
 const isFavorited = ref(false)
 const browseStartTime = ref(null) // 记录浏览开始时间
 const recommendedScripts = ref([]) // 相关推荐剧本
+const availableSchedules = ref([]) // 可约场次列表
+const loadingSchedules = ref(false)
 
 const reviewForm = reactive({
   rating: 5,
@@ -508,12 +580,14 @@ const loadReviews = async () => {
       // 格式化评价数据
       reviews.value = reviewList.map(item => ({
         id: item.id,
-        username: item.isAnonymous ? '匿名用户' : (item.username || item.userName || '用户'),
+        username: item.isAnonymous === 1 ? '匿名用户' : (item.userName || item.username || item.nickname || '神秘玩家'),
         userAvatar: item.userAvatar || item.avatar || '/default-avatar.jpg',
-        rating: item.scriptRating || item.overallRating || item.rating || 5,
-        content: item.scriptContent || item.content || '',
+        rating: Number(item.scriptRating || item.overallRating || item.rating || 5),
+        content: item.content || item.scriptContent || '该用户未填写评价内容',
+        images: item.images || '',
         createTime: item.createTime || item.createdAt || ''
       }))
+      console.log('格式化后的评价:', reviews.value)
       
       console.log('加载到的评价数量:', reviews.value.length, reviews.value)
     } else {
@@ -670,13 +744,9 @@ const loadCategories = async () => {
 
 // 立即预约
 const handleReserve = () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
+  // 跳转到场次选择页，而不是直接进预约创建页
   router.push({
-    path: '/reservation/create',
+    path: '/reservation/schedule',
     query: { scriptId: route.params.id }
   })
 }
@@ -750,6 +820,57 @@ const loadRecommendedScripts = async () => {
   }
 }
 
+// 加载可约场次（含余量）
+const loadAvailableSchedules = async () => {
+  if (!route.params.id) return
+  loadingSchedules.value = true
+  try {
+    const res = await getAvailableSchedules({ scriptId: route.params.id, days: 7 })
+    if (res.code === 200 || res.code === 1) {
+      availableSchedules.value = Array.isArray(res.data) ? res.data : []
+    }
+  } catch (error) {
+    console.error('加载可约场次失败:', error)
+    availableSchedules.value = []
+  } finally {
+    loadingSchedules.value = false
+  }
+}
+
+// 格式化场次日期（yyyy-MM-dd -> 今天/明天/MM月dd日）
+const formatScheduleDate = (dateStr) => {
+  if (!dateStr) return ''
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+  const d = new Date(dateStr)
+  if (d.toDateString() === today.toDateString()) return '今天'
+  if (d.toDateString() === tomorrow.toDateString()) return '明天'
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
+// 格式化时间 LocalTime -> HH:mm
+const formatTime = (t) => {
+  if (!t) return ''
+  return String(t).substring(0, 5)
+}
+
+// 余量文字
+const getRemainText = (schedule) => {
+  const remain = schedule.maxPlayers - schedule.currentPlayers
+  if (remain <= 0) return '已满'
+  if (remain === 1) return '差1人成团'
+  return `余 ${remain} 位`
+}
+
+// 余量样式
+const getRemainClass = (schedule) => {
+  const remain = schedule.maxPlayers - schedule.currentPlayers
+  if (remain <= 0) return 'remain-full'
+  if (remain <= 2) return 'remain-few'
+  return 'remain-ok'
+}
+
 onMounted(async () => {
   // 先加载分类，再加载剧本详情
   await loadCategories()
@@ -760,7 +881,8 @@ onMounted(async () => {
     loadRoles(),
     loadReviews(),
     checkFavoriteStatus(),
-    loadRecommendedScripts()
+    loadRecommendedScripts(),
+    loadAvailableSchedules()
   ])
 })
 </script>
@@ -1074,6 +1196,97 @@ onMounted(async () => {
   border-color: #ff6b6b;
   color: #ff6b6b;
 }
+
+/* 可约场次余量卡片 */
+.schedule-availability-card {
+  background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
+  border: 2px solid rgba(139, 0, 0, 0.3);
+  border-radius: 16px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.schedule-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.schedule-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.schedule-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+}
+
+.schedule-loading, .schedule-empty {
+  text-align: center;
+  color: rgba(255,255,255,0.5);
+  font-size: 13px;
+  padding: 12px 0;
+}
+
+.schedule-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.schedule-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 10px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.schedule-item:hover {
+  background: rgba(139,0,0,0.25);
+  border-color: rgba(139,0,0,0.5);
+  transform: translateY(-1px);
+}
+
+.schedule-date {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 4px;
+}
+
+.schedule-time {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 5px;
+}
+
+.schedule-remain {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.remain-ok { background: rgba(103,194,58,0.2); color: #67c23a; }
+.remain-few { background: rgba(230,162,60,0.2); color: #e6a23c; }
+.remain-full { background: rgba(245,108,108,0.2); color: #f56c6c; }
+
+.schedule-more {
+  text-align: center;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #ff6b6b;
+  cursor: pointer;
+}
+
+.schedule-more:hover { text-decoration: underline; }
 
 .guarantee-info {
   display: flex;
@@ -1883,6 +2096,51 @@ onMounted(async () => {
   color: #8B0000;
   font-weight: 500;
   text-decoration: underline;
+}
+
+/* 全部评价弹窗深色主题 */
+:deep(.all-reviews-dialog) {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
+  border: 1px solid rgba(102, 126, 234, 0.4) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+
+  .el-dialog__header {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+
+    .el-dialog__title {
+      color: #fff !important;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .el-dialog__headerbtn .el-dialog__close {
+      color: rgba(255, 255, 255, 0.6) !important;
+      &:hover { color: #fff !important; }
+    }
+  }
+
+  .el-dialog__body {
+    background: transparent !important;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .el-dialog__footer {
+    background: transparent !important;
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
+
+    .el-button--default {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      color: rgba(255, 255, 255, 0.8) !important;
+      &:hover {
+        background: rgba(255, 255, 255, 0.15) !important;
+        color: #fff !important;
+      }
+    }
+  }
 }
 
 /* 响应式设计 - 0.html风格 */

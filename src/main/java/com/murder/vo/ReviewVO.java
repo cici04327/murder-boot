@@ -46,7 +46,22 @@ public class ReviewVO implements Serializable {
     
     @Schema(description = "用户头像")
     private String userAvatar;
-    
+
+    @Schema(description = "是否匿名：1是，0否")
+    private Integer isAnonymous;
+
+    @Schema(description = "综合评分")
+    private Integer overallRating;
+
+    @Schema(description = "门店评分")
+    private Integer storeRating;
+
+    @Schema(description = "剧本评分")
+    private Integer scriptRating;
+
+    @Schema(description = "服务评分")
+    private Integer serviceRating;
+
     @Schema(description = "评分")
     private BigDecimal rating;
     

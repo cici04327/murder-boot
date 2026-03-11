@@ -55,9 +55,15 @@
           {{ reservation.checkInTime || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="核销码" :span="2">
-          <div v-if="reservation.payStatus === 1 || reservation.checkInCode" class="check-in-code">
-            <span>{{ reservation.checkInCode || '-' }}</span>
-            <span class="check-in-tip">到店后出示给门店工作人员进行核销</span>
+          <div v-if="reservation.payStatus === 1 || reservation.checkInCode" class="check-in-code-wrapper">
+            <div class="check-in-code">
+              <span>{{ reservation.checkInCode || '-' }}</span>
+              <span class="check-in-tip">到店后出示给门店工作人员进行核销</span>
+            </div>
+            <div class="qrcode-container">
+              <canvas ref="qrcodeCanvas"></canvas>
+              <span class="qrcode-label">扫码核销</span>
+            </div>
           </div>
           <span v-else>支付成功后可查看核销码</span>
         </el-descriptions-item>
@@ -89,6 +95,12 @@
         </el-descriptions-item>
       </el-descriptions>
 
+      <div v-if="reservation.status === 1 && reservation.payStatus === 0" class="countdown-container">
+        <div :class="['countdown', { 'countdown-blink': countdownTime.split(':')[0] === '00' && parseInt(countdownTime.split(':')[1]) < 5 }]">
+          ⏳ 请在 {{ countdownTime }} 内完成支付，超时将自动取消
+        </div>
+      </div>
+
       <div class="actions">
         <el-button
           v-if="reservation.status === 1 && reservation.payStatus === 0"
@@ -105,6 +117,14 @@
           @click="handleReview"
         >
           评价订单
+        </el-button>
+        <el-button
+          v-if="reservation.status < 3 && reservation.status !== 4 && reservation.checkInStatus !== 1"
+          type="warning"
+          size="large"
+          @click="handleReschedule"
+        >
+          申请改期
         </el-button>
         <el-button
           v-if="reservation.status < 3 && reservation.status !== 4 && reservation.checkInStatus !== 1"
@@ -141,6 +161,67 @@
       </el-card>
     </el-card>
 
+    <!-- 改期弹窗 -->
+    <el-dialog v-model="showRescheduleDialog" title="申请改期" width="460px" :close-on-click-modal="false">
+      <el-form label-width="110px">
+        <el-form-item label="当前预约时间">
+          <span style="color: #909399;">{{ reservation?.reservationTime }}</span>
+        </el-form-item>
+
+        <!-- 改期规则说明 -->
+        <el-form-item label=" ">
+          <div class="reschedule-rules">
+            <div class="rule-title">📋 改期规则</div>
+            <div class="rule-item" :class="{ 'rule-warn': !canReschedule }">
+              <span class="rule-icon">⏰</span>
+              <span>最晚改期时间：开局前 <strong>24小时</strong>
+                <span v-if="!canReschedule" style="color:#f56c6c;margin-left:6px">（已超时，无法改期）</span>
+                <span v-else style="color:#67c23a;margin-left:6px">（截止 {{ rescheduleDeadline }}）</span>
+              </span>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">💰</span>
+              <span>手续费：<strong>免费</strong></span>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">🔁</span>
+              <span>每笔订单最多可改期 <strong>1次</strong></span>
+            </div>
+            <div class="rule-item">
+              <span class="rule-icon">📌</span>
+              <span>改期不影响支付状态，新时间须晚于当前时间</span>
+            </div>
+          </div>
+        </el-form-item>
+
+        <el-form-item v-if="canReschedule" label="新预约时间" required>
+          <el-date-picker
+            v-model="newReservationTime"
+            type="datetime"
+            placeholder="请选择新的预约时间"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm"
+            :disabled-date="(date) => date < new Date()"
+            style="width: 100%"
+          />
+        </el-form-item>
+
+        <el-form-item v-if="!canReschedule" label=" ">
+          <el-alert
+            title="无法改期"
+            type="error"
+            :closable="false"
+            description="距开局不足24小时，已超过最晚改期时间。如有特殊情况请直接联系门店。"
+            show-icon
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showRescheduleDialog = false">关闭</el-button>
+        <el-button v-if="canReschedule" type="primary" :loading="rescheduling" @click="confirmReschedule">确认改期</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog v-model="showCancelDialog" title="取消预约" width="400px">
       <el-form>
         <el-form-item label="取消原因">
@@ -175,10 +256,11 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { cancelReservation, getReservationDetail } from '@/api/reservation'
+import QRCode from 'qrcode'
+import { cancelReservation, getReservationDetail, rescheduleReservation } from '@/api/reservation'
 import { getScriptDetail } from '@/api/script'
 import { getStoreDetail } from '@/api/store'
 
@@ -193,7 +275,18 @@ const storeInfo = ref(null)
 const roomInfo = ref(null)
 const showCancelDialog = ref(false)
 const showContactDialog = ref(false)
+const showRescheduleDialog = ref(false)
 const cancelReason = ref('')
+const rescheduling = ref(false)
+const newReservationTime = ref('')
+
+// Countdown timer states
+const countdownTime = ref('00:00')
+const isCountdownExpired = ref(false)
+const countdownTimerId = ref(null)
+
+// QR code canvas ref
+const qrcodeCanvas = ref(null)
 
 const timeline = computed(() => {
   if (!reservation.value) return []
@@ -329,6 +422,52 @@ const confirmCancel = async () => {
   }
 }
 
+// 计算是否可以改期（距开局24小时前）
+const canReschedule = computed(() => {
+  if (!reservation.value?.reservationTime) return false
+  const reservationDate = new Date(reservation.value.reservationTime)
+  const deadline = new Date(reservationDate.getTime() - 24 * 60 * 60 * 1000)
+  return new Date() < deadline
+})
+
+// 计算最晚改期截止时间（开局前24小时）
+const rescheduleDeadline = computed(() => {
+  if (!reservation.value?.reservationTime) return ''
+  const reservationDate = new Date(reservation.value.reservationTime)
+  const deadline = new Date(reservationDate.getTime() - 24 * 60 * 60 * 1000)
+  const y = deadline.getFullYear()
+  const mo = String(deadline.getMonth() + 1).padStart(2, '0')
+  const d = String(deadline.getDate()).padStart(2, '0')
+  const h = String(deadline.getHours()).padStart(2, '0')
+  const mi = String(deadline.getMinutes()).padStart(2, '0')
+  return `${y}-${mo}-${d} ${h}:${mi}`
+})
+
+const handleReschedule = () => {
+  newReservationTime.value = reservation.value.reservationTime || ''
+  showRescheduleDialog.value = true
+}
+
+const confirmReschedule = async () => {
+  if (!newReservationTime.value) {
+    ElMessage.warning('请选择新的预约时间')
+    return
+  }
+  // 格式化为 yyyy-MM-dd HH:mm:ss
+  const formatted = newReservationTime.value.replace('T', ' ') + ':00'
+  rescheduling.value = true
+  try {
+    await rescheduleReservation(reservation.value.id, formatted)
+    ElMessage.success('改期成功')
+    showRescheduleDialog.value = false
+    loadReservation()
+  } catch (error) {
+    ElMessage.error(error.message || '改期失败')
+  } finally {
+    rescheduling.value = false
+  }
+}
+
 const handleReview = () => {
   router.push({
     path: `/script/${reservation.value.scriptId}`,
@@ -348,8 +487,109 @@ const goToStore = () => {
   }
 }
 
+// Function to parse datetime string and calculate countdown
+const startCountdown = () => {
+  if (!reservation.value || reservation.value.status !== 1 || reservation.value.payStatus !== 0) {
+    return
+  }
+
+  // Clear existing timer
+  if (countdownTimerId.value) {
+    clearInterval(countdownTimerId.value)
+  }
+
+  const updateCountdown = () => {
+    const createTime = new Date(reservation.value.createTime)
+    const deadlineTime = new Date(createTime.getTime() + 30 * 60 * 1000) // 30 minutes later
+    const now = new Date()
+    const remainingMs = deadlineTime.getTime() - now.getTime()
+
+    if (remainingMs <= 0) {
+      // Countdown expired
+      countdownTime.value = '00:00'
+      isCountdownExpired.value = true
+      clearInterval(countdownTimerId.value)
+      ElMessage.error('订单已超时，请重新预约')
+      setTimeout(() => {
+        router.go(0) // Refresh the page
+      }, 2000)
+      return
+    }
+
+    // Calculate minutes and seconds
+    const totalSeconds = Math.floor(remainingMs / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+
+    countdownTime.value = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+
+  updateCountdown()
+  countdownTimerId.value = setInterval(updateCountdown, 1000)
+}
+
+// Function to generate QR code
+const generateQRCode = async () => {
+  if (!reservation.value?.checkInCode) return
+
+  // 等待 DOM 渲染（v-if 控制显示，需要 nextTick 后 canvas 才存在）
+  await nextTick()
+
+  if (!qrcodeCanvas.value) {
+    console.warn('qrcodeCanvas ref 未找到，稍后重试')
+    setTimeout(generateQRCode, 300)
+    return
+  }
+
+  try {
+    const options = {
+      width: 150,
+      margin: 2,
+      color: {
+        dark: '#ffffff',   // 前景色（白色）
+        light: '#1a1a2e'   // 背景色（深色）
+      }
+    }
+    await QRCode.toCanvas(qrcodeCanvas.value, reservation.value.checkInCode, options)
+  } catch (error) {
+    console.error('生成二维码失败:', error)
+  }
+}
+
+// Watch for reservation changes to update countdown and QR code
+watch(
+  () => reservation.value,
+  (newVal) => {
+    if (newVal) {
+      if (newVal.status === 1 && newVal.payStatus === 0) {
+        startCountdown()
+      }
+      if (newVal.checkInCode) {
+        generateQRCode()
+      }
+    }
+  },
+  { deep: true }
+)
+
+// Watch for check-in code changes
+watch(
+  () => reservation.value?.checkInCode,
+  (newCode) => {
+    if (newCode) {
+      generateQRCode()
+    }
+  }
+)
+
 onMounted(() => {
   loadReservation()
+})
+
+onBeforeUnmount(() => {
+  if (countdownTimerId.value) {
+    clearInterval(countdownTimerId.value)
+  }
 })
 </script>
 
@@ -382,6 +622,41 @@ onMounted(() => {
   font-weight: bold;
 }
 
+.countdown-container {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.countdown {
+  color: #f56c6c;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 12px 16px;
+  background-color: rgba(245, 108, 108, 0.1);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.countdown-blink {
+  animation: blink 0.6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.check-in-code-wrapper {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+}
+
 .check-in-code {
   display: flex;
   flex-direction: column;
@@ -399,6 +674,24 @@ onMounted(() => {
   font-size: 13px;
 }
 
+.qrcode-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.qrcode-container canvas {
+  background-color: #1a1a2e;
+  border-radius: 4px;
+  padding: 4px;
+}
+
+.qrcode-label {
+  color: #909399;
+  font-size: 13px;
+}
+
 .actions {
   display: flex;
   gap: 15px;
@@ -406,5 +699,49 @@ onMounted(() => {
   margin-top: 30px;
   padding-top: 20px;
   border-top: 1px solid #eee;
+}
+
+/* 改期规则样式 */
+.reschedule-rules {
+  background: rgba(64, 158, 255, 0.05);
+  border: 1px solid rgba(64, 158, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  width: 100%;
+}
+
+.rule-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #606266;
+  margin-bottom: 10px;
+}
+
+.rule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: #606266;
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+
+.rule-item:last-child {
+  margin-bottom: 0;
+}
+
+.rule-item strong {
+  color: #303133;
+}
+
+.rule-icon {
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.rule-warn {
+  color: #f56c6c;
 }
 </style>

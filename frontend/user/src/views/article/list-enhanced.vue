@@ -175,8 +175,7 @@
             v-model:current-page="queryParams.page"
             v-model:page-size="queryParams.pageSize"
             :total="total"
-            :page-sizes="[9, 18, 27, 36]"
-            layout="total, sizes, prev, pager, next, jumper"
+            layout="total, prev, pager, next, jumper"
             @current-change="handlePageChange"
             @size-change="handleSizeChange"
           />
@@ -733,60 +732,115 @@ onMounted(() => {
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(139, 0, 0, 0.2);
+  align-items: center;
 }
 
 .search-input {
   flex: 1;
-  max-width: 600px;
+}
+
+/* 搜索框整体容器去掉默认分组边框 */
+.search-input :deep(.el-input-group) {
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(139, 0, 0, 0.15);
 }
 
 .search-input :deep(.el-input__wrapper) {
-  border-radius: 12px;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3);
-  background: rgba(35, 35, 60, 0.9);
+  border-radius: 0;
+  box-shadow: none !important;
+  background: rgba(35, 35, 60, 0.95);
+  border: 1px solid rgba(139, 0, 0, 0.25);
+  border-right: none;
+  height: 46px;
   transition: all 0.3s;
+}
+
+.search-input :deep(.el-input__wrapper:hover) {
+  border-color: rgba(139, 0, 0, 0.5);
+  background: rgba(40, 40, 70, 0.98);
+}
+
+.search-input :deep(.el-input__wrapper.is-focus) {
+  border-color: #8B0000;
+  background: rgba(40, 40, 70, 0.98);
 }
 
 .search-input :deep(.el-input__inner) {
   color: #fff;
+  font-size: 14px;
 }
 
 .search-input :deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.search-input :deep(.el-input__prefix-inner .el-icon) {
   color: rgba(255, 255, 255, 0.5);
+  font-size: 16px;
 }
 
-.search-input :deep(.el-input__prefix) {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.search-input :deep(.el-input__wrapper:hover),
-.search-input :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 2px #8B0000;
-}
-
+/* 搜索按钮 */
 .search-input :deep(.el-input-group__append) {
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
-  border: none;
+  background: linear-gradient(135deg, #8B0000 0%, #b01020 100%);
+  border: 1px solid #8B0000;
+  border-left: none;
   color: #fff;
-  border-radius: 0 12px 12px 0;
+  border-radius: 0;
+  padding: 0 24px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s;
+  height: 46px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
+.search-input :deep(.el-input-group__append:hover) {
+  background: linear-gradient(135deg, #a01020 0%, #c01530 100%);
+  box-shadow: 0 0 16px rgba(139, 0, 0, 0.5);
+}
+
+.search-input :deep(.el-input-group__append .el-button) {
+  background: transparent !important;
+  border: none !important;
+  color: #fff !important;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 1px;
+  padding: 0;
+  height: 100%;
+}
+
+/* 排序选择器 */
 .sort-select {
-  width: 150px;
+  width: 140px;
+  flex-shrink: 0;
 }
 
 .sort-select :deep(.el-input__wrapper) {
-  border-radius: 12px;
-  background: rgba(35, 35, 60, 0.9);
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3);
+  border-radius: 14px;
+  background: rgba(35, 35, 60, 0.95);
+  box-shadow: none !important;
+  border: 1px solid rgba(139, 0, 0, 0.25);
+  height: 46px;
+  transition: all 0.3s;
+}
+
+.sort-select :deep(.el-input__wrapper:hover) {
+  border-color: rgba(139, 0, 0, 0.5);
 }
 
 .sort-select :deep(.el-input__inner) {
   color: #fff;
+  font-size: 14px;
 }
 
-.sort-select :deep(.el-input__suffix) {
-  color: rgba(255, 255, 255, 0.6);
+.sort-select :deep(.el-input__suffix .el-icon) {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 /* 文章卡片 - 剧本杀风格 */

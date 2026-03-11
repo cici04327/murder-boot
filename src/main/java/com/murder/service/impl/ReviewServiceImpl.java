@@ -115,6 +115,16 @@ public class ReviewServiceImpl implements ReviewService {
         }
         
         review.setRewardPoints(rewardPoints);
+
+        // 自动计算综合评分（前端未传时自动补全，避免数据库 NOT NULL 报错）
+        if (review.getOverallRating() == null) {
+            int ratingSum = 0;
+            int ratingCount = 0;
+            if (reviewDTO.getStoreRating() != null) { ratingSum += reviewDTO.getStoreRating(); ratingCount++; }
+            if (reviewDTO.getScriptRating() != null) { ratingSum += reviewDTO.getScriptRating(); ratingCount++; }
+            if (reviewDTO.getServiceRating() != null) { ratingSum += reviewDTO.getServiceRating(); ratingCount++; }
+            review.setOverallRating(ratingCount > 0 ? Math.round((float) ratingSum / ratingCount) : 5);
+        }
         
         // 5. 保存评价
         reviewMapper.insert(review);

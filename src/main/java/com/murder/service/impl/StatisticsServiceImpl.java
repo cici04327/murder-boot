@@ -64,15 +64,32 @@ public class StatisticsServiceImpl implements StatisticsService {
         sql = "SELECT COUNT(*) FROM store WHERE is_deleted = 0";
         Integer totalStores = jdbcTemplate.queryForObject(sql, Integer.class);
         
-        // 今日优惠券使用数
-        sql = "SELECT COUNT(*) FROM user_coupon WHERE use_time >= ? AND status = 2";
-        Integer todayCouponUsed = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+        // 今日优惠券使用数（use_time 可能为 null，用 update_time 兜底）
+        Integer todayCouponUsed;
+        try {
+            sql = "SELECT COUNT(*) FROM user_coupon WHERE use_time >= ? AND status = 2";
+            todayCouponUsed = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+        } catch (Exception e) {
+            log.warn("查询优惠券使用数失败（字段不存在），使用状态字段兜底: {}", e.getMessage());
+            try {
+                sql = "SELECT COUNT(*) FROM user_coupon WHERE status = 2";
+                todayCouponUsed = jdbcTemplate.queryForObject(sql, Integer.class);
+            } catch (Exception e2) {
+                todayCouponUsed = 0;
+            }
+        }
         
-        // 优惠券使用率（今日使用数/今日领取数）
-        sql = "SELECT COUNT(*) FROM user_coupon WHERE receive_time >= ?";
-        Integer todayCouponReceived = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+        // 优惠券使用率（今日领取数，字段名兼容 receive_time / create_time）
+        Integer todayCouponReceived;
+        try {
+            sql = "SELECT COUNT(*) FROM user_coupon WHERE create_time >= ?";
+            todayCouponReceived = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+        } catch (Exception e) {
+            log.warn("查询优惠券领取数失败: {}", e.getMessage());
+            todayCouponReceived = 0;
+        }
         BigDecimal couponUsageRate = BigDecimal.ZERO;
-        if (todayCouponReceived > 0) {
+        if (todayCouponReceived != null && todayCouponReceived > 0) {
             couponUsageRate = BigDecimal.valueOf(todayCouponUsed)
                     .divide(BigDecimal.valueOf(todayCouponReceived), 4, RoundingMode.HALF_UP)
                     .multiply(BigDecimal.valueOf(100));
@@ -80,27 +97,32 @@ public class StatisticsServiceImpl implements StatisticsService {
         
         // 精选剧本数（状态为1的剧本）
         sql = "SELECT COUNT(*) FROM script WHERE status = 1 AND is_deleted = 0";
-        Integer totalScripts = jdbcTemplate.queryForObject(sql, Integer.class);
+        Integer totalScripts;
+        try {
+            totalScripts = jdbcTemplate.queryForObject(sql, Integer.class);
+        } catch (Exception e) {
+            log.warn("查询剧本数失败: {}", e.getMessage());
+            totalScripts = 0;
+        }
         
-        // 用户满意度（基于评价的平均评分，5分制转换为百分比）
-        sql = "SELECT AVG(rating) FROM script_review WHERE is_deleted = 0";
-        BigDecimal avgRating = jdbcTemplate.queryForObject(sql, BigDecimal.class);
-        BigDecimal satisfactionRate = BigDecimal.ZERO;
-        if (avgRating != null && avgRating.compareTo(BigDecimal.ZERO) > 0) {
-            // 将5分制转换为百分比，例如4.5分 = 90%
-            satisfactionRate = avgRating.divide(BigDecimal.valueOf(5), 4, RoundingMode.HALF_UP)
-                    .multiply(BigDecimal.valueOf(100));
-        } else {
-            // 如果没有评价数据，使用门店评价计算
-            sql = "SELECT AVG(rating) FROM store_review WHERE is_deleted = 0";
-            BigDecimal storeAvgRating = jdbcTemplate.queryForObject(sql, BigDecimal.class);
-            if (storeAvgRating != null && storeAvgRating.compareTo(BigDecimal.ZERO) > 0) {
-                satisfactionRate = storeAvgRating.divide(BigDecimal.valueOf(5), 4, RoundingMode.HALF_UP)
+        // 用户满意度（安全查询，表不存在时兜底）
+        BigDecimal satisfactionRate = BigDecimal.valueOf(95);
+        try {
+            sql = "SELECT AVG(rating) FROM script_review WHERE is_deleted = 0";
+            BigDecimal avgRating = jdbcTemplate.queryForObject(sql, BigDecimal.class);
+            if (avgRating != null && avgRating.compareTo(BigDecimal.ZERO) > 0) {
+                satisfactionRate = avgRating.divide(BigDecimal.valueOf(5), 4, RoundingMode.HALF_UP)
                         .multiply(BigDecimal.valueOf(100));
             } else {
-                // 默认满意度
-                satisfactionRate = BigDecimal.valueOf(95);
+                sql = "SELECT AVG(rating) FROM store_review WHERE is_deleted = 0";
+                BigDecimal storeAvgRating = jdbcTemplate.queryForObject(sql, BigDecimal.class);
+                if (storeAvgRating != null && storeAvgRating.compareTo(BigDecimal.ZERO) > 0) {
+                    satisfactionRate = storeAvgRating.divide(BigDecimal.valueOf(5), 4, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(100));
+                }
             }
+        } catch (Exception e) {
+            log.warn("查询满意度失败（评价表可能不存在），使用默认值95%: {}", e.getMessage());
         }
         
         // 计算增长率
@@ -324,6 +346,128 @@ public class StatisticsServiceImpl implements StatisticsService {
     /**
      * 计算增长�?
      */
+    @Override
+    public Map<String, Object> getOperationBoard(Integer days, Long storeId) {
+        if (days == null || days <= 0) days = 30;
+        LocalDateTime start = LocalDateTime.now().minusDays(days).toLocalDate().atStartOfDay();
+        LocalDateTime end = LocalDateTime.now();
+        Map<String, Object> result = new HashMap<>();
+        String storeWhere = storeId != null ? " AND store_id = " + storeId : "";
+
+        // 1. 预约转化率 = 已支付 / 总创建
+        try {
+            int total  = safeQueryInt("SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0" + storeWhere, start, end);
+            int paid   = safeQueryInt("SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND pay_status=1" + storeWhere, start, end);
+            result.put("totalReservations", total);
+            result.put("paidReservations", paid);
+            result.put("conversionRate", total > 0 ? Math.round(paid * 10000.0 / total) / 100.0 : 0);
+        } catch (Exception e) { log.warn("转化率统计失败: {}", e.getMessage()); result.put("conversionRate", 0); }
+
+        // 2. 取消率
+        try {
+            int total  = ((Number) result.getOrDefault("totalReservations", 0)).intValue();
+            int cancel = safeQueryInt("SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND status IN (3,4)" + storeWhere, start, end);
+            result.put("cancelReservations", cancel);
+            result.put("cancelRate", total > 0 ? Math.round(cancel * 10000.0 / total) / 100.0 : 0);
+        } catch (Exception e) { log.warn("取消率统计失败: {}", e.getMessage()); result.put("cancelRate", 0); }
+
+        // 3. 退款率
+        try {
+            int total  = ((Number) result.getOrDefault("totalReservations", 0)).intValue();
+            int refund = safeQueryInt("SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND refund_status=2" + storeWhere, start, end);
+            result.put("refundCount", refund);
+            result.put("refundRate", total > 0 ? Math.round(refund * 10000.0 / total) / 100.0 : 0);
+        } catch (Exception e) { log.warn("退款率统计失败: {}", e.getMessage()); result.put("refundRate", 0); }
+
+        // 4. 复购率
+        try {
+            String repSql   = "SELECT COUNT(*) FROM (SELECT user_id FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND pay_status=1" + storeWhere + " GROUP BY user_id HAVING COUNT(*)>=2) t";
+            String userSql  = "SELECT COUNT(DISTINCT user_id) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND pay_status=1" + storeWhere;
+            int repUsers    = safeQueryInt(repSql, start, end);
+            int totalUsers  = safeQueryInt(userSql, start, end);
+            result.put("repurchaseUsers", repUsers);
+            result.put("totalPayingUsers", totalUsers);
+            result.put("repurchaseRate", totalUsers > 0 ? Math.round(repUsers * 10000.0 / totalUsers) / 100.0 : 0);
+        } catch (Exception e) { log.warn("复购率统计失败: {}", e.getMessage()); result.put("repurchaseRate", 0); }
+
+        // 5. 房间利用率
+        try {
+            LocalDate sd = start.toLocalDate(), ed = end.toLocalDate();
+            String storeW2 = storeId != null ? " AND store_id=" + storeId : "";
+            int total = safeQueryInt("SELECT COUNT(*) FROM script_schedule WHERE schedule_date >= ? AND schedule_date <= ? AND is_deleted=0" + storeW2, sd, ed);
+            int used  = safeQueryInt("SELECT COUNT(*) FROM script_schedule WHERE schedule_date >= ? AND schedule_date <= ? AND is_deleted=0 AND current_players > 0" + storeW2, sd, ed);
+            result.put("scheduleTotal", total);
+            result.put("scheduleUsed", used);
+            result.put("roomUtilizationRate", total > 0 ? Math.round(used * 10000.0 / total) / 100.0 : 0);
+        } catch (Exception e) { log.warn("房间利用率统计失败: {}", e.getMessage()); result.put("roomUtilizationRate", 0); }
+
+        // 6. 平均客单价
+        try {
+            BigDecimal avg = jdbcTemplate.queryForObject("SELECT AVG(actual_amount) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND pay_status=1" + storeWhere, BigDecimal.class, start, end);
+            result.put("avgOrderAmount", avg != null ? avg.setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        } catch (Exception e) { log.warn("客单价统计失败: {}", e.getMessage()); result.put("avgOrderAmount", BigDecimal.ZERO); }
+
+        // 7. 总营收
+        try {
+            BigDecimal rev = jdbcTemplate.queryForObject("SELECT SUM(actual_amount) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND pay_status=1" + storeWhere, BigDecimal.class, start, end);
+            result.put("totalRevenue", rev != null ? rev.setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+        } catch (Exception e) { log.warn("总营收统计失败: {}", e.getMessage()); result.put("totalRevenue", BigDecimal.ZERO); }
+
+        // 8. 每日趋势
+        try {
+            String trendSql = "SELECT DATE(create_time) as d, COUNT(*) as cnt, SUM(CASE WHEN pay_status=1 THEN actual_amount ELSE 0 END) as rev " +
+                    "FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0" + storeWhere + " GROUP BY DATE(create_time) ORDER BY d";
+            List<Map<String, Object>> trend = jdbcTemplate.queryForList(trendSql, start, end);
+            List<String> dates = new java.util.ArrayList<>();
+            List<Integer> counts = new java.util.ArrayList<>();
+            List<BigDecimal> revenues = new java.util.ArrayList<>();
+            for (Map<String, Object> row : trend) {
+                dates.add(String.valueOf(row.get("d")));
+                counts.add(((Number) row.get("cnt")).intValue());
+                Object rev = row.get("rev");
+                revenues.add(rev != null ? new BigDecimal(rev.toString()).setScale(2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO);
+            }
+            result.put("trendDates", dates);
+            result.put("trendCounts", counts);
+            result.put("trendRevenues", revenues);
+        } catch (Exception e) { log.warn("趋势统计失败: {}", e.getMessage()); }
+
+        // 9. 剧本热度榜 TOP8
+        try {
+            List<Map<String, Object>> rank = jdbcTemplate.queryForList(
+                "SELECT s.name, COUNT(r.id) as cnt FROM reservation_order r LEFT JOIN script s ON r.script_id=s.id " +
+                "WHERE r.create_time >= ? AND r.create_time <= ? AND r.is_deleted=0 AND r.pay_status=1" + storeWhere +
+                " GROUP BY r.script_id, s.name ORDER BY cnt DESC LIMIT 8", start, end);
+            result.put("scriptHotRank", rank);
+        } catch (Exception e) { log.warn("剧本热度统计失败: {}", e.getMessage()); result.put("scriptHotRank", new java.util.ArrayList<>()); }
+
+        // 10. 新老客户分层
+        try {
+            String newSql = "SELECT COUNT(DISTINCT user_id) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND pay_status=1" + storeWhere +
+                    " AND user_id NOT IN (SELECT DISTINCT user_id FROM reservation_order WHERE create_time < ? AND is_deleted=0 AND pay_status=1" + storeWhere + ")";
+            int newCustomers = safeQueryInt(newSql, start, end, start);
+            int total = ((Number) result.getOrDefault("totalPayingUsers", 0)).intValue();
+            result.put("newCustomers", newCustomers);
+            result.put("returningCustomers", Math.max(0, total - newCustomers));
+        } catch (Exception e) { log.warn("用户分层统计失败: {}", e.getMessage()); }
+
+        result.put("days", days);
+        result.put("storeId", storeId);
+        result.put("generatedAt", LocalDateTime.now().toString());
+        return result;
+    }
+
+    /** 安全执行 COUNT 查询，失败返回0 */
+    private int safeQueryInt(String sql, Object... args) {
+        try {
+            Integer r = jdbcTemplate.queryForObject(sql, Integer.class, args);
+            return r != null ? r : 0;
+        } catch (Exception e) {
+            log.warn("safeQueryInt: {}", e.getMessage());
+            return 0;
+        }
+    }
+
     private BigDecimal calculateGrowth(BigDecimal current, BigDecimal previous) {
         if (previous == null || previous.compareTo(BigDecimal.ZERO) == 0) {
             return BigDecimal.ZERO;

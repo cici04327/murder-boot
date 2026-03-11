@@ -131,12 +131,20 @@ public class ScriptFavoriteServiceImpl implements ScriptFavoriteService {
         } else {
             LambdaQueryWrapper<Script> scriptWrapper = new LambdaQueryWrapper<>();
             scriptWrapper.in(Script::getId, scriptIds);
-            scripts = scriptMapper.selectList(scriptWrapper);
+            List<Script> rawScripts = scriptMapper.selectList(scriptWrapper);
+            // 按收藏顺序排列，过滤掉已被删除的剧本
+            scripts = scriptIds.stream()
+                    .map(id -> rawScripts.stream()
+                            .filter(s -> s.getId().equals(id))
+                            .findFirst()
+                            .orElse(null))
+                    .filter(s -> s != null)
+                    .collect(Collectors.toList());
         }
-        
-        // 使用 Long 类型?total
-        Long total = favoritePage.getTotal();
-        log.info("查询用户{}的收藏列表，总数:{}, 当前页数?{}", userId, total, scripts.size());
+
+        // total 以实际存在的剧本数为准（过滤掉已删除的剧本后修正）
+        long total = Math.max(favoritePage.getTotal() - (scriptIds.size() - scripts.size()), scripts.size());
+        log.info("查询用户{}的收藏列表，DB总数:{}, 实际返回:{}, 修正后total:{}", userId, favoritePage.getTotal(), scripts.size(), total);
         
         return new PageResult<>(total, scripts);
     }

@@ -1156,14 +1156,16 @@ public class RecommendationServiceImpl implements RecommendationService {
         int rank = 1;
         
         for (Script script : scripts) {
-            BigDecimal score = script.getRating().multiply(BigDecimal.TEN);
+            // 防止 rating 为 null 导致 NullPointerException
+            BigDecimal rating = script.getRating() != null ? script.getRating() : BigDecimal.ZERO;
+            BigDecimal score = rating.multiply(BigDecimal.TEN);
             
             HotRanking ranking = HotRanking.builder()
                     .rankingType(rankingType)
                     .scriptId(script.getId())
                     .rank(rank++)
                     .score(score)
-                    .rating(script.getRating())
+                    .rating(rating)
                     .build();
             
             rankings.add(ranking);

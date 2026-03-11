@@ -47,6 +47,12 @@ const routes = [
         meta: { title: '门店统计', icon: 'DataAnalysis', roles: ['admin'] }
       },
       {
+        path: 'operation-board',
+        name: 'OperationBoard',
+        component: () => import('@/views/store/operation-board.vue'),
+        meta: { title: '经营看板', icon: 'TrendCharts', roles: ['admin', 'store'] }
+      },
+      {
         path: 'room',
         name: 'StoreRoom',
         component: () => import('@/views/store/room.vue'),
@@ -107,7 +113,7 @@ const routes = [
         path: 'schedule',
         name: 'ScriptSchedule',
         component: () => import('@/views/script/schedule.vue'),
-        meta: { title: '排期管理', icon: 'Calendar', roles: ['store'] }
+        meta: { title: '排期管理', icon: 'Calendar', roles: ['admin', 'store'] }
       }
     ]
   },

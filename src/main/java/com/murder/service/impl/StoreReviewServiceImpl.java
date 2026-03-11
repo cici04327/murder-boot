@@ -102,12 +102,17 @@ public class StoreReviewServiceImpl implements StoreReviewService {
             }
         }
         
-        // 查询用户昵称：单体模式下直接查本地用户表，避免遗留微服务端口(8081)导致网络错误
+        // 查询用户昵称和头像
         if (review.getUserId() != null) {
             try {
                 User user = userMapper.selectById(review.getUserId());
-                if (user != null && user.getNickname() != null && !user.getNickname().isBlank()) {
-                    vo.setUserNickname(user.getNickname());
+                if (user != null) {
+                    boolean anonymous = review.getIsAnonymous() != null && review.getIsAnonymous() == 1;
+                    vo.setIsAnonymous(review.getIsAnonymous());
+                    vo.setUserNickname(anonymous ? "匿名用户" :
+                            (user.getNickname() != null && !user.getNickname().isBlank() ?
+                                    user.getNickname() : "用户" + review.getUserId()));
+                    vo.setUserAvatar(anonymous ? null : user.getAvatar());
                 } else {
                     vo.setUserNickname("用户" + review.getUserId());
                 }
@@ -117,7 +122,7 @@ public class StoreReviewServiceImpl implements StoreReviewService {
         } else {
             vo.setUserNickname("匿名用户");
         }
-        
+
         return vo;
     }
 }

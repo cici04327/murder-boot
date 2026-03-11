@@ -4,6 +4,7 @@ import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
 import com.murder.dto.ReservationDTO;
+import com.murder.dto.RescheduleDTO;
 import com.murder.entity.Reservation;
 import com.murder.service.ReservationService;
 import com.murder.vo.ReservationVO;
@@ -147,5 +148,13 @@ public class ReservationController {
     ) {
         log.info("检查房间可用性: roomId={}, reservationTime={}, duration={}", roomId, reservationTime, duration);
         return Result.success(reservationService.checkRoomAvailability(roomId, reservationTime, duration));
+    }
+
+    @PutMapping("/{id}/reschedule")
+    @Operation(summary = "改期预约")
+    public Result<String> reschedule(@PathVariable Long id, @RequestBody RescheduleDTO dto) {
+        log.info("改期预约: id={}, newReservationTime={}", id, dto.getNewReservationTime());
+        reservationService.reschedule(id, dto.getNewReservationTime());
+        return Result.success("改期成功");
     }
 }

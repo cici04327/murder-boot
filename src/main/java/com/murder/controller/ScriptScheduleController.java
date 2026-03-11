@@ -138,4 +138,19 @@ public class ScriptScheduleController {
         ScriptSchedule schedule = scriptScheduleService.getById(id);
         return Result.success(schedule);
     }
+
+    /**
+     * 查询可约场次（用户端）- 含余量展示
+     * 返回指定剧本/门店未来N天内 status=1 且未满员的场次
+     */
+    @GetMapping("/available")
+    @Operation(summary = "查询可约场次（含余量）", description = "供用户端展示剧本详情页/门店详情页的可约场次和剩余名额")
+    public Result<List<ScriptSchedule>> getAvailable(
+            @RequestParam(required = false) Long scriptId,
+            @RequestParam(required = false) Long storeId,
+            @RequestParam(defaultValue = "7") Integer days) {
+        log.info("查询可约场次: scriptId={}, storeId={}, days={}", scriptId, storeId, days);
+        List<ScriptSchedule> list = scriptScheduleService.getAvailableSchedules(scriptId, storeId, days);
+        return Result.success(list);
+    }
 }

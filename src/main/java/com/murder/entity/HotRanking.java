@@ -39,8 +39,9 @@ public class HotRanking implements Serializable {
     private Long scriptId;
 
     /**
-     * 排名
+     * 排名（rank 是 MySQL 8.0 保留字，必须用反引号转义）
      */
+    @TableField("`rank`")
     private Integer rank;
 
     /**

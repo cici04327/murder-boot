@@ -114,6 +114,72 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
         log.info("批量生成排期: storeId={}, scriptId={}, 共{}条", storeId, scriptId, schedules.size());
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void incrementCurrentPlayers(Long scheduleId, int count) {
+        ScriptSchedule schedule = scriptScheduleMapper.selectById(scheduleId);
+        if (schedule == null) {
+            log.warn("排期不存在，跳过人数更新: scheduleId={}", scheduleId);
+            return;
+        }
+        int newCount = (schedule.getCurrentPlayers() == null ? 0 : schedule.getCurrentPlayers()) + count;
+        ScriptSchedule update = new ScriptSchedule();
+        update.setId(scheduleId);
+        update.setCurrentPlayers(newCount);
+        // 若已满则自动关闭排期
+        if (schedule.getMaxPlayers() != null && newCount >= schedule.getMaxPlayers()) {
+            update.setStatus(0); // 0=已满
+        }
+        scriptScheduleMapper.updateById(update);
+        log.info("排期人数+{}: scheduleId={}, currentPlayers={}", count, scheduleId, newCount);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void decrementCurrentPlayers(Long scheduleId, int count) {
+        ScriptSchedule schedule = scriptScheduleMapper.selectById(scheduleId);
+        if (schedule == null) {
+            log.warn("排期不存在，跳过人数回退: scheduleId={}", scheduleId);
+            return;
+        }
+        int newCount = Math.max(0, (schedule.getCurrentPlayers() == null ? 0 : schedule.getCurrentPlayers()) - count);
+        ScriptSchedule update = new ScriptSchedule();
+        update.setId(scheduleId);
+        update.setCurrentPlayers(newCount);
+        // 若之前是已满状态则恢复为可预约
+        if (Integer.valueOf(0).equals(schedule.getStatus())) {
+            update.setStatus(1);
+        }
+        scriptScheduleMapper.updateById(update);
+        log.info("排期人数-{}: scheduleId={}, currentPlayers={}", count, scheduleId, newCount);
+    }
+
+    @Override
+    public List<ScriptSchedule> getAvailableSchedules(Long scriptId, Long storeId, Integer days) {
+        if (days == null || days <= 0) days = 7;
+        LocalDate today = LocalDate.now();
+        LocalDate endDate = today.plusDays(days - 1);
+
+        LambdaQueryWrapper<ScriptSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ScriptSchedule::getIsDeleted, 0)
+               .eq(ScriptSchedule::getStatus, 1)           // 状态：可预约
+               .ge(ScriptSchedule::getScheduleDate, today)
+               .le(ScriptSchedule::getScheduleDate, endDate);
+
+        if (scriptId != null) {
+            wrapper.eq(ScriptSchedule::getScriptId, scriptId);
+        }
+        if (storeId != null) {
+            wrapper.eq(ScriptSchedule::getStoreId, storeId);
+        }
+
+        wrapper.orderByAsc(ScriptSchedule::getScheduleDate, ScriptSchedule::getStartTime);
+
+        // SQL 级过滤：直接排除 currentPlayers >= maxPlayers 的场次（性能优化）
+        wrapper.apply("current_players < max_players");
+        return scriptScheduleMapper.selectList(wrapper);
+    }
+
     /**
      * 检查时间冲突
      */

@@ -92,6 +92,134 @@
       </div>
     </div>
 
+    <!-- 权益对比表 -->
+    <div class="compare-section mystery-section">
+      <h2 class="section-title">
+        <span class="title-emoji">📊</span>
+        等级权益对比
+      </h2>
+      <div class="compare-table-wrap">
+        <table class="compare-table">
+          <thead>
+            <tr>
+              <th class="feature-col">权益项目</th>
+              <th v-for="lv in levelList" :key="lv.level" :class="`level-${lv.level}-col`">
+                <div class="th-level-badge" :class="`level-${lv.level}`">
+                  {{ lv.emoji }} {{ lv.name }}
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in compareRows" :key="row.key">
+              <td class="feature-col">
+                <span class="row-icon">{{ row.icon }}</span>{{ row.label }}
+              </td>
+              <td v-for="lv in levelList" :key="lv.level" class="value-col">
+                <span v-if="row.values[lv.level] === true" class="check-yes">✓</span>
+                <span v-else-if="row.values[lv.level] === false" class="check-no">—</span>
+                <span v-else class="value-text">{{ row.values[lv.level] }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 生日券 & 月度体验券感知模块 -->
+    <div class="coupon-perks-section mystery-section">
+      <h2 class="section-title">
+        <span class="title-emoji">🎟️</span>
+        专属券福利
+      </h2>
+      <div class="coupon-perks-grid">
+        <div class="coupon-perk-card">
+          <div class="cp-icon">🎂</div>
+          <div class="cp-body">
+            <div class="cp-title">生日专享券</div>
+            <div class="cp-desc">生日当月自动发放，无需领取</div>
+            <div class="cp-detail">
+              <span class="cp-level l1">见习 ¥30</span>
+              <span class="cp-level l2">银章 ¥80</span>
+              <span class="cp-level l3">金章 ¥150</span>
+              <span class="cp-level l4">传奇 ¥200</span>
+            </div>
+            <div class="cp-tip">📌 每月最后一天到期，请及时使用</div>
+          </div>
+        </div>
+        <div class="coupon-perk-card">
+          <div class="cp-icon">🎫</div>
+          <div class="cp-body">
+            <div class="cp-title">月度体验券</div>
+            <div class="cp-desc">每月1日自动发放到账户</div>
+            <div class="cp-detail">
+              <span class="cp-level l1">见习 ¥20×1</span>
+              <span class="cp-level l2">银章 ¥50×2</span>
+              <span class="cp-level l3">金章 ¥100×5</span>
+              <span class="cp-level l4">传奇 ¥150×10</span>
+            </div>
+            <div class="cp-tip">📌 30天内有效，可叠加折扣使用</div>
+          </div>
+        </div>
+        <div class="coupon-perk-card">
+          <div class="cp-icon">💎</div>
+          <div class="cp-body">
+            <div class="cp-title">专属折扣</div>
+            <div class="cp-desc">所有剧本预约享受会员价</div>
+            <div class="cp-detail">
+              <span class="cp-level l1">见习 9.5折</span>
+              <span class="cp-level l2">银章 9折</span>
+              <span class="cp-level l3">金章 8.5折</span>
+              <span class="cp-level l4">传奇 8折</span>
+            </div>
+            <div class="cp-tip">📌 结算时自动抵扣，无需手动选择</div>
+          </div>
+        </div>
+        <div class="coupon-perk-card">
+          <div class="cp-icon">🚀</div>
+          <div class="cp-body">
+            <div class="cp-title">优先拼单特权</div>
+            <div class="cp-desc">热门剧本优先匹配拼单队友</div>
+            <div class="cp-detail">
+              <span class="cp-level l1">—</span>
+              <span class="cp-level l2">银章优先</span>
+              <span class="cp-level l3">金章优先</span>
+              <span class="cp-level l4">传奇置顶</span>
+            </div>
+            <div class="cp-tip">📌 拼单大厅展示位置优先级更高</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIP限定榜单入口 -->
+    <div class="vip-exclusive-section mystery-section" v-if="userVipInfo && userVipInfo.level >= 2">
+      <h2 class="section-title">
+        <span class="title-emoji">👑</span>
+        VIP限定特权
+      </h2>
+      <div class="exclusive-grid">
+        <div class="exclusive-card" @click="router.push('/recommend')">
+          <div class="ex-icon">🏆</div>
+          <div class="ex-title">VIP专属榜单</div>
+          <div class="ex-desc">口碑榜·新品榜·稀缺本</div>
+          <el-tag type="warning" size="small">仅VIP可见</el-tag>
+        </div>
+        <div class="exclusive-card" @click="router.push('/reservation/schedule')">
+          <div class="ex-icon">⚡</div>
+          <div class="ex-title">优先预约通道</div>
+          <div class="ex-desc">VIP用户专属预约时段</div>
+          <el-tag type="warning" size="small">提前24h开抢</el-tag>
+        </div>
+        <div class="exclusive-card" @click="router.push('/user/coupons')">
+          <div class="ex-icon">🎟️</div>
+          <div class="ex-title">我的专属券包</div>
+          <div class="ex-desc">查看已发放的月度券和生日券</div>
+          <el-tag type="success" size="small">立即查看</el-tag>
+        </div>
+      </div>
+    </div>
+
     <!-- VIP套餐选择 - 剧本杀主题 -->
     <div class="packages-section mystery-section">
       <h2 class="section-title">
@@ -206,6 +334,8 @@
       title="选择支付方式"
       width="500px"
       :close-on-click-modal="false"
+      class="vip-payment-dialog"
+      :append-to-body="false"
     >
       <div class="payment-dialog">
         <div class="payment-info">
@@ -297,6 +427,27 @@ const selectedPackage = ref(null)
 const showPaymentDialog = ref(false)
 const paymentMethod = ref('')
 const purchasing = ref(false)
+
+// 等级列表
+const levelList = [
+  { level: 1, name: '见习侦探', emoji: '🔰' },
+  { level: 2, name: '银章侦探', emoji: '🥈' },
+  { level: 3, name: '金章侦探', emoji: '🥇' },
+  { level: 4, name: '传奇侦探', emoji: '👑' }
+]
+
+// 权益对比表数据
+const compareRows = [
+  { key: 'discount',    icon: '💎', label: '预约折扣',   values: { 1: '9.5折', 2: '9折', 3: '8.5折', 4: '8折' } },
+  { key: 'monthly',     icon: '🎫', label: '月度体验券', values: { 1: '¥20×1', 2: '¥50×2', 3: '¥100×5', 4: '¥150×10' } },
+  { key: 'birthday',    icon: '🎂', label: '生日专享券', values: { 1: '¥30', 2: '¥80', 3: '¥150', 4: '¥200' } },
+  { key: 'points',      icon: '🔍', label: '积分加成',   values: { 1: '1.5倍', 2: '2倍', 3: '3倍', 4: '5倍' } },
+  { key: 'priority',    icon: '🚀', label: '优先拼单',   values: { 1: false, 2: true, 3: true, 4: true } },
+  { key: 'ranking',     icon: '🏆', label: 'VIP专属榜单', values: { 1: false, 2: true, 3: true, 4: true } },
+  { key: 'earlybook',   icon: '⚡', label: '提前24h预约', values: { 1: false, 2: false, 3: true, 4: true } },
+  { key: 'service',     icon: '🕵️', label: 'VIP专属客服', values: { 1: false, 2: false, 3: true, 4: true } },
+  { key: 'badge',       icon: '👑', label: '专属徽章',   values: { 1: false, 2: false, 3: false, 4: true } },
+]
 
 // 会员权益 - 剧本杀主题
 const benefits = [
@@ -501,6 +652,7 @@ onMounted(() => {
   loadData()
 })
 </script>
+
 
 <style scoped lang="scss">
 .vip-container {
@@ -1215,7 +1367,57 @@ onMounted(() => {
   }
 }
 
-// 支付对话框
+// 支付对话框弹窗样式 - append-to-body=false 后可用 :deep() 生效
+:deep(.vip-payment-dialog) {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
+  border: 1px solid rgba(102, 126, 234, 0.4) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
+
+  .el-dialog__header {
+    background: transparent !important;
+    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+    padding: 20px 24px;
+
+    .el-dialog__title {
+      color: #fff !important;
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .el-dialog__headerbtn .el-dialog__close {
+      color: rgba(255, 255, 255, 0.6) !important;
+      &:hover {
+        color: #fff !important;
+      }
+    }
+  }
+
+  .el-dialog__body {
+    background: transparent !important;
+    padding: 24px;
+  }
+
+  .el-dialog__footer {
+    background: transparent !important;
+    border-top: 1px solid rgba(102, 126, 234, 0.2);
+    padding: 16px 24px;
+
+    .el-button--default {
+      background: rgba(255, 255, 255, 0.08) !important;
+      border-color: rgba(255, 255, 255, 0.2) !important;
+      color: rgba(255, 255, 255, 0.8) !important;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.15) !important;
+        border-color: rgba(255, 255, 255, 0.4) !important;
+        color: #fff !important;
+      }
+    }
+  }
+}
+
+// 支付对话框内容
 .payment-dialog {
   .payment-info {
     background: linear-gradient(135deg, rgba(40, 40, 70, 0.95) 0%, rgba(30, 30, 60, 0.95) 100%);
@@ -1323,6 +1525,150 @@ onMounted(() => {
     }
   }
 }
+
+// 权益对比表
+.compare-section { margin-bottom: 30px; }
+
+.compare-table-wrap { overflow-x: auto; }
+
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th, td {
+    padding: 12px 16px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .feature-col {
+    text-align: left;
+    color: rgba(255,255,255,0.8);
+    white-space: nowrap;
+    font-weight: 500;
+    min-width: 130px;
+  }
+
+  .row-icon { margin-right: 6px; }
+
+  th { background: rgba(255,255,255,0.05); }
+
+  tr:hover td { background: rgba(102,126,234,0.08); }
+}
+
+.th-level-badge {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 13px;
+  display: inline-block;
+
+  &.level-1 { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+  &.level-2 { background: linear-gradient(135deg, #C0C0C0, #E8E8E8); color: #333; }
+  &.level-3 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #fff; }
+  &.level-4 { background: linear-gradient(135deg, #B24FD8, #FF6B9D); color: #fff; }
+}
+
+.check-yes { color: #67c23a; font-size: 18px; font-weight: 700; }
+.check-no { color: rgba(255,255,255,0.25); font-size: 18px; }
+.value-text { color: #fff; font-weight: 600; }
+
+// 专属券福利
+.coupon-perks-section { margin-bottom: 30px; }
+
+.coupon-perks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.coupon-perk-card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  gap: 16px;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: rgba(102,126,234,0.4);
+    background: rgba(102,126,234,0.08);
+  }
+}
+
+.cp-icon { font-size: 36px; flex-shrink: 0; }
+
+.cp-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.cp-desc {
+  font-size: 13px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 10px;
+}
+
+.cp-detail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.cp-level {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+
+  &.l1 { background: rgba(102,126,234,0.2); color: #a0b0ff; }
+  &.l2 { background: rgba(192,192,192,0.2); color: #e0e0e0; }
+  &.l3 { background: rgba(255,215,0,0.2); color: #ffd700; }
+  &.l4 { background: rgba(178,79,216,0.2); color: #da9fef; }
+}
+
+.cp-tip {
+  font-size: 12px;
+  color: rgba(255,255,255,0.4);
+}
+
+// VIP限定入口
+.vip-exclusive-section { margin-bottom: 30px; }
+
+.exclusive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.exclusive-card {
+  background: linear-gradient(135deg, rgba(40,40,80,0.95) 0%, rgba(30,30,70,0.95) 100%);
+  border: 2px solid rgba(255,215,0,0.25);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  &:hover {
+    border-color: rgba(255,215,0,0.6);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(255,215,0,0.15);
+  }
+}
+
+.ex-icon { font-size: 40px; }
+.ex-title { font-size: 16px; font-weight: 700; color: #fff; }
+.ex-desc { font-size: 13px; color: rgba(255,255,255,0.6); }
 
 // 响应式
 @media (max-width: 768px) {

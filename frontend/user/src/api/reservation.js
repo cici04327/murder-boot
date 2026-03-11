@@ -110,3 +110,12 @@ export const updateReservation = (id, data) => {
     data
   })
 }
+
+// 预约改期
+export const rescheduleReservation = (id, newReservationTime) => {
+  return request({
+    url: `/reservation/${id}/reschedule`,
+    method: 'put',
+    data: { newReservationTime }
+  })
+}

@@ -32,4 +32,11 @@ public interface StatisticsService {
      * @param limit 限制数量
      */
     StatisticsRealtimeVO getRealtime(Integer limit);
+
+    /**
+     * 获取经营看板数据（转化率、房间利用率、复购率等）
+     * @param days 统计天数（默认30天）
+     * @param storeId 门店ID（null=全部门店）
+     */
+    java.util.Map<String, Object> getOperationBoard(Integer days, Long storeId);
 }

@@ -95,17 +95,90 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
     @Override
     public List<Map<String, Object>> getHotGroups(Integer limit) {
-        LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(GroupOrder::getStatus, 1)
-                .orderByDesc(GroupOrder::getCreateTime)
-                .last("LIMIT " + limit);
+        try {
+            int safeLimit = (limit == null || limit <= 0) ? 10 : Math.min(limit, 50);
+            LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(GroupOrder::getStatus, 1)
+                    .orderByDesc(GroupOrder::getCreateTime)
+                    .last("LIMIT " + safeLimit);
 
-        List<GroupOrder> groups = this.list(wrapper);
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (GroupOrder group : groups) {
-            result.add(convertToMap(group));
+            List<GroupOrder> groups = this.list(wrapper);
+            if (groups == null || groups.isEmpty()) {
+                return new ArrayList<>();
+            }
+
+            // 批量查询剧本，避免 N+1 查询导致的性能问题和偶发异常
+            List<Long> scriptIds = groups.stream()
+                    .filter(g -> g.getScriptId() != null)
+                    .map(GroupOrder::getScriptId)
+                    .distinct()
+                    .toList();
+
+            Map<Long, Script> scriptMap = new java.util.HashMap<>();
+            Map<Long, ScriptCategory> categoryMap = new java.util.HashMap<>();
+
+            if (!scriptIds.isEmpty()) {
+                try {
+                    LambdaQueryWrapper<Script> scriptWrapper = new LambdaQueryWrapper<>();
+                    scriptWrapper.in(Script::getId, scriptIds).eq(Script::getIsDeleted, 0);
+                    List<Script> scripts = scriptMapper.selectList(scriptWrapper);
+                    scripts.forEach(s -> scriptMap.put(s.getId(), s));
+
+                    // 批量查分类
+                    List<Long> categoryIds = scripts.stream()
+                            .filter(s -> s.getCategoryId() != null)
+                            .map(Script::getCategoryId)
+                            .distinct()
+                            .toList();
+                    if (!categoryIds.isEmpty()) {
+                        LambdaQueryWrapper<ScriptCategory> catWrapper = new LambdaQueryWrapper<>();
+                        catWrapper.in(ScriptCategory::getId, categoryIds);
+                        scriptCategoryMapper.selectList(catWrapper)
+                                .forEach(c -> categoryMap.put(c.getId(), c));
+                    }
+                } catch (Exception e) {
+                    log.warn("批量查询剧本信息失败，将使用拼单快照数据: {}", e.getMessage());
+                }
+            }
+
+            List<Map<String, Object>> result = new ArrayList<>();
+            for (GroupOrder group : groups) {
+                try {
+                    Script script = group.getScriptId() != null ? scriptMap.get(group.getScriptId()) : null;
+                    ScriptCategory category = (script != null && script.getCategoryId() != null)
+                            ? categoryMap.get(script.getCategoryId()) : null;
+
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", group.getId());
+                    map.put("creatorName", "神秘车主");
+                    map.put("creatorAvatar", null);
+                    map.put("scriptId", group.getScriptId());
+                    map.put("scriptName", script != null && StringUtils.hasText(script.getName())
+                            ? script.getName() : group.getScriptName());
+                    map.put("categoryId", script != null ? script.getCategoryId() : null);
+                    map.put("categoryName", category != null ? category.getName() : null);
+                    map.put("storeId", group.getStoreId());
+                    map.put("storeName", group.getStoreName());
+                    map.put("playTime", group.getPlayTime());
+                    map.put("currentCount", group.getCurrentCount());
+                    map.put("needCount", group.getNeedCount());
+                    map.put("playerCount", group.getPlayerCount());
+                    map.put("price", group.getPrice());
+                    map.put("genderRequirement", group.getGenderRequirement());
+                    map.put("newbieWelcome", group.getNewbieWelcome());
+                    map.put("description", group.getDescription());
+                    map.put("status", group.getStatus());
+                    map.put("createTime", group.getCreateTime());
+                    result.add(map);
+                } catch (Exception e) {
+                    log.warn("处理拼单数据失败，跳过 groupId={}: {}", group.getId(), e.getMessage());
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("获取热门拼单失败", e);
+            return new ArrayList<>();
         }
-        return result;
     }
 
     @Override

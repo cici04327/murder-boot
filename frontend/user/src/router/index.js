@@ -60,10 +60,16 @@ const routes = [
         meta: { title: '门店详情' }
       },
       {
+        path: 'reservation/schedule',
+        name: 'ScheduleSelect',
+        component: () => import('@/views/reservation/schedule-select.vue'),
+        meta: { title: '选择场次', requireAuth: false }
+      },
+      {
         path: 'reservation/create',
         name: 'CreateReservation',
         component: () => import('@/views/reservation/create.vue'),
-        meta: { title: '创建预约', requireAuth: true }
+        meta: { title: '确认预约', requireAuth: true }
       },
       {
         path: 'reservation/confirm/:id',

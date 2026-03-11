@@ -49,4 +49,6 @@ public interface ReservationService {
     List<Reservation> getUpcomingReservations(Integer hours);
 
     boolean checkRoomAvailability(Long roomId, String reservationTime, Double duration);
+
+    void reschedule(Long id, String newReservationTime);
 }

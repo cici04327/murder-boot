@@ -196,8 +196,7 @@
       v-model:current-page="searchForm.page"
       v-model:page-size="searchForm.pageSize"
       :total="total"
-      :page-sizes="[10, 20, 30]"
-      layout="total, sizes, prev, pager, next, jumper"
+      layout="total, prev, pager, next, jumper"
       @size-change="handleSizeChange"
       @current-change="handlePageChange"
     />

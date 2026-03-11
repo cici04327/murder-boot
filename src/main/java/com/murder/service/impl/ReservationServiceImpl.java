@@ -10,6 +10,7 @@ import com.murder.service.AdminNotificationService;
 import com.murder.service.CouponService;
 import com.murder.service.NotificationService;
 import com.murder.service.ReservationService;
+import com.murder.service.ScriptScheduleService;
 import com.murder.service.StoreRoomService;
 import com.murder.vo.ReservationVO;
 import lombok.extern.slf4j.Slf4j;
@@ -65,6 +66,9 @@ public class ReservationServiceImpl implements ReservationService {
 
     @Autowired(required = false)
     private com.murder.service.GroupOrderService groupOrderService;
+
+    @Autowired(required = false)
+    private ScriptScheduleService scriptScheduleService;
 
     @Autowired(required = false)
     private com.murder.service.VipService vipService;
@@ -154,6 +158,17 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setVipDiscount(vipDiscountRate);
 
         reservationMapper.insert(reservation);
+
+        // 同步更新排期的已预约人数（scheduleId 由前端传入）
+        if (reservationDTO.getScheduleId() != null && scriptScheduleService != null) {
+            try {
+                scriptScheduleService.incrementCurrentPlayers(
+                        reservationDTO.getScheduleId(),
+                        reservation.getPlayerCount() == null ? 1 : reservation.getPlayerCount());
+            } catch (Exception e) {
+                log.warn("更新排期人数失败: scheduleId={}", reservationDTO.getScheduleId(), e);
+            }
+        }
 
         if (couponValid && reservationDTO.getUserCouponId() != null) {
             couponService.useCoupon(reservationDTO.getUserCouponId(), reservation.getId());
@@ -376,6 +391,17 @@ public class ReservationServiceImpl implements ReservationService {
                 refundCoupon(id);
             } catch (Exception e) {
                 log.error("退回优惠券失败: reservationId={}", id, e);
+            }
+        }
+
+        // 回退排期已预约人数
+        if (reservation.getScheduleId() != null && scriptScheduleService != null) {
+            try {
+                scriptScheduleService.decrementCurrentPlayers(
+                        reservation.getScheduleId(),
+                        reservation.getPlayerCount() == null ? 1 : reservation.getPlayerCount());
+            } catch (Exception e) {
+                log.warn("回退排期人数失败: scheduleId={}", reservation.getScheduleId(), e);
             }
         }
 
@@ -690,5 +716,48 @@ public class ReservationServiceImpl implements ReservationService {
                 reservation.getStoreId(),
                 2
         );
+    }
+
+    @Override
+    public void reschedule(Long id, String newReservationTime) {
+        Reservation reservation = reservationMapper.selectById(id);
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+        assertAdminStoreScope(reservation);
+        ensureCheckInFields(reservation);
+
+        // 只允许待确认/已确认且未核销状态改期
+        if (Integer.valueOf(4).equals(reservation.getStatus()) || Integer.valueOf(1).equals(reservation.getCheckInStatus())) {
+            throw new RuntimeException("当前状态不支持改期");
+        }
+
+        // 新时间不能小于当前时间
+        LocalDateTime newTime = LocalDateTime.parse(newReservationTime, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        if (newTime.isBefore(LocalDateTime.now())) {
+            throw new RuntimeException("改期时间不能小于当前时间");
+        }
+
+        Reservation update = new Reservation();
+        update.setId(id);
+        update.setReservationTime(newTime);
+        reservationMapper.updateById(update);
+
+        // 发送改期通知
+        try {
+            String formattedTime = newTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+            notificationService.sendToUsers(
+                    "预约改期成功",
+                    String.format("您的预约已成功改期至 %s，请按时到店", formattedTime),
+                    1,
+                    "reservation",
+                    reservation.getId(),
+                    reservation.getUserId()
+            );
+        } catch (Exception e) {
+            log.warn("发送改期通知失败", e);
+        }
+
+        log.info("预约已改期: id={}, orderNo={}, newReservationTime={}", id, reservation.getOrderNo(), newReservationTime);
     }
 }

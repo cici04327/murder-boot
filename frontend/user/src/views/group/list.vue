@@ -17,6 +17,16 @@
     <!-- 筛选区域 -->
     <div class="filter-section">
       <div class="filter-row">
+        <span class="filter-label">开局时间</span>
+        <div class="filter-tags">
+          <span class="filter-tag" :class="{ active: filters.playTimeRange === null }" @click="setFilter('playTimeRange', null)">全部</span>
+          <span class="filter-tag" :class="{ active: filters.playTimeRange === 'today' }" @click="setFilter('playTimeRange', 'today')">今天</span>
+          <span class="filter-tag" :class="{ active: filters.playTimeRange === 'tomorrow' }" @click="setFilter('playTimeRange', 'tomorrow')">明天</span>
+          <span class="filter-tag" :class="{ active: filters.playTimeRange === 'weekend' }" @click="setFilter('playTimeRange', 'weekend')">本周末</span>
+          <span class="filter-tag" :class="{ active: filters.playTimeRange === 'week' }" @click="setFilter('playTimeRange', 'week')">本周</span>
+        </div>
+      </div>
+      <div class="filter-row">
         <span class="filter-label">状态</span>
         <div class="filter-tags">
           <span class="filter-tag" :class="{ active: filters.status === null }" @click="setFilter('status', null)">全部</span>
@@ -48,7 +58,7 @@
     <div class="group-list" v-loading="loading">
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="group in groups" :key="group.id">
-          <div class="group-card" @click="router.push(`/group/${group.id}`)">
+          <div class="group-card" @click="handleCardClick(group)">
             <!-- 剧本杀风格卡片头部 -->
             <div class="group-header">
               <div class="mystery-icon">🎭</div>
@@ -127,8 +137,7 @@
           v-model:current-page="page"
           v-model:page-size="pageSize"
           :total="total"
-          :page-sizes="[12, 24, 36, 48]"
-          layout="total, sizes, prev, pager, next"
+          layout="total, prev, pager, next"
           @size-change="loadGroups"
           @current-change="loadGroups"
         />
@@ -138,8 +147,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElNotification } from 'element-plus'
 import { Plus, Shop, Clock } from '@element-plus/icons-vue'
 import { getGroupList } from '@/api/group'
 import { getScriptCategories } from '@/api/script'
@@ -147,41 +157,108 @@ import { getScriptCategories } from '@/api/script'
 const router = useRouter()
 
 const loading = ref(false)
-const groups = ref([])
 const categories = ref([])
 const page = ref(1)
 const pageSize = ref(12)
 const total = ref(0)
+const allGroups = ref([])
 
 const filters = reactive({
   categoryId: null,
   playerCount: null,
-  status: null
+  status: null,
+  playTimeRange: null
+})
+
+// 检查日期是否为当天
+const isToday = (date) => {
+  const today = new Date()
+  return date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear()
+}
+
+// 检查日期是否为明天
+const isTomorrow = (date) => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return date.getDate() === tomorrow.getDate() &&
+    date.getMonth() === tomorrow.getMonth() &&
+    date.getFullYear() === tomorrow.getFullYear()
+}
+
+// 检查日期是否在本周末
+const isWeekend = (date) => {
+  const dayOfWeek = date.getDay()
+  return dayOfWeek === 5 || dayOfWeek === 6 // 周五和周六
+}
+
+// 检查日期是否在本周
+const isThisWeek = (date) => {
+  const today = new Date()
+  const firstDay = new Date(today)
+  firstDay.setDate(today.getDate() - today.getDay()) // 周日作为周的开始
+  const lastDay = new Date(firstDay)
+  lastDay.setDate(firstDay.getDate() + 6) // 周六作为周的结束
+  return date >= firstDay && date <= lastDay
+}
+
+// 根据 playTimeRange 筛选
+const filterByTimeRange = (groupList) => {
+  if (!filters.playTimeRange) return groupList
+  
+  return groupList.filter(group => {
+    const playDate = new Date(group.playTime)
+    
+    switch (filters.playTimeRange) {
+      case 'today':
+        return isToday(playDate)
+      case 'tomorrow':
+        return isTomorrow(playDate)
+      case 'weekend':
+        return isWeekend(playDate)
+      case 'week':
+        return isThisWeek(playDate)
+      default:
+        return true
+    }
+  })
+}
+
+// 客户端筛选逻辑
+const groups = computed(() => {
+  return filterByTimeRange(allGroups.value)
 })
 
 // 设置筛选条件
 const setFilter = (key, value) => {
   filters[key] = value
   page.value = 1
-  loadGroups()
+  if (key === 'playTimeRange') {
+    // 时间筛选是客户端过滤，直接重新计算 computed
+  } else {
+    loadGroups()
+  }
 }
 
 // 加载拼单列表
 const loadGroups = async () => {
   loading.value = true
   try {
+    const queryFilters = { ...filters }
+    delete queryFilters.playTimeRange // 不发送时间范围到后端，由客户端过滤
     const res = await getGroupList({
       page: page.value,
       pageSize: pageSize.value,
-      ...filters
+      ...queryFilters
     })
     if (res.code === 1 || res.code === 200) {
-      groups.value = res.data?.records || res.data || []
-      total.value = res.data?.total || groups.value.length
+      allGroups.value = res.data?.records || res.data || []
+      total.value = res.data?.total || allGroups.value.length
     }
   } catch (error) {
     console.error('加载拼单失败:', error)
-    groups.value = []
+    allGroups.value = []
     total.value = 0
   } finally {
     loading.value = false
@@ -230,6 +307,19 @@ const getStatusText = (status) => {
 const getStatusClass = (status) => {
   const map = { 0: 'status-cancelled', 1: 'status-active', 2: 'status-success', 3: 'status-ended' }
   return map[status] || ''
+}
+
+const handleCardClick = (group) => {
+  if (group.currentCount >= group.needCount) {
+    ElNotification({
+      title: '提示',
+      message: '此拼车已满员',
+      type: 'warning',
+      duration: 3000
+    })
+    return
+  }
+  router.push(`/group/${group.id}`)
 }
 
 onMounted(() => {

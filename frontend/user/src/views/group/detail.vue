@@ -162,7 +162,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
 import { getGroupDetail, joinGroup } from '@/api/group'
 import { useUserStore } from '@/store/user'
@@ -233,7 +233,18 @@ const handleJoin = async () => {
     )
     const res = await joinGroup(route.params.id)
     if (res.code === 1 || res.code === 200) {
-      ElMessage.success('🎉 上车成功！祝您游戏愉快~')
+      ElNotification({
+        title: '🎉 拼车成功',
+        message: `<div style="line-height: 1.8;">
+          <p><strong>剧本：</strong>${group.value.scriptName}</p>
+          <p><strong>门店：</strong>${group.value.storeName}</p>
+          <p><strong>开局时间：</strong>${formatPlayTime(group.value.playTime)}</p>
+          <p style="color: #e6a23c; margin-top: 8px;">⏰ 请在预约时间前15分钟到达门店</p>
+        </div>`,
+        type: 'success',
+        duration: 5000,
+        dangerouslyUseHTMLString: true
+      })
       loadDetail()
     }
   } catch (error) {

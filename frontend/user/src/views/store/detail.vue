@@ -77,6 +77,15 @@
                     <el-icon><Clock /></el-icon>
                     营业时间
                   </template>
+                  <el-tag 
+                    v-if="businessStatus"
+                    :type="businessStatus.open ? 'success' : 'danger'"
+                    size="small"
+                    style="margin-right: 8px;"
+                    :effect="businessStatus.urgent || businessStatus.soon ? 'dark' : 'plain'"
+                  >
+                    {{ businessStatus.text }}
+                  </el-tag>
                   {{ store.openTime }} - {{ store.closeTime }}
                 </el-descriptions-item>
               </el-descriptions>
@@ -174,7 +183,18 @@
               </div>
               <div class="info-content">
                 <div class="info-label">营业时间</div>
-                <div class="info-value">{{ store?.openTime || '10:00' }} - {{ store?.closeTime || '22:00' }}</div>
+                <div class="info-value">
+                  <el-tag 
+                    v-if="businessStatus"
+                    :type="businessStatus.open ? 'success' : 'danger'"
+                    size="small"
+                    style="margin-right: 8px;"
+                    :effect="businessStatus.urgent || businessStatus.soon ? 'dark' : 'plain'"
+                  >
+                    {{ businessStatus.text }}
+                  </el-tag>
+                  {{ store?.openTime || '10:00' }} - {{ store?.closeTime || '22:00' }}
+                </div>
               </div>
             </div>
           </el-col>
@@ -298,6 +318,38 @@
       </el-empty>
     </el-card>
     
+    <!-- 近期可约场次 -->
+    <el-card class="detail-card schedule-card">
+      <template #header>
+        <div class="card-header">
+          <span>🗓️ 近7天可约场次</span>
+          <el-tag v-if="!loadingStoreSchedules" type="success" size="small">
+            {{ storeSchedules.length > 0 ? `${storeSchedules.length} 个场次可约` : '暂无排期' }}
+          </el-tag>
+        </div>
+      </template>
+      <div v-if="loadingStoreSchedules" style="text-align:center;padding:20px;color:rgba(255,255,255,0.5)">加载中...</div>
+      <div v-else-if="storeSchedules.length === 0" style="text-align:center;padding:20px;color:rgba(255,255,255,0.5)">
+        🕰️ 暂无可约场次，可致电门店咨询
+      </div>
+      <div v-else class="store-schedule-grid">
+        <div
+          v-for="s in storeSchedules"
+          :key="s.id"
+          class="store-schedule-item"
+          @click="router.push({ path: '/reservation/schedule', query: { storeId: store.value.id } })"
+        >
+          <div class="ss-date">{{ formatScheduleDate(s.scheduleDate) }}</div>
+          <div class="ss-time">{{ formatTime(s.startTime) }}</div>
+          <div class="ss-script" v-if="s.scriptName">{{ s.scriptName }}</div>
+          <div class="ss-remain" :class="getRemainClass(s)">{{ getRemainText(s) }}</div>
+        </div>
+      </div>
+      <div v-if="storeSchedules.length > 0" style="text-align:center;margin-top:16px">
+        <el-button type="primary" size="small" @click="handleReserve">立即预约</el-button>
+      </div>
+    </el-card>
+
     <!-- 用户评价 -->
     <el-card class="detail-card reviews-card">
       <template #header>
@@ -333,6 +385,17 @@
             <div class="review-date">{{ review.createTime }}</div>
           </div>
           <div class="review-content">{{ review.content }}</div>
+          <div v-if="review.images" class="review-images">
+            <el-image
+              v-for="(img, idx) in review.images.split(',')"
+              :key="idx"
+              :src="img"
+              :preview-src-list="review.images.split(',')"
+              :initial-index="idx"
+              fit="cover"
+              style="width: 80px; height: 80px; border-radius: 4px; margin-right: 8px; margin-top: 8px;"
+            />
+          </div>
         </div>
         
         <el-empty v-if="reviews.length === 0" description="暂无评价" />
@@ -353,6 +416,21 @@
             placeholder="请输入评价内容"
           />
         </el-form-item>
+        <el-form-item label="打卡晒图">
+          <el-upload
+            v-model:file-list="reviewForm.imageList"
+            action="/api/upload/image"
+            list-type="picture-card"
+            :limit="6"
+            accept="image/*"
+            :on-success="handleUploadSuccess"
+            :on-remove="handleUploadRemove"
+            :before-upload="beforeUpload"
+          >
+            <el-icon><Plus /></el-icon>
+          </el-upload>
+          <div class="upload-tip">最多上传6张图片，每张不超过2MB</div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="showReviewDialog = false">取消</el-button>
@@ -370,9 +448,11 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getStoreDetail, getStoreRooms, getStoreReviews, addStoreReview } from '@/api/store'
+import { getAvailableSchedules } from '@/api/script'
+import { recordBrowseHistory } from '@/api/recommendation'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
 import { getUserLocation, getDistanceText, requestLocationPermission } from '@/utils/location'
@@ -398,7 +478,8 @@ import {
   CircleCheck,
   CircleClose,
   InfoFilled,
-  Warning
+  Warning,
+  Plus
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -414,10 +495,36 @@ const distance = ref('')
 const locationLoading = ref(false)
 const locationError = ref('')
 const locationDialogVisible = ref(false)
+const browseStartTime = ref(null)
+const storeSchedules = ref([])   // 门店近期可约场次
+const loadingStoreSchedules = ref(false)
 
 const reviewForm = reactive({
   rating: 5,
-  content: ''
+  content: '',
+  images: [],
+  imageList: []
+})
+
+// 营业状态计算
+const businessStatus = computed(() => {
+  if (!store.value?.openTime || !store.value?.closeTime) return null
+  const now = new Date()
+  const [openH, openM] = store.value.openTime.split(':').map(Number)
+  const [closeH, closeM] = store.value.closeTime.split(':').map(Number)
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const openMinutes = openH * 60 + openM
+  const closeMinutes = closeH * 60 + closeM
+  const isOpen = nowMinutes >= openMinutes && nowMinutes < closeMinutes
+  const minutesToClose = closeMinutes - nowMinutes
+  const minutesToOpen = openMinutes - nowMinutes
+  if (isOpen) {
+    if (minutesToClose <= 60) return { open: true, urgent: true, text: `营业中 · ${minutesToClose}分钟后闭店` }
+    return { open: true, urgent: false, text: '营业中' }
+  } else {
+    if (minutesToOpen > 0 && minutesToOpen <= 60) return { open: false, soon: true, text: `即将开店 · ${minutesToOpen}分钟后` }
+    return { open: false, soon: false, text: '已闭店' }
+  }
 })
 
 // 计算可用房间数量
@@ -584,6 +691,16 @@ const loadStoreDetail = async () => {
       // 如果门店有经纬度信息，自动计算距离
       if (store.value.latitude && store.value.longitude) {
         calculateDistance()
+      }
+
+      // 记录浏览历史
+      if (userStore.isLoggedIn) {
+        browseStartTime.value = Date.now()
+        try {
+          await recordBrowseHistory(2, store.value.id, 0) // targetType: 2=门店
+        } catch (e) {
+          console.error('保存门店浏览历史失败:', e)
+        }
       }
     }
   } catch (error) {
@@ -926,7 +1043,16 @@ const loadReviews = async () => {
       pageSize: 10
     })
     if (res.data) {
-      reviews.value = res.data.records || res.data.list || []
+      const rawList = res.data.records || res.data.list || []
+      reviews.value = rawList.map(item => ({
+        id: item.id,
+        username: item.isAnonymous === 1 ? '匿名用户' : (item.userNickname || item.userName || item.username || '神秘玩家'),
+        userAvatar: item.isAnonymous === 1 ? null : (item.userAvatar || item.avatar || null),
+        rating: Number(item.rating || item.overallRating || 5),
+        content: item.content || '该用户未填写评价内容',
+        images: item.images || '',
+        createTime: item.createTime || ''
+      }))
     }
   } catch (error) {
     console.error('加载评价失败:', error)
@@ -934,13 +1060,9 @@ const loadReviews = async () => {
 }
 
 const handleReserve = () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
+  // 跳转到场次选择页
   router.push({
-    path: '/reservation/create',
+    path: '/reservation/schedule',
     query: { storeId: store.value.id }
   })
 }
@@ -951,6 +1073,25 @@ const handleCall = () => {
   } else {
     ElMessage.info('暂无联系电话')
   }
+}
+
+const handleUploadSuccess = (response, file) => {
+  if (response.data) {
+    reviewForm.images.push(response.data)
+  }
+}
+
+const handleUploadRemove = (file) => {
+  const url = file.response?.data || file.url
+  reviewForm.images = reviewForm.images.filter(img => img !== url)
+}
+
+const beforeUpload = (file) => {
+  const isImage = file.type.startsWith('image/')
+  const isLt2M = file.size / 1024 / 1024 < 2
+  if (!isImage) { ElMessage.error('只能上传图片文件'); return false }
+  if (!isLt2M) { ElMessage.error('图片大小不能超过2MB'); return false }
+  return true
 }
 
 const handleSubmitReview = async () => {
@@ -969,12 +1110,15 @@ const handleSubmitReview = async () => {
     await addStoreReview({
       storeId: route.params.id,
       rating: reviewForm.rating,
-      content: reviewForm.content
+      content: reviewForm.content,
+      images: reviewForm.images.join(',')
     })
     ElMessage.success('评价成功')
     showReviewDialog.value = false
     reviewForm.rating = 5
     reviewForm.content = ''
+    reviewForm.images = []
+    reviewForm.imageList = []
     // 重新加载门店信息和评价列表，更新评价数量
     await Promise.all([
       loadStoreDetail(),
@@ -1005,20 +1149,11 @@ const getRoomTypeDesc = (type) => {
   return descMap[type] || '标准房间'
 }
 
-// 预约指定房间
+// 预约指定房间 → 跳到场次选择页（带门店ID，用户选完场次再确认）
 const handleRoomReserve = (room) => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
   router.push({
-    path: '/reservation/create',
-    query: { 
-      storeId: store.value.id,
-      roomId: room.id,
-      roomName: room.name
-    }
+    path: '/reservation/schedule',
+    query: { storeId: store.value.id }
   })
 }
 
@@ -1071,10 +1206,67 @@ const previewImage = (image) => {
   // 这里可以集成图片预览功能
 }
 
+// 页面卸载时记录完整浏览时长
+onBeforeUnmount(() => {
+  if (userStore.isLoggedIn && store.value && browseStartTime.value) {
+    const duration = Math.floor((Date.now() - browseStartTime.value) / 1000)
+    if (duration > 0) {
+      recordBrowseHistory(2, store.value.id, duration).catch(e => {
+        console.error('更新门店浏览时长失败:', e)
+      })
+    }
+  }
+})
+
+// 加载门店可约场次
+const loadStoreSchedules = async () => {
+  if (!route.params.id) return
+  loadingStoreSchedules.value = true
+  try {
+    const res = await getAvailableSchedules({ storeId: route.params.id, days: 7 })
+    if (res.code === 200 || res.code === 1) {
+      storeSchedules.value = Array.isArray(res.data) ? res.data : []
+    }
+  } catch (e) {
+    console.error('加载门店场次失败:', e)
+    storeSchedules.value = []
+  } finally {
+    loadingStoreSchedules.value = false
+  }
+}
+
+const formatScheduleDate = (dateStr) => {
+  if (!dateStr) return ''
+  const today = new Date()
+  const tomorrow = new Date(today)
+  tomorrow.setDate(today.getDate() + 1)
+  const d = new Date(dateStr)
+  if (d.toDateString() === today.toDateString()) return '今天'
+  if (d.toDateString() === tomorrow.toDateString()) return '明天'
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
+
+const formatTime = (t) => t ? String(t).substring(0, 5) : ''
+
+const getRemainText = (s) => {
+  const r = s.maxPlayers - s.currentPlayers
+  if (r <= 0) return '已满'
+  if (r === 1) return '差1人成团'
+  return `余 ${r} 位`
+}
+
+const getRemainClass = (s) => {
+  const r = s.maxPlayers - s.currentPlayers
+  if (r <= 0) return 'remain-full'
+  if (r <= 2) return 'remain-few'
+  return 'remain-ok'
+}
+
 onMounted(() => {
   loadStoreDetail()
   loadRooms()
   loadReviews()
+  loadStoreSchedules()
 })
 </script>
 
@@ -1320,6 +1512,76 @@ onMounted(() => {
   color: rgba(255, 255, 255, 0.8);
   line-height: 1.7;
   margin-bottom: 12px;
+}
+
+.review-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* 门店场次余量 */
+.store-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.store-schedule-item {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.store-schedule-item:hover {
+  background: rgba(139,0,0,0.2);
+  border-color: rgba(139,0,0,0.5);
+  transform: translateY(-2px);
+}
+
+.ss-date {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 4px;
+}
+
+.ss-time {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.ss-script {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ss-remain {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+.remain-ok { background: rgba(103,194,58,0.2); color: #67c23a; }
+.remain-few { background: rgba(230,162,60,0.2); color: #e6a23c; }
+.remain-full { background: rgba(245,108,108,0.2); color: #f56c6c; }
+
+.upload-tip {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  margin-top: 8px;
 }
 
 .review-footer {

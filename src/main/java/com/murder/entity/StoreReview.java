@@ -60,6 +60,16 @@ public class StoreReview implements Serializable {
      * 商家回复
      */
     private String reply;
+
+    /**
+     * 评价图片，逗号分隔
+     */
+    private String images;
+
+    /**
+     * 是否匿名：1是，0否
+     */
+    private Integer isAnonymous;
     
     /**
      * 逻辑删除�?删除�?未删�?

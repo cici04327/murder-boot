@@ -13,6 +13,10 @@ import com.murder.vo.VipPackageVO;
 import com.murder.mapper.UserMapper;
 import com.murder.mapper.UserVipMapper;
 import com.murder.mapper.VipPackageMapper;
+import com.murder.entity.Coupon;
+import com.murder.entity.UserCoupon;
+import com.murder.mapper.CouponMapper;
+import com.murder.mapper.UserCouponMapper;
 import com.murder.service.CouponService;
 import com.murder.service.VipService;
 import lombok.extern.slf4j.Slf4j;
@@ -46,6 +50,12 @@ public class VipServiceImpl implements VipService {
 
     @Autowired(required = false)
     private CouponService couponService;
+
+    @Autowired
+    private CouponMapper couponMapper;
+
+    @Autowired
+    private UserCouponMapper userCouponMapper;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -269,37 +279,113 @@ public class VipServiceImpl implements VipService {
             return;
         }
 
-        // 调用优惠券服务发放优惠券
-        if (couponService != null) {
-            try {
-                // 根据VIP等级发放不同面额的优惠券
-                int couponAmount = 0;
-                switch (currentVip.getLevel()) {
-                    case 1: // 普通VIP
-                        couponAmount = 20;
-                        break;
-                    case 2: // 高级VIP
-                        couponAmount = 50;
-                        break;
-                    case 3: // 至尊VIP
-                        couponAmount = 100;
-                        break;
-                    default:
-                        couponAmount = 10;
-                }
-                
-                // 发放指定数量的优惠券
-                for (int i = 0; i < vipPackage.getCouponCount(); i++) {
-                    log.info("为VIP用户 {} 发放第{} 张优惠券，面值 {}", userId, i + 1, couponAmount);
-                    // 实际调用优惠券服务的方法
-                    // couponService.grantVipMonthlyCoupon(userId, couponAmount);
-                }
-                log.info("为VIP用户 {} 成功发放 {} 张月度优惠券", userId, vipPackage.getCouponCount());
-            } catch (Exception e) {
-                log.error("为VIP用户发放月度优惠券失败", e);
+        // 根据VIP等级确定优惠券面额
+        int couponAmount;
+        switch (currentVip.getLevel()) {
+            case 1: couponAmount = 20; break;  // 见习侦探：20元体验券
+            case 2: couponAmount = 50; break;  // 银章侦探：50元体验券
+            case 3: couponAmount = 100; break; // 金章侦探：100元体验券
+            case 4: couponAmount = 150; break; // 传奇侦探：150元体验券
+            default: couponAmount = 20;
+        }
+
+        try {
+            // 查找或创建对应面额的VIP专属优惠券模板
+            Coupon template = getOrCreateVipCouponTemplate(currentVip.getLevel(), couponAmount, "月度体验券");
+            if (template == null) {
+                log.error("无法获取VIP优惠券模板，userId={}", userId);
+                return;
             }
-        } else {
-            log.warn("优惠券服务未注入，无法发放VIP月度优惠券");
+
+            // 发放指定数量的优惠券
+            LocalDateTime now = LocalDateTime.now();
+            LocalDateTime expireTime = now.plusDays(30); // 30天有效期
+            for (int i = 0; i < vipPackage.getCouponCount(); i++) {
+                UserCoupon userCoupon = UserCoupon.builder()
+                        .userId(userId)
+                        .couponId(template.getId())
+                        .status(1) // 未使用
+                        .receiveTime(now)
+                        .expireTime(expireTime)
+                        .build();
+                userCouponMapper.insert(userCoupon);
+                log.info("为VIP用户 {} 发放第{}张月度体验券，面值{}元，有效期至{}", userId, i + 1, couponAmount, expireTime);
+            }
+            log.info("为VIP用户 {} 成功发放 {} 张月度体验券（面值{}元）", userId, vipPackage.getCouponCount(), couponAmount);
+        } catch (Exception e) {
+            log.error("为VIP用户发放月度优惠券失败，userId={}", userId, e);
+        }
+    }
+
+    /**
+     * 获取或创建VIP专属优惠券模板
+     */
+    private Coupon getOrCreateVipCouponTemplate(int level, int amount, String typeName) {
+        String couponName = "VIP" + getLevelName(level) + typeName;
+        // 查找已有的VIP优惠券模板
+        LambdaQueryWrapper<Coupon> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Coupon::getName, couponName).eq(Coupon::getStatus, 1).last("LIMIT 1");
+        Coupon coupon = couponMapper.selectOne(wrapper);
+        if (coupon != null) return coupon;
+
+        // 不存在则自动创建
+        coupon = new Coupon();
+        coupon.setName(couponName);
+        coupon.setType(1); // 满减券
+        coupon.setDiscountValue(new BigDecimal(amount));
+        coupon.setMinAmount(new BigDecimal(amount)); // 面额即最低消费
+        coupon.setTotalCount(99999);
+        coupon.setRemainCount(99999);
+        coupon.setStatus(1);
+        coupon.setDescription("VIP专属" + typeName + "，面值" + amount + "元，30天内有效");
+        coupon.setValidEndTime(LocalDateTime.now().plusYears(1));
+        couponMapper.insert(coupon);
+        log.info("自动创建VIP优惠券模板：{}", couponName);
+        return coupon;
+    }
+
+    /**
+     * 为生日月VIP用户发放生日专属优惠券
+     */
+    @Transactional
+    public void grantBirthdayCoupon(Long userId) {
+        UserVip currentVip = userVipMapper.getCurrentVip(userId);
+        if (currentVip == null) return;
+
+        VipPackage vipPackage = vipPackageMapper.selectById(currentVip.getPackageId());
+        if (vipPackage == null || vipPackage.getBirthdayGift() == null || vipPackage.getBirthdayGift() != 1) {
+            return;
+        }
+
+        // 生日券面额：等级越高越大
+        int birthdayAmount;
+        switch (currentVip.getLevel()) {
+            case 1: birthdayAmount = 30; break;
+            case 2: birthdayAmount = 80; break;
+            case 3: birthdayAmount = 150; break;
+            case 4: birthdayAmount = 200; break;
+            default: birthdayAmount = 30;
+        }
+
+        try {
+            Coupon template = getOrCreateVipCouponTemplate(currentVip.getLevel(), birthdayAmount, "生日专享券");
+            if (template == null) return;
+
+            LocalDateTime now = LocalDateTime.now();
+            // 生日券有效期：当月最后一天
+            LocalDateTime expireTime = now.withDayOfMonth(1).plusMonths(1).minusSeconds(1);
+
+            UserCoupon userCoupon = UserCoupon.builder()
+                    .userId(userId)
+                    .couponId(template.getId())
+                    .status(1)
+                    .receiveTime(now)
+                    .expireTime(expireTime)
+                    .build();
+            userCouponMapper.insert(userCoupon);
+            log.info("为VIP用户 {} 发放生日专享券，面值{}元，有效至{}", userId, birthdayAmount, expireTime);
+        } catch (Exception e) {
+            log.error("发放生日券失败，userId={}", userId, e);
         }
     }
 

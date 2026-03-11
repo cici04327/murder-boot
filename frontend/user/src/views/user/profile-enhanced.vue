@@ -376,7 +376,7 @@
       </div>
       <template #footer>
         <el-button @click="showVipDialog = false">取消</el-button>
-        <el-button type="warning" @click="handlePurchaseVip">
+        <el-button type="warning" @click="handlePurchaseVip" :loading="vipPurchasing">
           <el-icon><Medal /></el-icon>
           立即开通
         </el-button>
@@ -390,10 +390,11 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserInfo, getUserPoints } from '@/api/user'
+import { getUserInfo, getUserPoints, updateUserInfo, updatePassword, completeProfileTask } from '@/api/user'
 import { getMyReservations } from '@/api/reservation'
 import { getMyCoupons } from '@/api/coupon'
 import { getFavoriteScripts } from '@/api/script'
+import { purchaseVip, getVipPackages } from '@/api/vip'
 import {
   User, Camera, Phone, Message, Calendar, Edit, Lock,
   Tickets, Star, Coin, Ticket, Bell, Wallet, ArrowRight,
@@ -813,152 +814,133 @@ const handlePendingClick = (type) => {
 
 // 更新个人资料
 const handleUpdateProfile = async () => {
+  // 验证表单
+  if (!editForm.username || !editForm.username.trim()) {
+    ElMessage.warning('请输入昵称')
+    return
+  }
+  if (editForm.phone && !/^1[3-9]\d{9}$/.test(editForm.phone)) {
+    ElMessage.warning('请输入正确的手机号')
+    return
+  }
+  if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
+    ElMessage.warning('请输入正确的邮箱地址')
+    return
+  }
+
   try {
-    // 验证表单
-    if (!editForm.username || !editForm.username.trim()) {
-      ElMessage.warning('请输入昵称')
+    // 调用后端 PUT /api/user 更新资料
+    const res = await updateUserInfo({
+      username: editForm.username.trim(),
+      phone: editForm.phone,
+      email: editForm.email
+    })
+    if (res.code !== 1 && res.code !== 200) {
+      ElMessage.error(res.msg || '更新失败')
       return
     }
-    
-    if (editForm.phone && !/^1[3-9]\d{9}$/.test(editForm.phone)) {
-      ElMessage.warning('请输入正确的手机号')
-      return
-    }
-    
-    if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
-      ElMessage.warning('请输入正确的邮箱地址')
-      return
-    }
-    
-    try {
-      // TODO: 调用API更新资料
-      // await updateUserInfo(editForm)
-      
-      // 检查完善资料任务
-      // import { completeProfileTask } from '@/api/user'
-      // const taskRes = await completeProfileTask()
-      // if (taskRes.code === 1 || taskRes.code === 200) {
-      //   if (taskRes.data?.completed && !taskRes.data?.alreadyCompleted) {
-      //     ElMessage.success('恭喜！完成完善资料任务，获得30积分')
-      //   }
-      // }
-    } catch (error) {
-      console.error('更新资料失败:', error)
-    }
-    
-    // 更新本地数据
-    userInfo.value.username = editForm.username
+
+    // 更新本地数据 & Store
+    userInfo.value.username = editForm.username.trim()
     userInfo.value.phone = editForm.phone
     userInfo.value.email = editForm.email
-    
-    // 更新 userStore
     if (userStore.userInfo) {
-      userStore.userInfo.username = editForm.username
+      userStore.userInfo.username = editForm.username.trim()
       userStore.userInfo.phone = editForm.phone
       userStore.userInfo.email = editForm.email
     }
-    
+
     ElMessage.success('资料更新成功')
     editProfileDialog.value = false
+
+    // 触发完善资料积分任务（首次完善赠30积分）
+    try {
+      const taskRes = await completeProfileTask()
+      if ((taskRes.code === 1 || taskRes.code === 200) && taskRes.data?.completed && !taskRes.data?.alreadyCompleted) {
+        ElMessage.success('🎉 恭喜完成「完善资料」任务，获得 30 积分！')
+      }
+    } catch (_) { /* 积分任务失败不影响主流程 */ }
   } catch (error) {
     console.error('更新资料失败:', error)
-    ElMessage.error('更新失败，请稍后重试')
+    ElMessage.error(error?.msg || '更新失败，请稍后重试')
   }
 }
 
 // 修改密码
 const handleUpdatePassword = async () => {
+  if (!passwordForm.oldPassword) { ElMessage.warning('请输入原密码'); return }
+  if (!passwordForm.newPassword) { ElMessage.warning('请输入新密码'); return }
+  if (passwordForm.newPassword.length < 6) { ElMessage.warning('新密码长度至少6位'); return }
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) { ElMessage.error('两次密码输入不一致'); return }
+  if (passwordForm.oldPassword === passwordForm.newPassword) { ElMessage.warning('新密码不能与原密码相同'); return }
+
   try {
-    // 验证表单
-    if (!passwordForm.oldPassword) {
-      ElMessage.warning('请输入原密码')
+    const res = await updatePassword({
+      oldPassword: passwordForm.oldPassword,
+      newPassword: passwordForm.newPassword
+    })
+    if (res.code !== 1 && res.code !== 200) {
+      ElMessage.error(res.msg || '修改失败，请检查原密码是否正确')
       return
     }
-    
-    if (!passwordForm.newPassword) {
-      ElMessage.warning('请输入新密码')
-      return
-    }
-    
-    if (passwordForm.newPassword.length < 6) {
-      ElMessage.warning('新密码长度至少6位')
-      return
-    }
-    
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      ElMessage.error('两次密码输入不一致')
-      return
-    }
-    
-    if (passwordForm.oldPassword === passwordForm.newPassword) {
-      ElMessage.warning('新密码不能与原密码相同')
-      return
-    }
-    
-    // TODO: 调用API修改密码
-    // await updatePassword(passwordForm)
-    
+
     ElMessage.success('密码修改成功，请重新登录')
-    
-    // 清空表单
     passwordForm.oldPassword = ''
     passwordForm.newPassword = ''
     passwordForm.confirmPassword = ''
-    
     showPasswordDialog.value = false
-    
-    // 可选：自动退出登录
-    // setTimeout(() => {
-    //   userStore.logout()
-    //   router.push('/login')
-    // }, 1500)
+
+    // 退出登录，跳转到登录页
+    setTimeout(async () => {
+      await userStore.logout?.()
+      router.push('/login')
+    }, 1500)
   } catch (error) {
     console.error('修改密码失败:', error)
-    ElMessage.error(error.msg || '修改失败，请稍后重试')
+    ElMessage.error(error?.msg || '修改失败，请稍后重试')
   }
 }
 
 // 购买VIP
+const vipPurchasing = ref(false)
 const handlePurchaseVip = async () => {
+  const plan = vipPlans.value.find(p => p.id === selectedPlan.value)
+  if (!plan) { ElMessage.error('请选择套餐'); return }
+
   try {
-    const plan = vipPlans.value.find(p => p.id === selectedPlan.value)
-    
-    if (!plan) {
-      ElMessage.error('请选择套餐')
+    await ElMessageBox.confirm(
+      `确定要开通「${plan.name}」吗？费用为 ¥${plan.price}`,
+      '确认开通',
+      { confirmButtonText: '立即开通', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch { return /* 用户取消 */ }
+
+  vipPurchasing.value = true
+  try {
+    // 调用后端 POST /api/vip/purchase
+    const res = await purchaseVip({ packageId: plan.id })
+    if (res.code !== 1 && res.code !== 200) {
+      ElMessage.error(res.msg || '开通失败，请稍后重试')
       return
     }
-    
-    // 确认购买
-    await ElMessageBox.confirm(
-      `确定要开通${plan.name}吗？费用为¥${plan.price}`,
-      '确认开通',
-      {
-        confirmButtonText: '确定开通',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }
-    )
-    
-    // TODO: 调用API开通VIP
-    // await purchaseVip({ planId: plan.id })
-    
-    ElMessage.success(`开通${plan.name}成功！`)
-    
-    // 更新VIP等级
-    userInfo.value.vipLevel = plan.id
+
+    ElMessage.success(`🎉 恭喜！「${plan.name}」开通成功！`)
+
+    // 从后端返回的最新用户信息中读取VIP等级，兜底用 plan.id
+    const newVipLevel = res.data?.vipLevel ?? plan.id
+    userInfo.value.vipLevel = newVipLevel
     if (userStore.userInfo) {
-      userStore.userInfo.vipLevel = plan.id
+      userStore.userInfo.vipLevel = newVipLevel
     }
-    
+
     showVipDialog.value = false
-    
-    // 刷新页面数据
-    loadUserInfo()
+    // 刷新统计数据
+    await loadUserInfo()
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('开通VIP失败:', error)
-      ElMessage.error(error.msg || '开通失败，请稍后重试')
-    }
+    console.error('开通VIP失败:', error)
+    ElMessage.error(error?.msg || '开通失败，请稍后重试')
+  } finally {
+    vipPurchasing.value = false
   }
 }
 
