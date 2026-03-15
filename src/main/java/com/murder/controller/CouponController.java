@@ -69,47 +69,51 @@ public class CouponController {
     }
 
     /**
-     * 新增优惠�?
+     * 新增优惠券（仅超级管理员）
      */
     @PostMapping
-    @Operation(summary = "新增优惠�?")
+    @Operation(summary = "新增优惠券")
     public Result<String> add(@RequestBody CouponDTO couponDTO) {
-        log.info("新增优惠�? {}", couponDTO);
+        requireSuperAdmin();
+        log.info("新增优惠券: {}", couponDTO);
         couponService.add(couponDTO);
         return Result.success("新增成功");
     }
 
     /**
-     * 更新优惠�?
+     * 更新优惠券（仅超级管理员）
      */
     @PutMapping
-    @Operation(summary = "更新优惠�?")
+    @Operation(summary = "更新优惠券")
     public Result<String> update(@RequestBody CouponDTO couponDTO) {
-        log.info("更新优惠�? {}", couponDTO);
+        requireSuperAdmin();
+        log.info("更新优惠券: {}", couponDTO);
         couponService.update(couponDTO);
         return Result.success("更新成功");
     }
 
     /**
-     * 删除优惠�?
+     * 删除优惠券（仅超级管理员）
      */
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除优惠�?")
+    @Operation(summary = "删除优惠券")
     public Result<String> delete(@PathVariable Long id) {
-        log.info("删除优惠�? {}", id);
+        requireSuperAdmin();
+        log.info("删除优惠券: {}", id);
         couponService.delete(id);
         return Result.success("删除成功");
     }
     
     /**
-     * 上架/下架优惠�?
+     * 上架/下架优惠券（仅超级管理员）
      */
     @PutMapping("/{id}/status")
-    @Operation(summary = "上架/下架优惠�?")
+    @Operation(summary = "上架/下架优惠券")
     public Result<String> updateStatus(
             @PathVariable Long id,
             @RequestParam Integer status) {
-        log.info("更新优惠券状�? id={}, status={}", id, status);
+        requireSuperAdmin();
+        log.info("更新优惠券状态: id={}, status={}", id, status);
         couponService.updateStatus(id, status);
         return Result.success("更新成功");
     }
@@ -254,6 +258,16 @@ public class CouponController {
         return Result.success("操作成功");
     }
     
+    /**
+     * 校验是否为超级管理员，否则抛出异常
+     */
+    private void requireSuperAdmin() {
+        String role = com.murder.common.context.BaseContext.getRole();
+        if (!"SUPER_ADMIN".equals(role)) {
+            throw new com.murder.common.exception.BaseException("无权限，仅超级管理员可执行此操作");
+        }
+    }
+
     /**
      * 获取预约可用的优惠券列表
      */

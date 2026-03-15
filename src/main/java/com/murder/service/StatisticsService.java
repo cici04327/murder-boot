@@ -39,4 +39,10 @@ public interface StatisticsService {
      * @param storeId 门店ID（null=全部门店）
      */
     java.util.Map<String, Object> getOperationBoard(Integer days, Long storeId);
+
+    /**
+     * 门店营收日报（今日/昨日/本周/本月，含各时段预约分布）
+     * @param storeId 门店ID（门店端必传）
+     */
+    java.util.Map<String, Object> getStoreDailyReport(Long storeId);
 }

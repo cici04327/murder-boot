@@ -85,3 +85,12 @@ export const getVipStatistics = () => {
   })
 }
 
+// 手动补发月度体验券
+export const grantMonthlyCoupons = (userId, year, month, reason) => {
+  return userService({
+    url: '/admin/vip/grant-monthly-coupons',
+    method: 'post',
+    params: { userId, year, month, reason }
+  })
+}
+

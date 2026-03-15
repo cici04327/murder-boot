@@ -359,7 +359,7 @@ const handleReserve = (store) => {
     return
   }
   router.push({
-    path: '/reservation/create',
+    path: '/reservation/schedule',
     query: { storeId: store.id }
   })
 }
@@ -441,108 +441,45 @@ const handleLocationDeny = () => {
   sessionStorage.setItem('location_permission_asked', 'true')
 }
 
-// 初始化用户位置（检查是否需要显示弹窗）
-const initUserLocation = async () => {
-  // 检查用户是否已经在我们的弹窗中做过选择
+// 初始化用户位置：仅在用户之前已主动授权过时才静默恢复缓存，不弹窗、不自动请求
+const initUserLocation = () => {
   const hasGrantedInApp = localStorage.getItem('location_permission_granted') === 'true'
   const hasDeniedInApp = localStorage.getItem('location_permission_denied') === 'true'
   const hasAskedThisSession = sessionStorage.getItem('location_permission_asked') === 'true'
-  
-  // 如果用户之前在我们的弹窗中选择了"暂不需要"
+
+  // 用户明确拒绝过，隐藏提示卡片，不再打扰
   if (hasDeniedInApp || hasAskedThisSession) {
     locationDenied.value = true
     return
   }
-  
-  // 如果用户之前在我们的弹窗中授权过，检查缓存
+
+  // 用户之前已主动授权过，尝试从缓存恢复（不弹任何弹窗）
   if (hasGrantedInApp) {
     const cached = localStorage.getItem('user_location')
     if (cached) {
       try {
         const { location, timestamp } = JSON.parse(cached)
         const age = Date.now() - timestamp
-        // 位置缓存5分钟内有效
         if (age < 5 * 60 * 1000) {
+          // 缓存5分钟内有效，直接使用
           userLocation.value = location
           searchForm.latitude = location.latitude
           searchForm.longitude = location.longitude
+          calculateStoresDistance()
           return
         }
-      } catch (e) {
-        // 忽略解析错误
-      }
+      } catch (e) { /* 忽略解析错误 */ }
     }
-    
-    // 缓存过期，静默获取新位置
-    try {
-      const location = await getUserLocationUtil(true)
-      userLocation.value = location
-      searchForm.latitude = location.latitude
-      searchForm.longitude = location.longitude
-    } catch (error) {
-      console.error('获取位置失败:', error)
-    }
-    return
+    // 缓存过期但用户曾授权过 → 显示提示卡片让用户再次点击获取
+    // 不自动重新请求，避免意外弹出浏览器权限框
   }
-  
-  // 用户从未在我们的弹窗中做过选择，显示自定义弹窗
-  // 延迟显示弹窗，让页面先加载完成
-  setTimeout(() => {
-    locationDialogVisible.value = true
-  }, 800)
-}
 
-// 旧的初始化方法（保留兼容）
-const initUserLocationLegacy = async () => {
-  try {
-    // 强制请求新位置，触发浏览器权限弹窗
-    const location = await getUserLocationUtil(true)
-    userLocation.value = location
-    searchForm.latitude = location.latitude
-    searchForm.longitude = location.longitude
-    console.log('用户位置获取成功:', location)
-    
-    // 显示成功提示
-    ElMessage.success({
-      message: '位置获取成功，已为您显示门店距离',
-      duration: 2000
-    })
-    
-    // 重新计算已加载门店的距离
-    if (stores.value.length > 0) {
-      calculateStoresDistance()
-    }
-  } catch (error) {
-    // 用户拒绝或获取失败的提示
-    console.log('位置获取失败:', error.message || error)
-    
-    let errorMsg = '未获取到位置信息'
-    if (error.code === 1) {
-      errorMsg = '您拒绝了位置权限，无法显示门店距离'
-    } else if (error.code === 2) {
-      errorMsg = '位置信息不可用'
-    } else if (error.code === 3) {
-      errorMsg = '获取位置超时'
-    }
-    
-    // 显示提示，但不打断用户操作
-    ElMessage.info({
-      message: errorMsg,
-      duration: 3000,
-      showClose: true
-    })
-  }
+  // 其余情况（首次访问等）：什么都不做，提示卡片已通过 v-if 显示，等用户主动点击
 }
 
 onMounted(() => {
-  // 先加载门店列表
   loadStores()
-  
-  // 延迟500ms后初始化位置权限流程，让用户先看到页面内容
-  // initUserLocation 会检查权限状态，如果需要会显示自定义弹窗让用户确认
-  setTimeout(() => {
-    initUserLocation()
-  }, 500)
+  initUserLocation()
 })
 </script>
 

@@ -85,33 +85,36 @@ public class ScriptController {
     }
 
     /**
-     * 新增剧本
+     * 新增剧本（仅超级管理员）
      */
     @PostMapping
     @Operation(summary = "新增剧本")
     public Result<String> add(@RequestBody Script script) {
+        requireSuperAdmin();
         log.info("新增剧本: {}", script);
         scriptService.add(script);
         return Result.success("新增成功");
     }
 
     /**
-     * 更新剧本
+     * 更新剧本（仅超级管理员）
      */
     @PutMapping
     @Operation(summary = "更新剧本")
     public Result<String> update(@RequestBody Script script) {
+        requireSuperAdmin();
         log.info("更新剧本: {}", script);
         scriptService.update(script);
         return Result.success("更新成功");
     }
 
     /**
-     * 删除剧本
+     * 删除剧本（仅超级管理员）
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除剧本")
     public Result<String> delete(@PathVariable Long id) {
+        requireSuperAdmin();
         log.info("删除剧本: {}", id);
         scriptService.delete(id);
         return Result.success("删除成功");
@@ -127,7 +130,43 @@ public class ScriptController {
         List<ScriptCategory> categories = scriptService.getCategories();
         return Result.success(categories);
     }
-    
+
+    /**
+     * 新增剧本分类（仅超级管理员）
+     */
+    @PostMapping("/category")
+    @Operation(summary = "新增剧本分类")
+    public Result<String> addCategory(@RequestBody ScriptCategory category) {
+        requireSuperAdmin();
+        log.info("新增剧本分类: {}", category);
+        scriptService.addCategory(category);
+        return Result.success("新增成功");
+    }
+
+    /**
+     * 更新剧本分类（仅超级管理员）
+     */
+    @PutMapping("/category/{id}")
+    @Operation(summary = "更新剧本分类")
+    public Result<String> updateCategory(@PathVariable Long id, @RequestBody ScriptCategory category) {
+        requireSuperAdmin();
+        log.info("更新剧本分类: id={}, category={}", id, category);
+        scriptService.updateCategory(id, category);
+        return Result.success("更新成功");
+    }
+
+    /**
+     * 删除剧本分类（仅超级管理员）
+     */
+    @DeleteMapping("/category/{id}")
+    @Operation(summary = "删除剧本分类")
+    public Result<String> deleteCategory(@PathVariable Long id) {
+        requireSuperAdmin();
+        log.info("删除剧本分类: id={}", id);
+        scriptService.deleteCategory(id);
+        return Result.success("删除成功");
+    }
+
     /**
      * 获取剧本角色列表
      */
@@ -137,5 +176,15 @@ public class ScriptController {
         log.info("获取剧本角色列表: scriptId={}", id);
         List<ScriptRole> roles = scriptService.getRolesByScriptId(id);
         return Result.success(roles);
+    }
+
+    /**
+     * 校验是否为超级管理员，否则抛出异常
+     */
+    private void requireSuperAdmin() {
+        String role = com.murder.common.context.BaseContext.getRole();
+        if (!"SUPER_ADMIN".equals(role)) {
+            throw new com.murder.common.exception.BaseException("无权限，仅超级管理员可执行此操作");
+        }
     }
 }

@@ -77,6 +77,11 @@ public class ScriptSchedule implements Serializable {
     private Integer status;
 
     /**
+     * 主持 DM 的 ID（可为空，表示暂未分配）
+     */
+    private Long dmId;
+
+    /**
      * 备注
      */
     private String remark;
@@ -107,4 +112,12 @@ public class ScriptSchedule implements Serializable {
 
     @TableField(exist = false)
     private String roomName;
+
+    /** DM 姓名（非数据库字段，查询时填充） */
+    @TableField(exist = false)
+    private String dmName;
+
+    /** DM 头像（非数据库字段，查询时填充） */
+    @TableField(exist = false)
+    private String dmAvatar;
 }

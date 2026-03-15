@@ -15,7 +15,7 @@ public interface UserVipMapper extends BaseMapper<UserVip> {
     /**
      * 获取用户当前有效的VIP记录
      */
-    @Select("SELECT * FROM user_vip WHERE user_id = #{userId} AND status = 1 AND end_time > NOW() ORDER BY end_time DESC LIMIT 1")
+    @Select("SELECT * FROM user_vip WHERE user_id = #{userId} AND status = 1 AND end_time > CURRENT_TIMESTAMP ORDER BY end_time DESC LIMIT 1")
     UserVip getCurrentVip(@Param("userId") Long userId);
 }
 

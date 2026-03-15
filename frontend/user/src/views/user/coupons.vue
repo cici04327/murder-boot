@@ -610,7 +610,7 @@ const useCouponNow = (coupon) => {
     }).catch(err => {
       console.error('跳转失败:', err)
       // 如果命名路由失败，尝试使用路径
-      router.push('/reservation/create')
+      router.push('/script/list')
     })
   }).catch(() => {
     console.log('用户取消跳转')

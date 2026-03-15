@@ -1,5 +1,6 @@
 package com.murder.controller;
 
+import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
 import com.murder.dto.ReviewDTO;
@@ -8,6 +9,7 @@ import com.murder.vo.ReviewVO;
 import com.murder.service.ReviewService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +32,10 @@ public class ReviewController {
     @PostMapping
     @Operation(summary = "创建评价")
     public Result<String> create(@RequestBody ReviewDTO reviewDTO) {
+        // 校验登录状态（userId 由 Service 层从 BaseContext 注入，防止伪造他人评价）
+        if (BaseContext.getCurrentId() == null) {
+            return Result.error("请先登录");
+        }
         log.info("创建评价: {}", reviewDTO);
         reviewService.create(reviewDTO);
         return Result.success("评价成功");
@@ -69,8 +75,18 @@ public class ReviewController {
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除评价")
-    public Result<String> delete(@PathVariable Long id) {
+    public Result<String> delete(@PathVariable Long id, HttpServletRequest request) {
         log.info("删除评价: {}", id);
+        // 用户端：只能删除自己的评价
+        String clientType = request.getHeader("X-Client-Type");
+        if (!"admin".equals(clientType)) {
+            Long currentUserId = BaseContext.getCurrentId();
+            ReviewVO review = reviewService.getById(id);
+            if (review == null || !java.util.Objects.equals(currentUserId, review.getUserId())) {
+                log.warn("用户{}尝试删除不属于自己的评价{}", currentUserId, id);
+                return Result.error("无权删除该评价");
+            }
+        }
         reviewService.delete(id);
         return Result.success("删除成功");
     }

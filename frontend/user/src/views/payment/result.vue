@@ -36,7 +36,11 @@ const isSuccess = computed(() => route.query.success === 'true')
 const reservationId = computed(() => route.query.reservationId)
 
 const goToDetail = () => {
-  router.push(`/user/reservations`)
+  if (reservationId.value) {
+    router.push(`/reservation/detail/${reservationId.value}`)
+  } else {
+    router.push('/user/reservations')
+  }
 }
 
 const goToReservations = () => {

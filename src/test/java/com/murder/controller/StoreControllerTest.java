@@ -22,8 +22,11 @@ import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 
+import com.murder.common.context.BaseContext;
+import org.mockito.MockedStatic;
+
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -157,31 +160,37 @@ class StoreControllerTest {
     @Test
     @DisplayName("新增门店")
     void testAdd() throws Exception {
-        // When & Then
-        mockMvc.perform(post("/api/store")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testStore)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+        try (MockedStatic<BaseContext> mockedStatic = mockStatic(BaseContext.class)) {
+            mockedStatic.when(BaseContext::getRole).thenReturn("SUPER_ADMIN");
+            mockMvc.perform(post("/api/store")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(testStore)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200));
+        }
     }
 
     @Test
     @DisplayName("更新门店")
     void testUpdate() throws Exception {
-        // When & Then
-        mockMvc.perform(put("/api/store")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testStore)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+        try (MockedStatic<BaseContext> mockedStatic = mockStatic(BaseContext.class)) {
+            mockedStatic.when(BaseContext::getRole).thenReturn("SUPER_ADMIN");
+            mockMvc.perform(put("/api/store")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(testStore)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200));
+        }
     }
 
     @Test
     @DisplayName("删除门店")
     void testDelete() throws Exception {
-        // When & Then
-        mockMvc.perform(delete("/api/store/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
+        try (MockedStatic<BaseContext> mockedStatic = mockStatic(BaseContext.class)) {
+            mockedStatic.when(BaseContext::getRole).thenReturn("SUPER_ADMIN");
+            mockMvc.perform(delete("/api/store/1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200));
+        }
     }
 }

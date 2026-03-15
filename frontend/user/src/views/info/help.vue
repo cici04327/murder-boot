@@ -198,7 +198,6 @@
     <BackToTop />
     
     <!-- 主题切换器 -->
-    <ThemeSwitcher />
   </div>
 </template>
 
@@ -216,18 +215,12 @@ import {
 import InfoPageBreadcrumb from '@/components/InfoPageBreadcrumb.vue'
 import ShareButtons from '@/components/ShareButtons.vue'
 import BackToTop from '@/components/BackToTop.vue'
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
-import { useTheme } from '@/composables/useTheme'
 
 const router = useRouter()
 
 // 初始化滚动显示动画
 useScrollReveal()
-
-// 初始化主题
-const { loadTheme } = useTheme()
-loadTheme()
 
 // 搜索关键词
 const searchQuery = ref('')

@@ -240,7 +240,7 @@
           </el-col>
           <el-col :span="12">
             <el-form-item label="房间" prop="roomId">
-              <el-select v-model="form.roomId" placeholder="选择房间" style="width:100%">
+              <el-select v-model="form.roomId" placeholder="选择房间" style="width:100%" @change="triggerConflictCheck">
                 <el-option v-for="r in rooms" :key="r.id" :label="r.name" :value="r.id">
                   <span>{{ r.name }}</span>
                   <span style="float:right;color:#999;font-size:12px">
@@ -268,14 +268,25 @@
             value-format="YYYY-MM-DD"
             style="width:100%"
             :disabled-date="disablePastDates"
+            @change="triggerConflictCheck"
           />
         </el-form-item>
 
         <el-form-item label="时间段" required>
           <div class="time-range">
-            <el-time-picker v-model="form.startTime" placeholder="开始" format="HH:mm" value-format="HH:mm:ss" style="flex:1" />
+            <el-time-picker v-model="form.startTime" placeholder="开始" format="HH:mm" value-format="HH:mm:ss" style="flex:1" @change="triggerConflictCheck" />
             <span class="sep">—</span>
-            <el-time-picker v-model="form.endTime" placeholder="结束" format="HH:mm" value-format="HH:mm:ss" style="flex:1" />
+            <el-time-picker v-model="form.endTime" placeholder="结束" format="HH:mm" value-format="HH:mm:ss" style="flex:1" @change="triggerConflictCheck" />
+          </div>
+          <!-- 冲突检测结果 -->
+          <div v-if="conflictChecking" class="conflict-tip conflict-checking">
+            <el-icon class="is-loading"><Loading /></el-icon> 检测中...
+          </div>
+          <div v-else-if="conflictInfo?.conflict" class="conflict-tip conflict-error">
+            ⚠️ {{ conflictInfo.message }}
+          </div>
+          <div v-else-if="conflictInfo && !conflictInfo.conflict" class="conflict-tip conflict-ok">
+            ✅ {{ conflictInfo.message }}
           </div>
           <!-- 自动生成的时间段（选剧本后出现） -->
           <div class="quick-slots" v-if="autoSlots.length > 0">
@@ -322,6 +333,35 @@
           </el-col>
         </el-row>
 
+        <!-- DM 选择 -->
+        <el-form-item label="主持 DM">
+          <el-select
+            v-model="form.dmId"
+            placeholder="选择主持 DM（可不选）"
+            clearable
+            style="width:100%"
+            :loading="dmLoading"
+          >
+            <el-option :value="null" label="暂不分配" />
+            <el-option
+              v-for="dm in dmOptions"
+              :key="dm.id"
+              :label="dm.name"
+              :value="dm.id"
+            >
+              <div style="display:flex;align-items:center;gap:8px">
+                <el-avatar :size="24" :src="dm.avatar">🎭</el-avatar>
+                <span>{{ dm.name }}</span>
+                <el-rate :model-value="Number(dm.rating)" disabled size="small" style="margin-left:auto" />
+              </div>
+            </el-option>
+          </el-select>
+          <div v-if="form.dmId && selectedDm" class="dm-selected-tip">
+            🎭 {{ selectedDm.name }}
+            <el-tag v-for="tag in (selectedDm.styleTagList || [])" :key="tag" size="small" style="margin-left:4px">{{ tag }}</el-tag>
+          </div>
+        </el-form-item>
+
         <el-form-item label="备注">
           <el-input v-model="form.remark" type="textarea" :rows="2" placeholder="可填写特殊说明" />
         </el-form-item>
@@ -329,7 +369,8 @@
 
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="submitting" @click="handleSubmit">
+        <el-button type="primary" :loading="submitting" @click="handleSubmit"
+          :disabled="conflictInfo?.conflict">
           {{ isEdit ? '保存修改' : '新增排期' }}
         </el-button>
       </template>
@@ -434,15 +475,17 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus, Delete, ArrowLeft, ArrowRight, ArrowDown } from '@element-plus/icons-vue'
+import { Plus, Delete, ArrowLeft, ArrowRight, ArrowDown, Loading } from '@element-plus/icons-vue'
 import {
   getScheduleList,
   addSchedule,
   updateSchedule,
   updateScheduleStatus,
   deleteSchedule,
-  generateSchedules
+  generateSchedules,
+  checkScheduleConflict
 } from '@/api/schedule'
+import { getDmList } from '@/api/dm'
 import request from '@/utils/request'
 
 // =================== 角色 & 门店 ===================
@@ -464,6 +507,26 @@ const loadStoreList = async () => {
       }
     }
   } catch (e) { console.warn('加载门店列表失败', e) }
+}
+
+// =================== DM ===================
+const dmOptions = ref([])
+const dmLoading = ref(false)
+const selectedDm = computed(() => dmOptions.value.find(d => d.id === form.dmId) || null)
+
+const loadDmOptions = async (sid) => {
+  if (!sid) { dmOptions.value = []; return }
+  dmLoading.value = true
+  try {
+    const res = await getDmList(sid)
+    if (res.code === 1 || res.code === 200) {
+      dmOptions.value = res.data || []
+    }
+  } catch (e) {
+    console.warn('加载 DM 列表失败', e)
+  } finally {
+    dmLoading.value = false
+  }
 }
 
 // =================== 状态 ===================
@@ -751,6 +814,42 @@ const handleBatchScriptChange = (scriptId) => {
   autoMatchRoom(script.playerCount, batchForm, batchRoomMatchTip)
 }
 
+// =================== 冲突检测 ===================
+const conflictInfo = ref(null)   // null=未检测, false=无冲突, Object=有冲突
+const conflictChecking = ref(false)
+
+// 防抖冲突检测（房间/日期/时间任一变化时触发）
+let conflictTimer = null
+const triggerConflictCheck = () => {
+  if (!form.roomId || !form.scheduleDate || !form.startTime || !form.endTime) {
+    conflictInfo.value = null
+    return
+  }
+  if (form.startTime >= form.endTime) {
+    conflictInfo.value = null
+    return
+  }
+  clearTimeout(conflictTimer)
+  conflictTimer = setTimeout(async () => {
+    conflictChecking.value = true
+    try {
+      const st = form.startTime.length === 5 ? form.startTime : form.startTime.substring(0, 5)
+      const et = form.endTime.length   === 5 ? form.endTime   : form.endTime.substring(0, 5)
+      const res = await checkScheduleConflict(
+        storeId.value, form.roomId, form.scheduleDate, st, et,
+        isEdit.value ? form.id : null
+      )
+      if (res.code === 1 || res.code === 200) {
+        conflictInfo.value = res.data
+      }
+    } catch (e) {
+      conflictInfo.value = null
+    } finally {
+      conflictChecking.value = false
+    }
+  }, 600)
+}
+
 // 快捷时段（手动备用）
 const quickSlots = [
   { label: '08:00-12:00', start: '08:00:00', end: '12:00:00' },
@@ -759,11 +858,16 @@ const quickSlots = [
   { label: '18:00-22:00', start: '18:00:00', end: '22:00:00' },
 ]
 
-const applyQuickSlot = (slot) => { form.startTime = slot.start; form.endTime = slot.end }
+const applyQuickSlot = (slot) => {
+  form.startTime = slot.start
+  form.endTime = slot.end
+  triggerConflictCheck()
+}
 
 // =================== 表单 ===================
 const form = reactive({
   id: null, storeId: null, scriptId: null, roomId: null,
+  dmId: null,
   scheduleDate: '', startTime: '', endTime: '',
   maxPlayers: 6, status: 1, remark: ''
 })
@@ -781,7 +885,8 @@ const showAddDialog = () => {
   if (!storeId.value) { ElMessage.warning('请先选择门店'); return }
   isEdit.value = false
   Object.assign(form, { id: null, storeId: storeId.value, scriptId: null, roomId: null,
-    scheduleDate: queryDate.value, startTime: '', endTime: '', maxPlayers: 6, status: 1, remark: '' })
+    dmId: null, scheduleDate: queryDate.value, startTime: '', endTime: '', maxPlayers: 6, status: 1, remark: '' })
+  loadDmOptions(storeId.value)
   dialogVisible.value = true
 }
 
@@ -789,7 +894,8 @@ const quickAdd = (date) => {
   if (!storeId.value) { ElMessage.warning('请先选择门店'); return }
   isEdit.value = false
   Object.assign(form, { id: null, storeId: storeId.value, scriptId: null, roomId: null,
-    scheduleDate: date, startTime: '', endTime: '', maxPlayers: 6, status: 1, remark: '' })
+    dmId: null, scheduleDate: date, startTime: '', endTime: '', maxPlayers: 6, status: 1, remark: '' })
+  loadDmOptions(storeId.value)
   dialogVisible.value = true
 }
 
@@ -797,9 +903,11 @@ const handleEdit = (row) => {
   isEdit.value = true
   Object.assign(form, {
     id: row.id, storeId: row.storeId, scriptId: row.scriptId, roomId: row.roomId,
+    dmId: row.dmId || null,
     scheduleDate: row.scheduleDate, startTime: row.startTime, endTime: row.endTime,
     maxPlayers: row.maxPlayers, status: row.status ?? 1, remark: row.remark
   })
+  loadDmOptions(row.storeId)
   dialogVisible.value = true
 }
 
@@ -821,7 +929,10 @@ const handleSubmit = async () => {
   finally { submitting.value = false }
 }
 
-const resetForm = () => formRef.value?.resetFields()
+const resetForm = () => {
+  formRef.value?.resetFields()
+  conflictInfo.value = null
+}
 
 // =================== 下拉菜单 ===================
 const handleDropdown = async (cmd, row) => {
@@ -1021,6 +1132,16 @@ onMounted(async () => {
 .sep { color: #909399; flex-shrink: 0; }
 
 .quick-slots { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+
+.dm-selected-tip {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #606266;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
 .qs-label { font-size: 12px; color: #909399; }
 .qs-tag { cursor: pointer; }
 .qs-tag:hover { opacity: 0.8; }
@@ -1046,6 +1167,21 @@ onMounted(async () => {
 }
 
 .batch-slots-header { width: 100%; }
+
+/* 冲突检测提示 */
+.conflict-tip {
+  font-size: 12px;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.5;
+}
+.conflict-checking { background: #f4f4f5; color: #909399; }
+.conflict-error    { background: #fef0f0; color: #f56c6c; border: 1px solid #fde2e2; font-weight: 500; }
+.conflict-ok       { background: #f0f9eb; color: #67c23a; border: 1px solid #e1f3d8; }
 
 /* 房间匹配提示 */
 .room-match-tip {

@@ -67,13 +67,20 @@ public class StoreController {
     }
 
     /**
-     * 获取门店统计信息
+     * 获取门店统计信息（门店管理员传入storeId只看自己门店，超级管理员不传看全部）
      */
     @GetMapping("/statistics")
     @Operation(summary = "获取门店统计信息")
-    public Result<StoreStatisticsVO> getStatistics() {
-        log.info("获取门店统计信息");
-        StoreStatisticsVO statistics = storeService.getStatistics();
+    public Result<StoreStatisticsVO> getStatistics(
+            @RequestParam(required = false) Long storeId) {
+        String role = com.murder.common.context.BaseContext.getRole();
+        // 门店管理员强制只看自己的门店
+        if ("STORE_ADMIN".equals(role)) {
+            Long contextStoreId = com.murder.common.context.BaseContext.getStoreId();
+            storeId = contextStoreId;
+        }
+        log.info("获取门店统计信息: storeId={}, role={}", storeId, role);
+        StoreStatisticsVO statistics = storeService.getStatistics(storeId);
         return Result.success(statistics);
     }
 
@@ -100,66 +107,72 @@ public class StoreController {
     }
 
     /**
-     * 新增门店
+     * 新增门店（仅超级管理员）
      */
     @PostMapping
     @Operation(summary = "新增门店")
     public Result<String> add(@RequestBody Store store) {
+        requireSuperAdmin();
         log.info("新增门店: {}", store);
         storeService.add(store);
         return Result.success("新增成功");
     }
 
     /**
-     * 更新门店
+     * 更新门店（仅超级管理员）
      */
     @PutMapping
     @Operation(summary = "更新门店")
     public Result<String> update(@RequestBody Store store) {
+        requireSuperAdmin();
         log.info("更新门店: {}", store);
         storeService.update(store);
         return Result.success("更新成功");
     }
 
     /**
-     * 删除门店
+     * 删除门店（仅超级管理员）
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除门店")
     public Result<String> delete(@PathVariable Long id) {
+        requireSuperAdmin();
         log.info("删除门店: {}", id);
         storeService.delete(id);
         return Result.success("删除成功");
     }
 
     /**
-     * 批量删除门店
+     * 批量删除门店（仅超级管理员）
      */
     @DeleteMapping("/batch")
     @Operation(summary = "批量删除门店")
     public Result<String> batchDelete(@RequestBody List<Long> ids) {
+        requireSuperAdmin();
         log.info("批量删除门店: {}", ids);
         storeService.batchDelete(ids);
         return Result.success("批量删除成功");
     }
 
     /**
-     * 更新门店状态
+     * 更新门店状态（仅超级管理员）
      */
     @PutMapping("/status/{id}")
     @Operation(summary = "更新门店状态")
     public Result<String> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+        requireSuperAdmin();
         log.info("更新门店状态: id={}, status={}", id, status);
         storeService.updateStatus(id, status);
         return Result.success("状态更新成功");
     }
 
     /**
-     * 批量更新门店状态
+     * 批量更新门店状态（仅超级管理员）
      */
     @PutMapping("/status/batch")
     @Operation(summary = "批量更新门店状态")
     public Result<String> batchUpdateStatus(@RequestBody List<Long> ids, @RequestParam Integer status) {
+        requireSuperAdmin();
         log.info("批量更新门店状态: ids={}, status={}", ids, status);
         storeService.batchUpdateStatus(ids, status);
         return Result.success("批量状态更新成功");
@@ -235,11 +248,12 @@ public class StoreController {
     }
     
     /**
-     * 更新门店账号信息（超级管理员使用）
+     * 更新门店账号信息（仅超级管理员）
      */
     @PutMapping("/account")
     @Operation(summary = "更新门店账号信息")
     public Result<String> updateAccount(@RequestBody java.util.Map<String, Object> params) {
+        requireSuperAdmin();
         Long storeId = Long.valueOf(params.get("id").toString());
         String loginAccount = (String) params.get("loginAccount");
         String loginPassword = (String) params.get("loginPassword");
@@ -250,15 +264,26 @@ public class StoreController {
     }
     
     /**
-     * 重置门店密码为默认值（超级管理员使用）
+     * 重置门店密码为默认值（仅超级管理员）
      */
     @PutMapping("/account/reset-password")
     @Operation(summary = "重置门店密码为默认值")
     public Result<String> resetPassword(@RequestBody java.util.Map<String, Object> params) {
+        requireSuperAdmin();
         Long storeId = Long.valueOf(params.get("id").toString());
         
         log.info("重置门店密码: storeId={}", storeId);
         storeService.resetStorePassword(storeId);
         return Result.success("密码已重置为默认值: 123456");
+    }
+
+    /**
+     * 校验是否为超级管理员，否则抛出异常
+     */
+    private void requireSuperAdmin() {
+        String role = com.murder.common.context.BaseContext.getRole();
+        if (!"SUPER_ADMIN".equals(role)) {
+            throw new com.murder.common.exception.BaseException("无权限，仅超级管理员可执行此操作");
+        }
     }
 }

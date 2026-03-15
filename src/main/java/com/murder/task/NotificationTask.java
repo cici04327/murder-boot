@@ -3,8 +3,10 @@ package com.murder.task;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.entity.Reservation;
 import com.murder.entity.UserCoupon;
+import com.murder.entity.UserVip;
 import com.murder.mapper.ReservationMapper;
 import com.murder.mapper.UserCouponMapper;
+import com.murder.mapper.UserVipMapper;
 import com.murder.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -23,12 +26,15 @@ public class NotificationTask {
 
     @Autowired
     private NotificationService notificationService;
-    
+
     @Autowired
     private UserCouponMapper userCouponMapper;
-    
+
     @Autowired
     private ReservationMapper reservationMapper;
+
+    @Autowired
+    private UserVipMapper userVipMapper;
 
     /**
      * 预约提醒任务 - 每小时执行一次
@@ -127,6 +133,64 @@ public class NotificationTask {
             log.info("优惠券到期提醒任务执行完成，发送通知数: {}", count);
         } catch (Exception e) {
             log.error("优惠券到期提醒任务执行失败", e);
+        }
+    }
+
+    /**
+     * VIP到期提醒 - 每天上午10点执行
+     * 提前3天提醒即将到期的VIP用户续费
+     */
+    @Scheduled(cron = "0 0 10 * * ?")
+    public void vipExpireReminder() {
+        log.info("开始执行VIP到期提醒任务");
+        try {
+            LocalDateTime now = LocalDateTime.now();
+            // 查找3天内到期的有效VIP
+            LocalDateTime threeDaysLater = now.plusDays(3);
+
+            LambdaQueryWrapper<UserVip> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(UserVip::getStatus, 1)
+                   .gt(UserVip::getEndTime, now)
+                   .le(UserVip::getEndTime, threeDaysLater);
+
+            List<UserVip> expiringVips = userVipMapper.selectList(wrapper);
+
+            int count = 0;
+            for (UserVip vip : expiringVips) {
+                try {
+                    long daysLeft = ChronoUnit.DAYS.between(now, vip.getEndTime());
+                    String levelName = getLevelName(vip.getLevel());
+
+                    String title = "⏰ VIP会员即将到期";
+                    String content;
+                    if (daysLeft <= 0) {
+                        content = String.format("您的%s会员今日到期，续费后可继续享受专属权益，月度体验券等福利不间断～", levelName);
+                    } else {
+                        content = String.format(
+                                "您的%s会员还有 %d 天到期（%d月%d日），续费后月度体验券等权益持续发放，不要错过～",
+                                levelName, daysLeft,
+                                vip.getEndTime().getMonthValue(), vip.getEndTime().getDayOfMonth());
+                    }
+
+                    notificationService.sendToUsers(title, content, 2, "VIP_EXPIRE_REMIND", vip.getId(), vip.getUserId());
+                    count++;
+                } catch (Exception e) {
+                    log.error("发送VIP到期提醒失败，userId={}", vip.getUserId(), e);
+                }
+            }
+            log.info("VIP到期提醒任务执行完成，发送通知数: {}", count);
+        } catch (Exception e) {
+            log.error("VIP到期提醒任务执行失败", e);
+        }
+    }
+
+    private String getLevelName(Integer level) {
+        switch (level) {
+            case 1: return "见习侦探";
+            case 2: return "银章侦探";
+            case 3: return "金章侦探";
+            case 4: return "传奇侦探";
+            default: return "VIP";
         }
     }
 }

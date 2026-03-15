@@ -226,6 +226,37 @@ public class ScriptServiceImpl implements ScriptService {
         wrapper.orderByAsc(ScriptCategory::getSort);
         return scriptCategoryMapper.selectList(wrapper);
     }
+
+    /**
+     * 新增剧本分类
+     */
+    @Override
+    @org.springframework.cache.annotation.CacheEvict(value = "script:categories", allEntries = true)
+    public void addCategory(ScriptCategory category) {
+        if (category.getStatus() == null) {
+            category.setStatus(1);
+        }
+        scriptCategoryMapper.insert(category);
+    }
+
+    /**
+     * 更新剧本分类
+     */
+    @Override
+    @org.springframework.cache.annotation.CacheEvict(value = "script:categories", allEntries = true)
+    public void updateCategory(Long id, ScriptCategory category) {
+        category.setId(id);
+        scriptCategoryMapper.updateById(category);
+    }
+
+    /**
+     * 删除剧本分类
+     */
+    @Override
+    @org.springframework.cache.annotation.CacheEvict(value = "script:categories", allEntries = true)
+    public void deleteCategory(Long id) {
+        scriptCategoryMapper.deleteById(id);
+    }
     
     /**
      * 根据剧本ID获取角色列表

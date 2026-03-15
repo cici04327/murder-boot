@@ -1,15 +1,22 @@
 package com.murder.integration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.murder.dto.ReservationDTO;
+import com.murder.entity.Reservation;
+import com.murder.mapper.ReservationMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -18,6 +25,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @DisplayName("预约模块集成测试")
 class ReservationIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private ReservationMapper reservationMapper;
 
     @Nested
     @DisplayName("预约查询测试")
@@ -28,10 +38,11 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
         void pageQuery_Success() throws Exception {
             mockMvc.perform(get("/api/reservation/page")
                             .param("page", "1")
-                            .param("pageSize", "10"))
+                            .param("pageSize", "10")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.total").value(greaterThanOrEqualTo(0)))
+                    .andExpect(jsonPath("$.data.total").value(3))
                     .andExpect(jsonPath("$.data.records").isArray());
         }
 
@@ -41,9 +52,11 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(get("/api/reservation/page")
                             .param("page", "1")
                             .param("pageSize", "10")
-                            .param("userId", "1"))
+                            .param("userId", "1")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.total").value(3));
         }
 
         @Test
@@ -52,34 +65,41 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(get("/api/reservation/page")
                             .param("page", "1")
                             .param("pageSize", "10")
-                            .param("status", "1"))  // 已确认
+                            .param("status", "1")  // 已确认
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.total").value(0));
         }
 
         @Test
         @DisplayName("根据ID查询预约详情")
         void getById_Success() throws Exception {
-            mockMvc.perform(get("/api/reservation/1"))
+            mockMvc.perform(get("/api/reservation/1")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.id").value(1))
-                    .andExpect(jsonPath("$.data.reservationNo").value("RSV202601230001"));
+                    .andExpect(jsonPath("$.data.orderNo").value("RSV202601230001"));
         }
 
         @Test
         @DisplayName("根据预约编号查询")
         void getByReservationNo_Success() throws Exception {
-            mockMvc.perform(get("/api/reservation/no/RSV202601230001"))
+            mockMvc.perform(get("/api/reservation/no/RSV202601230001")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.reservationNo").value("RSV202601230001"));
+                    .andExpect(jsonPath("$.data.id").value(1))
+                    .andExpect(jsonPath("$.data.orderNo").value("RSV202601230001"))
+                    .andExpect(jsonPath("$.data.status").value(2));
         }
 
         @Test
         @DisplayName("查询不存在的预约")
         void getById_NotFound() throws Exception {
-            mockMvc.perform(get("/api/reservation/99999"))
+            mockMvc.perform(get("/api/reservation/99999")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isEmpty());
         }
@@ -98,19 +118,35 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
             ReservationDTO dto = new ReservationDTO();
             dto.setUserId(1L);
             dto.setStoreId(1L);
-            dto.setRoomId(1L);
+            dto.setRoomId(2L);  // 使用房间2，避免与测试数据中的房间1冲突
             dto.setScriptId(1L);
             dto.setReservationTime(reservationTime);
             dto.setDuration(new BigDecimal("4.0"));
             dto.setPlayerCount(6);
             dto.setTotalPrice(new BigDecimal("198.00"));
 
-            mockMvc.perform(post("/api/reservation")
+            MvcResult result = mockMvc.perform(post("/api/reservation")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(toJson(dto)))
+                            .content(toJson(dto))
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.reservationNo").exists());
+                    .andExpect(jsonPath("$.data.orderNo").exists())
+                    .andReturn();
+
+            JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
+            String orderNo = body.path("data").path("orderNo").asText();
+
+            LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Reservation::getOrderNo, orderNo);
+            Reservation created = reservationMapper.selectOne(wrapper);
+
+            assertNotNull(created);
+            assertEquals(1L, created.getUserId());
+            assertEquals(1, created.getStatus());
+            assertEquals(0, created.getPayStatus());
+            assertEquals(2L, created.getRoomId());
+            assertNotNull(created.getCheckInCode());
         }
     }
 
@@ -122,39 +158,60 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
         @DisplayName("确认预约")
         void confirm_Success() throws Exception {
             // 确认待处理的预约（ID=2）
-            mockMvc.perform(put("/api/reservation/2/confirm"))
+            mockMvc.perform(put("/api/reservation/2/confirm")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").value("确认成功"));
+
+            Reservation updated = reservationMapper.selectById(2L);
+            assertEquals(2, updated.getStatus());
+            assertEquals(0, updated.getPayStatus());
         }
 
         @Test
         @DisplayName("取消预约")
         void cancel_Success() throws Exception {
             mockMvc.perform(put("/api/reservation/2/cancel")
-                            .param("reason", "用户临时有事"))
+                            .param("reason", "用户临时有事")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").value("取消成功"));
+
+            Reservation updated = reservationMapper.selectById(2L);
+            assertEquals(4, updated.getStatus());
+            assertEquals("用户临时有事", updated.getRemark());
         }
 
         @Test
         @DisplayName("支付预约")
         void pay_Success() throws Exception {
-            mockMvc.perform(put("/api/reservation/2/pay"))
+            mockMvc.perform(put("/api/reservation/2/pay")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").value("支付成功"));
+
+            Reservation updated = reservationMapper.selectById(2L);
+            assertEquals(2, updated.getStatus());
+            assertEquals(1, updated.getPayStatus());
+            assertNotNull(updated.getPayTime());
         }
 
         @Test
         @DisplayName("完成预约")
         void complete_Success() throws Exception {
             // 完成已确认且已支付的预约（ID=1）
-            mockMvc.perform(put("/api/reservation/1/complete"))
+            mockMvc.perform(put("/api/reservation/1/complete")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").value("完成成功"));
+
+            Reservation updated = reservationMapper.selectById(1L);
+            assertEquals(3, updated.getStatus());
+            assertEquals(1, updated.getPayStatus());
         }
     }
 
@@ -171,7 +228,8 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(get("/api/reservation/check-availability")
                             .param("roomId", "1")
                             .param("reservationTime", futureTime)
-                            .param("duration", "3"))
+                            .param("duration", "3")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").isBoolean());
@@ -181,7 +239,8 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
         @DisplayName("查询即将开始的预约")
         void getUpcoming_Success() throws Exception {
             mockMvc.perform(get("/api/reservation/upcoming")
-                            .param("hours", "24"))
+                            .param("hours", "24")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").isArray());

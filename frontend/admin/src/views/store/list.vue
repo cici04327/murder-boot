@@ -8,7 +8,7 @@
         <el-form-item>
           <el-button type="primary" @click="handleQuery">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleAdd">新增门店</el-button>
+          <el-button v-if="isSuperAdmin" type="success" @click="handleAdd">新增门店</el-button>
         </el-form-item>
       </el-form>
 
@@ -56,11 +56,12 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="280" fixed="right">
+        <el-table-column label="操作" :width="isSuperAdmin ? 280 : 80" fixed="right">
           <template #default="{ row }">
-            <el-button type="warning" size="small" @click="handleAccountManage(row)">账号管理</el-button>
-            <el-button type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
-            <el-button type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <el-button v-if="isSuperAdmin" type="warning" size="small" @click="handleAccountManage(row)">账号管理</el-button>
+            <el-button v-if="isSuperAdmin" type="primary" size="small" @click="handleEdit(row)">编辑</el-button>
+            <el-button v-if="isSuperAdmin" type="danger" size="small" @click="handleDelete(row)">删除</el-button>
+            <span v-if="!isSuperAdmin" style="color: #909399; font-size: 12px;">只读</span>
           </template>
         </el-table-column>
       </el-table>
@@ -224,10 +225,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Upload, Close } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+
+const isSuperAdmin = computed(() => localStorage.getItem('admin-login-type') !== 'store')
 
 const loading = ref(false)
 const uploading = ref(false)

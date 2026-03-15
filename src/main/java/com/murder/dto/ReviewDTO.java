@@ -31,6 +31,12 @@ public class ReviewDTO implements Serializable {
     
     @Schema(description = "服务评分（1-5星）")
     private Integer serviceRating;
+
+    @Schema(description = "DM ID（主持人）")
+    private Long dmId;
+
+    @Schema(description = "DM 评分（1-5星）")
+    private Integer dmRating;
     
     @Schema(description = "评价内容")
     private String content;

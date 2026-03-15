@@ -595,7 +595,7 @@ const goToDetail = (id) => {
 // 预约剧本
 const handleReserve = (scriptId) => {
   router.push({
-    path: '/reservation/create',
+    path: '/reservation/schedule',
     query: { scriptId }
   })
 }
@@ -949,16 +949,49 @@ onMounted(() => {
 
 .filter-item :deep(.el-input__wrapper) {
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: none;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: none !important;
+}
+
+.filter-item :deep(.el-input__wrapper:hover) {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.filter-item :deep(.el-input__wrapper.is-focus) {
+  border-color: rgba(102, 126, 234, 0.8) !important;
 }
 
 .filter-item :deep(.el-input__inner) {
-  color: #fff;
+  color: #fff !important;
 }
 
+/* 已选中的值文字颜色 */
+.filter-item :deep(.el-select__selected-item) {
+  color: #fff !important;
+}
+
+.filter-item :deep(.el-select__selected-item span) {
+  color: #fff !important;
+}
+
+/* placeholder 颜色 */
 .filter-item :deep(.el-select__placeholder) {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.5) !important;
+}
+
+/* 下拉箭头颜色 */
+.filter-item :deep(.el-select__suffix .el-icon) {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* 清除按钮颜色 */
+.filter-item :deep(.el-select__clear) {
+  color: rgba(255, 255, 255, 0.6) !important;
+  background: transparent !important;
+}
+
+.filter-item :deep(.el-select__clear:hover) {
+  color: #fff !important;
 }
 
 .price-filter .price-labels {

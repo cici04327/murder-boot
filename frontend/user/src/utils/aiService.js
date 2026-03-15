@@ -25,6 +25,19 @@ class AIService {
    * @param {Object} context - 上下文信息
    */
   async chat(message, context = {}) {
+    // 优先检测转人工意图，直接触发转接而不走 AI
+    const transferKeywords = ['转人工', '人工客服', '转客服', '人工服务', '真人客服']
+    if (transferKeywords.some(kw => message.includes(kw))) {
+      return {
+        success: true,
+        message: '好的，马上为您转接人工客服，请稍等...',
+        suggestions: [],
+        actions: [{ type: 'transfer', label: '点击转接人工客服' }],
+        fallback: false,
+        triggerTransfer: true  // 前端收到此标记直接调用 transferToHuman
+      }
+    }
+
     try {
       // 添加到历史记录
       this.conversationHistory.push({
@@ -67,7 +80,8 @@ class AIService {
           message: aiResponse,
           suggestions: responseData.suggestions || [],
           actions: responseData.actions || [],
-          fallback: false
+          fallback: false,
+          triggerTransfer: responseData.triggerTransfer || false
         }
       } else {
         console.warn('AI API返回无效响应，使用本地知识库:', response)
@@ -291,6 +305,57 @@ class AIService {
 
 🎭 **祝您游戏愉快！**`,
         suggestions: []
+      },
+      '怎么玩|如何玩|玩法|规则|新手|第一次': {
+        answer: `🎭 **剧本杀玩法介绍：**
+
+1. 📖 **领取剧本**：到店后每人获得专属角色剧本
+2. 🔍 **阅读剧情**：了解自己角色的背景和任务
+3. 💬 **自由交流**：与其他玩家交流、搜证、推理
+4. 🗳️ **投票指凶**：在规定时间内找出凶手
+5. 🎬 **复盘揭秘**：DM主持揭晓真相
+
+💡 **新手建议：**
+• 选择「欢乐本」或「新手本」入门
+• 认真阅读剧本，记住关键线索
+• 大胆发言，积极参与互动
+• 全程约3-5小时，建议留足时间`,
+        suggestions: ['推荐新手剧本', '如何预约', '拼车组队']
+      },
+      '团体|团建|多人|包场|公司|聚会|生日': {
+        answer: `🎉 **团体预约服务：**
+
+• 👥 **人数范围**：6-20人均可接待
+• 🎭 **包场服务**：10人以上可申请包场
+• 💰 **团体优惠**：10人以上享9折，20人以上享8.5折
+• 🎂 **生日特权**：寿星免费参与，赠送专属道具
+
+📝 **预约方式：**
+1. 在预约页面选择人数
+2. 备注「团体预约」
+3. 客服会主动联系确认
+
+📞 也可直接致电：**400-123-4567**`,
+        suggestions: ['立即预约', '查看适合团建的剧本', '联系客服']
+      },
+      '投诉|评价|差评|不满意|纠纷|举报': {
+        answer: `📝 **评价与投诉渠道：**
+
+**发表评价：**
+• 游戏结束后在「我的预约」中评价
+• 评价可获得 **+20积分** 奖励
+
+**意见反馈：**
+• 首页底部「意见反馈」提交
+• 反馈后1个工作日内回复
+
+**投诉处理：**
+• 📞 客服热线：400-123-4567
+• 📧 邮箱：complaint@jubensha.com
+• ⏰ 处理时效：3个工作日内
+
+我们重视每一条反馈，感谢您的监督！`,
+        suggestions: ['我的预约', '联系客服', '意见反馈']
       }
     }
   }

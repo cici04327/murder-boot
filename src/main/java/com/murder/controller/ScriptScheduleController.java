@@ -140,6 +140,26 @@ public class ScriptScheduleController {
     }
 
     /**
+     * 实时冲突检测（前端新增/编辑排期表单填写完时间后调用）
+     * 返回 conflict=true/false，冲突时附带冲突场次信息
+     */
+    @GetMapping("/check-conflict")
+    @Operation(summary = "排期时段冲突检测", description = "新增传excludeId=null，编辑传自身ID，检测同门店同房间同日期时段是否冲突")
+    public Result<Map<String, Object>> checkConflict(
+            @RequestParam Long storeId,
+            @RequestParam Long roomId,
+            @RequestParam String scheduleDate,
+            @RequestParam String startTime,
+            @RequestParam String endTime,
+            @RequestParam(required = false) Long excludeId) {
+        log.info("冲突检测: storeId={}, roomId={}, date={}, {}-{}, excludeId={}",
+                storeId, roomId, scheduleDate, startTime, endTime, excludeId);
+        Map<String, Object> result = scriptScheduleService.checkConflict(
+                storeId, roomId, scheduleDate, startTime, endTime, excludeId);
+        return Result.success(result);
+    }
+
+    /**
      * 查询可约场次（用户端）- 含余量展示
      * 返回指定剧本/门店未来N天内 status=1 且未满员的场次
      */

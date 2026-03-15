@@ -100,12 +100,13 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElNotification } from 'element-plus'
 import NotificationBell from '@/components/NotificationBell.vue'
 import { userService } from '@/utils/request'
 import notificationWS from '@/utils/websocket'
+import { playNotificationSound } from '@/utils/notification'
 
 const router = useRouter()
 const route = useRoute()
@@ -156,11 +157,71 @@ const handleStoreChange = (val) => {
   window.location.reload()
 }
 
+// ========== 客服WebSocket（全局监听新会话通知）==========
+let serviceWs = null
+let serviceWsHeartbeat = null
+
+const connectServiceWs = (adminId) => {
+  if (!adminId) return
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${location.host}/api/ws/service?adminId=${adminId}&role=admin`
+  serviceWs = new WebSocket(wsUrl)
+
+  serviceWs.onmessage = (event) => {
+    if (event.data === 'pong') return
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'new_service_session') {
+        // 播放提示音
+        playNotificationSound()
+        // 显示页面内通知
+        ElNotification({
+          title: '📞 新客服请求',
+          message: `用户「${data.userName || '用户'}」发起了人工客服请求`,
+          type: 'warning',
+          duration: 8000,
+          onClick: () => {
+            router.push('/service/index')
+          }
+        })
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  serviceWs.onclose = () => {
+    // 断线后5秒重连
+    setTimeout(() => {
+      const ui = JSON.parse(localStorage.getItem('admin-user') || '{}')
+      if (ui.id && localStorage.getItem('admin-token')) {
+        connectServiceWs(ui.id)
+      }
+    }, 5000)
+  }
+
+  // 心跳保活
+  clearInterval(serviceWsHeartbeat)
+  serviceWsHeartbeat = setInterval(() => {
+    if (serviceWs && serviceWs.readyState === WebSocket.OPEN) {
+      serviceWs.send('ping')
+    }
+  }, 30000)
+}
+
+onUnmounted(() => {
+  clearInterval(serviceWsHeartbeat)
+  if (serviceWs) {
+    serviceWs.close()
+    serviceWs = null
+  }
+})
+
 onMounted(() => {
   loadStores()
   const userInfo = JSON.parse(localStorage.getItem('admin-user') || '{}')
   if (userInfo.id) {
     notificationWS.connect(userInfo.id)
+    // 同时连接客服WebSocket，监听新客服会话请求
+    connectServiceWs(userInfo.id)
   }
 })
 
@@ -199,6 +260,8 @@ const currentTitle = computed(() => route.meta.title || '')
 const handleCommand = (command) => {
   if (command === 'logout') {
     notificationWS.close()
+    clearInterval(serviceWsHeartbeat)
+    if (serviceWs) { serviceWs.close(); serviceWs = null }
     localStorage.removeItem('admin-token')
     localStorage.removeItem('admin-user')
     localStorage.removeItem('admin-current-store-id')

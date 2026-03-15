@@ -36,9 +36,9 @@ public interface ReservationMapper extends BaseMapper<Reservation> {
             "AND status IN (1, 2) " +
             "AND is_deleted = 0 " +
             "AND ((reservation_time >= #{startTime} AND reservation_time < #{endTime}) " +
-            "OR (DATE_ADD(reservation_time, INTERVAL duration HOUR) > #{startTime} " +
-            "AND DATE_ADD(reservation_time, INTERVAL duration HOUR) <= #{endTime}) " +
-            "OR (reservation_time <= #{startTime} AND DATE_ADD(reservation_time, INTERVAL duration HOUR) >= #{endTime}))")
+            "OR (DATEADD('HOUR', CAST(duration AS INT), reservation_time) > #{startTime} " +
+            "AND DATEADD('HOUR', CAST(duration AS INT), reservation_time) <= #{endTime}) " +
+            "OR (reservation_time <= #{startTime} AND DATEADD('HOUR', CAST(duration AS INT), reservation_time) >= #{endTime}))")
     int countConflictingReservations(@Param("roomId") Long roomId,
                                       @Param("startTime") LocalDateTime startTime,
                                       @Param("endTime") LocalDateTime endTime);

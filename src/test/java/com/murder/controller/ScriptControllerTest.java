@@ -20,8 +20,11 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 
+import com.murder.common.context.BaseContext;
+import org.mockito.MockedStatic;
+
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -151,34 +154,40 @@ class ScriptControllerTest {
     @Test
     @DisplayName("新增剧本")
     void testAdd() throws Exception {
-        // When & Then
-        mockMvc.perform(post("/api/script")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testScript)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value("新增成功"));
+        try (MockedStatic<BaseContext> mockedStatic = mockStatic(BaseContext.class)) {
+            mockedStatic.when(BaseContext::getRole).thenReturn("SUPER_ADMIN");
+            mockMvc.perform(post("/api/script")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(testScript)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data").value("新增成功"));
+        }
     }
 
     @Test
     @DisplayName("更新剧本")
     void testUpdate() throws Exception {
-        // When & Then
-        mockMvc.perform(put("/api/script")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(testScript)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value("更新成功"));
+        try (MockedStatic<BaseContext> mockedStatic = mockStatic(BaseContext.class)) {
+            mockedStatic.when(BaseContext::getRole).thenReturn("SUPER_ADMIN");
+            mockMvc.perform(put("/api/script")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(testScript)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data").value("更新成功"));
+        }
     }
 
     @Test
     @DisplayName("删除剧本")
     void testDelete() throws Exception {
-        // When & Then
-        mockMvc.perform(delete("/api/script/1"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value("删除成功"));
+        try (MockedStatic<BaseContext> mockedStatic = mockStatic(BaseContext.class)) {
+            mockedStatic.when(BaseContext::getRole).thenReturn("SUPER_ADMIN");
+            mockMvc.perform(delete("/api/script/1"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data").value("删除成功"));
+        }
     }
 }

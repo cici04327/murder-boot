@@ -26,6 +26,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("分页查询剧本列表")
         void pageQuery_Success() throws Exception {
             mockMvc.perform(get("/api/script/page")
+                            .header("token", testUserToken)
                             .param("page", "1")
                             .param("pageSize", "10"))
                     .andExpect(status().isOk())
@@ -38,6 +39,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("按分类查询剧本")
         void pageQuery_ByCategory() throws Exception {
             mockMvc.perform(get("/api/script/page")
+                            .header("token", testUserToken)
                             .param("page", "1")
                             .param("pageSize", "10")
                             .param("categoryId", "1"))  // 恐怖类
@@ -50,6 +52,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("按难度查询剧本")
         void pageQuery_ByDifficulty() throws Exception {
             mockMvc.perform(get("/api/script/page")
+                            .header("token", testUserToken)
                             .param("page", "1")
                             .param("pageSize", "10")
                             .param("difficulty", "2"))
@@ -61,6 +64,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("按人数查询剧本")
         void pageQuery_ByPlayerCount() throws Exception {
             mockMvc.perform(get("/api/script/page")
+                            .header("token", testUserToken)
                             .param("page", "1")
                             .param("pageSize", "10")
                             .param("playerCount", "6"))
@@ -71,7 +75,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("根据ID查询剧本详情")
         void getById_Success() throws Exception {
-            mockMvc.perform(get("/api/script/1"))
+            mockMvc.perform(get("/api/script/1")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.id").value(1))
@@ -81,7 +86,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("查询不存在的剧本")
         void getById_NotFound() throws Exception {
-            mockMvc.perform(get("/api/script/99999"))
+            mockMvc.perform(get("/api/script/99999")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isEmpty());
         }
@@ -89,7 +95,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("获取热门剧本列表")
         void getHotScripts_Success() throws Exception {
-            mockMvc.perform(get("/api/script/list/hot"))
+            mockMvc.perform(get("/api/script/list/hot")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").isArray());
@@ -98,7 +105,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("获取推荐剧本列表")
         void getRecommendedScripts_Success() throws Exception {
-            mockMvc.perform(get("/api/script/list/recommended"))
+            mockMvc.perform(get("/api/script/list/recommended")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").isArray());
@@ -112,7 +120,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("获取所有剧本分类")
         void getCategories_Success() throws Exception {
-            mockMvc.perform(get("/api/script/category"))
+            mockMvc.perform(get("/api/script/category")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").isArray())
@@ -140,6 +149,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                     .build();
 
             mockMvc.perform(post("/api/script")
+                            .header("token", adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(script)))
                     .andExpect(status().isOk())
@@ -163,6 +173,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                     .build();
 
             mockMvc.perform(put("/api/script")
+                            .header("token", adminToken)
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(script)))
                     .andExpect(status().isOk())
@@ -173,7 +184,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("删除剧本")
         void deleteScript_Success() throws Exception {
             // 删除ID为4的已下架剧本
-            mockMvc.perform(delete("/api/script/4"))
+            mockMvc.perform(delete("/api/script/4")
+                            .header("token", adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200));
         }
@@ -187,6 +199,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("按关键字搜索剧本")
         void searchByKeyword_Success() throws Exception {
             mockMvc.perform(get("/api/script/page")
+                            .header("token", testUserToken)
                             .param("page", "1")
                             .param("pageSize", "10")
                             .param("keyword", "惊魂"))
@@ -198,6 +211,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("组合条件搜索剧本")
         void searchByMultipleConditions_Success() throws Exception {
             mockMvc.perform(get("/api/script/page")
+                            .header("token", testUserToken)
                             .param("page", "1")
                             .param("pageSize", "10")
                             .param("categoryId", "1")

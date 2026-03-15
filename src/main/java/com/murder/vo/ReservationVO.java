@@ -147,4 +147,19 @@ public class ReservationVO implements Serializable {
 
     @Schema(description = "VIP等级名称")
     private String vipLevelName;
+
+    @Schema(description = "主持 DM ID")
+    private Long dmId;
+
+    @Schema(description = "主持 DM 姓名")
+    private String dmName;
+
+    @Schema(description = "主持 DM 头像")
+    private String dmAvatar;
+
+    @Schema(description = "主持 DM 风格标签，逗号分隔")
+    private String dmStyleTags;
+
+    @Schema(description = "主持 DM 综合评分")
+    private java.math.BigDecimal dmRating;
 }

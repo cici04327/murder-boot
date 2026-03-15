@@ -33,6 +33,25 @@
         </el-descriptions-item>
         <el-descriptions-item label="房间">{{ reservation.roomName || roomInfo?.name || '-' }}</el-descriptions-item>
         <el-descriptions-item label="房间容量">{{ reservation.roomCapacity || roomInfo?.capacity || '-' }} 人</el-descriptions-item>
+        <!-- DM 信息 -->
+        <el-descriptions-item label="主持 DM" :span="2">
+          <div v-if="reservation.dmId" class="dm-info-row">
+            <el-avatar :size="36" :src="reservation.dmAvatar" style="margin-right:10px;flex-shrink:0">🎭</el-avatar>
+            <div class="dm-info-content">
+              <span class="dm-info-name">{{ reservation.dmName }}</span>
+              <el-rate :model-value="Number(reservation.dmRating || 0)" disabled show-score size="small" style="margin-left:8px" />
+              <div class="dm-info-tags" v-if="reservation.dmStyleTags">
+                <el-tag
+                  v-for="tag in reservation.dmStyleTags.split(',')"
+                  :key="tag"
+                  size="small"
+                  style="margin:2px"
+                >{{ tag }}</el-tag>
+              </div>
+            </div>
+          </div>
+          <span v-else style="color:#999">暂未分配主持 DM</span>
+        </el-descriptions-item>
         <el-descriptions-item label="预约时间" :span="2">
           <span class="time-highlight">{{ reservation.reservationTime }}</span>
         </el-descriptions-item>
@@ -620,6 +639,29 @@ onBeforeUnmount(() => {
   color: #f56c6c;
   font-size: 22px;
   font-weight: bold;
+}
+
+/* DM 信息展示 */
+.dm-info-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.dm-info-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.dm-info-name {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dm-info-tags {
+  width: 100%;
+  margin-top: 4px;
 }
 
 .countdown-container {

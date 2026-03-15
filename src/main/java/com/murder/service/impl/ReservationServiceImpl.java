@@ -73,6 +73,9 @@ public class ReservationServiceImpl implements ReservationService {
     @Autowired(required = false)
     private com.murder.service.VipService vipService;
 
+    @Autowired(required = false)
+    private com.murder.mapper.DmMapper dmMapper;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Reservation create(ReservationDTO reservationDTO) {
@@ -306,6 +309,7 @@ public class ReservationServiceImpl implements ReservationService {
         populateScriptInfo(reservation, vo);
         populateRoomInfo(reservation, vo);
         populateReviewState(reservation, vo);
+        populateDmInfo(reservation, vo);
         return vo;
     }
 
@@ -333,6 +337,7 @@ public class ReservationServiceImpl implements ReservationService {
         populateScriptInfo(reservation, vo);
         populateRoomInfo(reservation, vo);
         populateReviewState(reservation, vo);
+        populateDmInfo(reservation, vo);
         return vo;
     }
 
@@ -592,6 +597,22 @@ public class ReservationServiceImpl implements ReservationService {
             vo.setRoomCapacity(room.getCapacity());
         } catch (Exception e) {
             log.debug("查询房间信息失败: roomId={}", reservation.getRoomId(), e);
+        }
+    }
+
+    private void populateDmInfo(Reservation reservation, ReservationVO vo) {
+        if (reservation.getDmId() == null || dmMapper == null) return;
+        try {
+            com.murder.entity.Dm dm = dmMapper.selectById(reservation.getDmId());
+            if (dm != null) {
+                vo.setDmId(dm.getId());
+                vo.setDmName(dm.getName());
+                vo.setDmAvatar(dm.getAvatar());
+                vo.setDmStyleTags(dm.getStyleTags());
+                vo.setDmRating(dm.getRating());
+            }
+        } catch (Exception e) {
+            log.debug("查询 DM 信息失败: dmId={}", reservation.getDmId(), e);
         }
     }
 

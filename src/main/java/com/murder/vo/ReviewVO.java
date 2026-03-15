@@ -62,6 +62,18 @@ public class ReviewVO implements Serializable {
     @Schema(description = "服务评分")
     private Integer serviceRating;
 
+    @Schema(description = "DM ID")
+    private Long dmId;
+
+    @Schema(description = "DM 姓名")
+    private String dmName;
+
+    @Schema(description = "DM 头像")
+    private String dmAvatar;
+
+    @Schema(description = "DM 评分（1-5星）")
+    private Integer dmRating;
+
     @Schema(description = "评分")
     private BigDecimal rating;
     

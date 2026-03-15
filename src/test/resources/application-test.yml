@@ -5,7 +5,7 @@ spring:
   datasource:
     # 使用H2内存数据库进行测试
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;IGNORECASE=TRUE
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;IGNORECASE=TRUE;NON_KEYWORDS=USER,VALUE
     username: sa
     password: 
   
@@ -36,9 +36,17 @@ mybatis-plus:
       id-type: auto
 
 # JWT配置（测试用）
-jwt:
-  secret: test-secret-key-for-integration-testing-purposes-only
-  expiration: 86400000
+murder:
+  jwt:
+    secret-key: test-secret-key-for-integration-testing-purposes-only
+    ttl: 86400000
+    token-name: token
+    user-secret-key: test-user-secret-key-for-integration-testing
+    user-ttl: 86400000
+    user-token-name: token
+    admin-secret-key: test-admin-secret-key-for-integration-testing
+    admin-ttl: 86400000
+    admin-token-name: token
 
 # 日志级别
 logging:

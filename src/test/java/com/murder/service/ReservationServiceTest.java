@@ -88,26 +88,15 @@ class ReservationServiceTest {
     @Test
     @DisplayName("确认预约")
     void testConfirm() {
-        // Given
-        when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
-
-        // When
-        reservationService.confirm(1L);
-
-        // Then - 服务直接调用updateById更新状态
-        verify(reservationMapper, times(1)).updateById(any(Reservation.class));
-    }
-
-    @Test
-    @DisplayName("取消预约")
-    void testCancel() {
-        // Given - cancel方法会先查询预约是否存在
+        // Given - confirm方法会先selectById查询预约
         testReservation.setStatus(1); // 待确认状态
+        testReservation.setCheckInCode("123456"); // 确保checkInCode非空，避免ensureCheckInFields触发额外updateById
+        testReservation.setCheckInStatus(0);
         when(reservationMapper.selectById(1L)).thenReturn(testReservation);
         when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
 
         // When
-        reservationService.cancel(1L, "临时有事");
+        reservationService.confirm(1L);
 
         // Then
         verify(reservationMapper, times(1)).selectById(1L);
@@ -115,10 +104,31 @@ class ReservationServiceTest {
     }
 
     @Test
+    @DisplayName("取消预约")
+    void testCancel() {
+        // Given - cancel方法会先查询预约是否存在
+        // 设置checkInCode和checkInStatus，避免ensureCheckInFields触发额外updateById
+        testReservation.setStatus(1); // 待确认状态
+        testReservation.setCheckInCode("123456");
+        testReservation.setCheckInStatus(0);
+        when(reservationMapper.selectById(1L)).thenReturn(testReservation);
+        when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
+
+        // When
+        reservationService.cancel(1L, "临时有事");
+
+        // Then - selectById调用1次，updateById调用1次（cancel本身）
+        verify(reservationMapper, times(1)).selectById(1L);
+        verify(reservationMapper, times(1)).updateById(any(Reservation.class));
+    }
+
+    @Test
     @DisplayName("完成预约")
     void testComplete() {
-        // Given - complete方法会先查询预约是否存在
+        // Given - complete方法要求 status=2(已确认) 且 checkInStatus=1(已核销)
         testReservation.setStatus(2); // 已确认状态
+        testReservation.setCheckInStatus(1); // 已核销
+        testReservation.setCheckInCode("123456"); // 确保非空
         when(reservationMapper.selectById(1L)).thenReturn(testReservation);
         when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
 
@@ -133,13 +143,17 @@ class ReservationServiceTest {
     @Test
     @DisplayName("支付预约")
     void testPay() {
-        // Given
+        // Given - pay方法会先selectById查询预约
+        testReservation.setCheckInCode("123456"); // 确保非空
+        testReservation.setCheckInStatus(0);
+        when(reservationMapper.selectById(1L)).thenReturn(testReservation);
         when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
 
         // When
         reservationService.pay(1L);
 
-        // Then - 服务直接调用updateById更新支付状态
+        // Then
+        verify(reservationMapper, times(1)).selectById(1L);
         verify(reservationMapper, times(1)).updateById(any(Reservation.class));
     }
 

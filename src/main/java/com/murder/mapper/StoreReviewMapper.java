@@ -28,4 +28,10 @@ public interface StoreReviewMapper extends BaseMapper<StoreReview> {
      */
     @Select("SELECT COUNT(*) FROM store_review WHERE rating >= 4 AND is_deleted = 0")
     Long countGoodReviews();
+
+    /**
+     * 统计指定门店的好评数量（评分>=4为好评）
+     */
+    @Select("SELECT COUNT(*) FROM store_review WHERE store_id = #{storeId} AND rating >= 4 AND is_deleted = 0")
+    Long countGoodReviewsByStoreId(Long storeId);
 }

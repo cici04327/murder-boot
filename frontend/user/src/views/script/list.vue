@@ -403,8 +403,10 @@ const saveBrowseHistory = (scriptData) => {
     
     history.unshift(historyItem)
     
-    // 只保留最近30条
-    history = history.slice(0, 30)
+    // FIFO：最多保留 100 条，超出时丢弃最旧的记录
+    if (history.length > 100) {
+      history = history.slice(0, 100)
+    }
     
     localStorage.setItem('browseHistory', JSON.stringify(history))
     console.log('浏览历史已保存:', scriptData.name, historyItem)

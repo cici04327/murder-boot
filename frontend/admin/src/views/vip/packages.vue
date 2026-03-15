@@ -113,7 +113,7 @@
             <el-switch v-model="row.status" :active-value="1" :inactive-value="0" @change="handleStatusChange(row)" />
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="150" fixed="right">
+        <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button type="primary" link @click="handleEdit(row)">编辑</el-button>
             <el-button type="danger" link @click="handleDelete(row)">删除</el-button>
@@ -121,6 +121,80 @@
         </el-table-column>
       </el-table>
     </el-card>
+
+    <!-- VIP用户列表 -->
+    <el-card class="table-card" shadow="hover">
+      <template #header>
+        <div class="card-header">
+          <span>VIP用户管理</span>
+        </div>
+      </template>
+      <el-table :data="vipUserList" v-loading="vipUserLoading" style="width: 100%">
+        <el-table-column prop="userId" label="用户ID" width="90" />
+        <el-table-column prop="nickname" label="昵称" width="120" />
+        <el-table-column prop="phone" label="手机号" width="130" />
+        <el-table-column label="等级" width="120">
+          <template #default="{ row }">
+            <el-tag :type="getLevelType(row.level)">{{ row.levelName }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="到期时间" width="160">
+          <template #default="{ row }">
+            <span :class="{ 'text-warning': row.daysRemaining <= 3 && row.daysRemaining > 0 }">
+              {{ row.endTime ? row.endTime.substring(0, 10) : '-' }}
+            </span>
+            <el-tag v-if="row.daysRemaining <= 3 && row.daysRemaining > 0" type="warning" size="small" style="margin-left:4px">
+              {{ row.daysRemaining }}天后到期
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="90">
+          <template #default="{ row }">
+            <el-tag :type="row.status === 1 ? 'success' : 'info'">
+              {{ row.status === 1 ? '生效中' : '已过期' }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="160" fixed="right">
+          <template #default="{ row }">
+            <el-button type="success" link @click="handleGrantCoupon(row)">补发体验券</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
+
+    <!-- 补发月度体验券对话框 -->
+    <el-dialog v-model="grantDialogVisible" title="手动补发月度体验券" width="440px">
+      <el-form label-width="90px">
+        <el-form-item label="用户">
+          <span>{{ grantForm.nickname }}（ID: {{ grantForm.userId }}）</span>
+          <el-tag :type="getLevelType(grantForm.level)" size="small" style="margin-left:8px">{{ grantForm.levelName }}</el-tag>
+        </el-form-item>
+        <el-form-item label="补发月份">
+          <el-date-picker
+            v-model="grantForm.month"
+            type="month"
+            placeholder="选择补发月份"
+            value-format="YYYY-MM"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="补发数量">
+          <span class="grant-preview">
+            {{ LEVEL_COUPON_CONFIG[grantForm.level]?.count || '-' }} 张 ×
+            ¥{{ LEVEL_COUPON_CONFIG[grantForm.level]?.amount || '-' }} 元
+          </span>
+          <span style="color:#909399;font-size:12px;margin-left:8px">（按等级自动确定）</span>
+        </el-form-item>
+        <el-form-item label="补发原因">
+          <el-input v-model="grantForm.reason" placeholder="请输入补发原因" type="textarea" :rows="2" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="grantDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="handleGrantSubmit" :loading="grantSubmitting">确认补发</el-button>
+      </template>
+    </el-dialog>
 
     <!-- 新增/编辑对话框 -->
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="600px" @close="handleDialogClose">
@@ -183,6 +257,15 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { User, ShoppingBag, Money, TrendCharts, Plus } from '@element-plus/icons-vue'
 import { userService } from '@/utils/request'
+import { grantMonthlyCoupons } from '@/api/vip'
+
+// 各等级月度体验券配置（与后端一致）
+const LEVEL_COUPON_CONFIG = {
+  1: { count: 2,  amount: 10  },
+  2: { count: 5,  amount: 20  },
+  3: { count: 10, amount: 50  },
+  4: { count: 15, amount: 100 }
+}
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -190,6 +273,22 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增套餐')
 const packageList = ref([])
 const formRef = ref(null)
+
+// VIP用户列表
+const vipUserList = ref([])
+const vipUserLoading = ref(false)
+
+// 补发对话框
+const grantDialogVisible = ref(false)
+const grantSubmitting = ref(false)
+const grantForm = reactive({
+  userId: null,
+  nickname: '',
+  level: 1,
+  levelName: '',
+  month: '',
+  reason: ''
+})
 
 const stats = reactive({
   totalVipUsers: 0,
@@ -358,9 +457,68 @@ const removeFeature = (index) => {
   form.features.splice(index, 1)
 }
 
+const loadVipUsers = async () => {
+  vipUserLoading.value = true
+  try {
+    const res = await userService.get('/admin/vip/users', {
+      params: { page: 1, pageSize: 100, status: 1 }
+    })
+    if (res.code === 1 || res.code === 200) {
+      vipUserList.value = res.data?.records || res.data || []
+    }
+  } catch (e) {
+    console.error('加载VIP用户失败:', e)
+  } finally {
+    vipUserLoading.value = false
+  }
+}
+
+const handleGrantCoupon = (row) => {
+  // 默认补发当月
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  Object.assign(grantForm, {
+    userId: row.userId,
+    nickname: row.nickname || row.username || ('用户' + row.userId),
+    level: row.level,
+    levelName: row.levelName,
+    month: `${y}-${m}`,
+    reason: ''
+  })
+  grantDialogVisible.value = true
+}
+
+const handleGrantSubmit = async () => {
+  if (!grantForm.month) {
+    ElMessage.warning('请选择补发月份')
+    return
+  }
+  if (!grantForm.reason.trim()) {
+    ElMessage.warning('请填写补发原因')
+    return
+  }
+  try {
+    grantSubmitting.value = true
+    const [year, month] = grantForm.month.split('-').map(Number)
+    const res = await grantMonthlyCoupons(grantForm.userId, year, month, grantForm.reason)
+    if (res.code === 1 || res.code === 200) {
+      ElMessage.success(`已成功为用户 ${grantForm.nickname} 补发 ${grantForm.month} 月度体验券，系统已发送通知`)
+      grantDialogVisible.value = false
+    } else {
+      ElMessage.error(res.msg || '补发失败')
+    }
+  } catch (e) {
+    ElMessage.error(e.message || '补发失败，请重试')
+  } finally {
+    grantSubmitting.value = false
+  }
+}
+
 onMounted(() => {
   loadData()
   loadStats()
+  loadVipUsers()
 })
 </script>
 
@@ -445,5 +603,13 @@ onMounted(() => {
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.text-warning { color: #E6A23C; font-weight: 600; }
+
+.grant-preview {
+  font-size: 15px;
+  font-weight: 700;
+  color: #409EFF;
 }
 </style>

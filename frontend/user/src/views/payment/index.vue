@@ -75,7 +75,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { getReservationDetail, createPayment, queryPaymentStatus } from '@/api/reservation'
 
 const route = useRoute()
@@ -107,6 +107,11 @@ const finalPrice = computed(() => {
 })
 
 const loadReservation = async () => {
+  if (!route.params.id) {
+    ElMessage.error('预约ID无效')
+    router.push('/user/reservations')
+    return
+  }
   loading.value = true
   try {
     const res = await getReservationDetail(route.params.id)
@@ -130,6 +135,27 @@ const loadReservation = async () => {
 }
 
 const handlePay = async () => {
+  // 防重复提交：正在支付中则直接返回
+  if (paying.value) return
+
+  const methodLabel = { alipay: '支付宝', wechat: '微信支付', mock: '模拟支付' }[paymentMethod.value] || '当前方式'
+
+  try {
+    await ElMessageBox.confirm(
+      `确认使用【${methodLabel}】支付 ¥${finalPrice.value}？`,
+      '确认支付',
+      {
+        confirmButtonText: '确认支付',
+        cancelButtonText: '再想想',
+        type: 'warning',
+        distinguishCancelAndClose: true
+      }
+    )
+  } catch {
+    // 用户取消，不做任何处理
+    return
+  }
+
   paying.value = true
   try {
     const res = await createPayment(route.params.id, paymentMethod.value)
@@ -142,19 +168,14 @@ const handlePay = async () => {
         ElMessage.success('支付成功')
         router.push({
           path: '/payment/result',
-          query: {
-            success: true,
-            reservationId: route.params.id
-          }
+          query: { success: true, reservationId: route.params.id }
         })
       } 
-      // 真实支付宝支付：显示支付表单
+      // 真实支付宝支付：显示支付表单并自动提交
       else if (payResult && payResult.includes('<form')) {
-        // 创建临时div显示支付表单并自动提交
         const div = document.createElement('div')
         div.innerHTML = payResult
         document.body.appendChild(div)
-        // 自动提交表单跳转到支付宝
         setTimeout(() => {
           document.forms[document.forms.length - 1].submit()
         }, 100)
@@ -164,10 +185,7 @@ const handlePay = async () => {
         ElMessage.success('支付成功')
         router.push({
           path: '/payment/result',
-          query: {
-            success: true,
-            reservationId: route.params.id
-          }
+          query: { success: true, reservationId: route.params.id }
         })
       }
     }

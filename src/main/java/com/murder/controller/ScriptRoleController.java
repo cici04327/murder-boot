@@ -46,46 +46,60 @@ public class ScriptRoleController {
     }
 
     /**
-     * 新增角色
+     * 新增角色（仅超级管理员）
      */
     @PostMapping
     @Operation(summary = "新增角色")
     public Result<String> add(@RequestBody ScriptRole scriptRole) {
+        requireSuperAdmin();
         log.info("新增角色: {}", scriptRole);
         scriptRoleService.add(scriptRole);
         return Result.success("新增成功");
     }
 
     /**
-     * 更新角色
+     * 更新角色（仅超级管理员）
      */
     @PutMapping
     @Operation(summary = "更新角色")
     public Result<String> update(@RequestBody ScriptRole scriptRole) {
+        requireSuperAdmin();
         log.info("更新角色: {}", scriptRole);
         scriptRoleService.update(scriptRole);
         return Result.success("更新成功");
     }
 
     /**
-     * 删除角色
+     * 删除角色（仅超级管理员）
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除角色")
     public Result<String> delete(@PathVariable Long id) {
+        requireSuperAdmin();
         log.info("删除角色: {}", id);
         scriptRoleService.delete(id);
         return Result.success("删除成功");
     }
 
     /**
-     * 批量新增角色
+     * 批量新增角色（仅超级管理员）
      */
     @PostMapping("/batch")
     @Operation(summary = "批量新增角色")
     public Result<String> addBatch(@RequestBody List<ScriptRole> roles) {
-        log.info("批量新增角色，数�? {}", roles.size());
+        requireSuperAdmin();
+        log.info("批量新增角色，数量: {}", roles.size());
         scriptRoleService.addBatch(roles);
         return Result.success("批量新增成功");
+    }
+
+    /**
+     * 校验是否为超级管理员，否则抛出异常
+     */
+    private void requireSuperAdmin() {
+        String role = com.murder.common.context.BaseContext.getRole();
+        if (!"SUPER_ADMIN".equals(role)) {
+            throw new com.murder.common.exception.BaseException("无权限，仅超级管理员可执行此操作");
+        }
     }
 }

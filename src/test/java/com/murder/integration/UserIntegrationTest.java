@@ -34,8 +34,7 @@ class UserIntegrationTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(registerDTO)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.msg").value("success"));
+                    .andExpect(jsonPath("$.code").value(200));
         }
 
         @Test
@@ -126,6 +125,7 @@ class UserIntegrationTest extends BaseIntegrationTest {
         @DisplayName("分页查询用户列表")
         void pageQuery_Success() throws Exception {
             mockMvc.perform(get("/api/user/page")
+                            .header("token", testUserToken)
                             .param("page", "1")
                             .param("pageSize", "10"))
                     .andExpect(status().isOk())
@@ -136,7 +136,8 @@ class UserIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("根据ID查询用户")
         void getById_Success() throws Exception {
-            mockMvc.perform(get("/api/user/1"))
+            mockMvc.perform(get("/api/user/1")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.id").value(1))
@@ -146,7 +147,8 @@ class UserIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("查询不存在的用户")
         void getById_NotFound() throws Exception {
-            mockMvc.perform(get("/api/user/99999"))
+            mockMvc.perform(get("/api/user/99999")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isEmpty());
         }

@@ -27,7 +27,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
         void pageQuery_Success() throws Exception {
             mockMvc.perform(get("/api/store/page")
                             .param("page", "1")
-                            .param("pageSize", "10"))
+                            .param("pageSize", "10")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.total").value(greaterThanOrEqualTo(0)))
@@ -40,7 +41,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(get("/api/store/page")
                             .param("page", "1")
                             .param("pageSize", "10")
-                            .param("keyword", "测试门店A"))
+                            .param("keyword", "测试门店A")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200));
         }
@@ -48,7 +50,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("根据ID查询门店详情")
         void getById_Success() throws Exception {
-            mockMvc.perform(get("/api/store/1"))
+            mockMvc.perform(get("/api/store/1")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.id").value(1))
@@ -58,7 +61,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("查询不存在的门店")
         void getById_NotFound() throws Exception {
-            mockMvc.perform(get("/api/store/99999"))
+            mockMvc.perform(get("/api/store/99999")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data").isEmpty());
         }
@@ -66,7 +70,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("获取热门门店列表")
         void getHotStores_Success() throws Exception {
-            mockMvc.perform(get("/api/store/list/hot"))
+            mockMvc.perform(get("/api/store/list/hot")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").isArray());
@@ -78,7 +83,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(get("/api/store/nearby")
                             .param("longitude", "116.4074")
                             .param("latitude", "39.9042")
-                            .param("radius", "10"))
+                            .param("radius", "10")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").isArray());
@@ -104,7 +110,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
 
             mockMvc.perform(post("/api/store")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(toJson(store)))
+                            .content(toJson(store))
+                            .header("token", adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200));
         }
@@ -122,7 +129,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
 
             mockMvc.perform(put("/api/store")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content(toJson(store)))
+                            .content(toJson(store))
+                            .header("token", adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200));
         }
@@ -131,7 +139,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
         @DisplayName("删除门店")
         void deleteStore_Success() throws Exception {
             // 删除ID为3的已关闭门店
-            mockMvc.perform(delete("/api/store/3"))
+            mockMvc.perform(delete("/api/store/3")
+                            .header("token", adminToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200));
         }
@@ -144,7 +153,8 @@ class StoreIntegrationTest extends BaseIntegrationTest {
         @Test
         @DisplayName("获取门店详细信息")
         void getStoreDetail_Success() throws Exception {
-            mockMvc.perform(get("/api/store/detail/1"))
+            mockMvc.perform(get("/api/store/detail/1")
+                            .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.id").value(1))

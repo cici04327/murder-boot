@@ -336,38 +336,66 @@ public class StoreServiceImpl implements StoreService {
     }
 
     @Override
-    public StoreStatisticsVO getStatistics() {
-        // 统计门店总数
+    public StoreStatisticsVO getStatistics(Long storeId) {
+        if (storeId != null) {
+            // 门店管理员：只统计自己门店的数据
+            Store store = storeMapper.selectById(storeId);
+            
+            // 该门店的房间数
+            LambdaQueryWrapper<StoreRoom> roomWrapper = new LambdaQueryWrapper<>();
+            roomWrapper.eq(StoreRoom::getStoreId, storeId);
+            Long totalRooms = storeRoomMapper.selectCount(roomWrapper);
+            
+            LambdaQueryWrapper<StoreRoom> availableRoomWrapper = new LambdaQueryWrapper<>();
+            availableRoomWrapper.eq(StoreRoom::getStoreId, storeId).eq(StoreRoom::getStatus, 1);
+            Long availableRooms = storeRoomMapper.selectCount(availableRoomWrapper);
+            
+            // 该门店的评价数
+            Long totalReviews = storeReviewMapper.countByStoreId(storeId);
+            Long goodReviews = storeReviewMapper.countGoodReviewsByStoreId(storeId);
+            
+            BigDecimal rating = store != null && store.getRating() != null ? store.getRating() : BigDecimal.ZERO;
+            int storeStatus = store != null ? store.getStatus() : 0;
+            
+            return StoreStatisticsVO.builder()
+                    .totalStores(1L)
+                    .openStores(storeStatus == 1 ? 1L : 0L)
+                    .closedStores(storeStatus == 1 ? 0L : 1L)
+                    .totalRooms(totalRooms)
+                    .availableRooms(availableRooms)
+                    .averageRating(rating)
+                    .totalReviews(totalReviews)
+                    .goodReviews(goodReviews)
+                    .build();
+        }
+        
+        // 超级管理员：统计全部门店数据
         Long totalStores = storeMapper.selectCount(null);
         
-        // 统计营业中门店数
         LambdaQueryWrapper<Store> openWrapper = new LambdaQueryWrapper<>();
         openWrapper.eq(Store::getStatus, 1);
         Long openStores = storeMapper.selectCount(openWrapper);
-        
-        // 统计停业门店�?
         Long closedStores = totalStores - openStores;
         
-        // 统计总房间数
         Long totalRooms = storeRoomMapper.selectCount(null);
         
-        // 统计可用房间�?
         LambdaQueryWrapper<StoreRoom> availableWrapper = new LambdaQueryWrapper<>();
         availableWrapper.eq(StoreRoom::getStatus, 1);
         Long availableRooms = storeRoomMapper.selectCount(availableWrapper);
         
-        // 计算平均评分
         List<Store> allStores = storeMapper.selectList(null);
-        BigDecimal averageRating = allStores.stream()
+        BigDecimal averageRating = BigDecimal.ZERO;
+        List<BigDecimal> ratings = allStores.stream()
                 .map(Store::getRating)
                 .filter(rating -> rating != null && rating.compareTo(BigDecimal.ZERO) > 0)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .divide(BigDecimal.valueOf(allStores.size()), 2, RoundingMode.HALF_UP);
+                .collect(Collectors.toList());
+        if (!ratings.isEmpty()) {
+            averageRating = ratings.stream()
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .divide(BigDecimal.valueOf(ratings.size()), 2, RoundingMode.HALF_UP);
+        }
         
-        // 统计评价总数
         Long totalReviews = storeReviewMapper.selectCount(null);
-        
-        // 统计好评数量（假设评分>=4为好评）
         Long goodReviews = storeReviewMapper.countGoodReviews();
         
         return StoreStatisticsVO.builder()

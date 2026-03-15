@@ -60,3 +60,11 @@ export const calculateVipPrice = (packageId, couponId) => {
   })
 }
 
+// 查询本月月度体验券发放状态（已发张数、面值、下次发放倒计时秒数）
+export const getMonthlyCouponStatus = () => {
+  return request({
+    url: '/vip/monthly-coupon-status',
+    method: 'get'
+  })
+}
+

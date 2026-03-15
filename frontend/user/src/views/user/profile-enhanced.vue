@@ -563,63 +563,81 @@ const loadUserInfo = async () => {
   }
 }
 
-// 加载统计数据
+// 加载统计数据（并行请求，避免串行等待）
 const loadStats = async () => {
   try {
-    // 加载预约数量
-    const reservationRes = await getMyReservations({ page: 1, pageSize: 1 })
-    if (reservationRes.code === 1 || reservationRes.code === 200) {
-      stats.value.reservationCount = reservationRes.data.total || 0
-      
-      // 计算待付款和待使用数量
-      const allReservations = await getMyReservations({ page: 1, pageSize: 100 })
-      if (allReservations.code === 1 || allReservations.code === 200) {
-        const records = allReservations.data.records || []
-        pendingItems.value.unpaidCount = records.filter(r => r.status === 0 || r.status === '待付款').length
-        pendingItems.value.unusedCount = records.filter(r => r.status === 1 || r.status === '待使用').length
+    // 并行发起所有请求，总耗时 = 最慢的那一个，而非所有请求之和
+    const [reservationRes, favoriteRes, couponRes, pointsRes] = await Promise.allSettled([
+      getMyReservations({ page: 1, pageSize: 100 }), // 一次获取足够多，同时算 total 和 pending
+      getFavoriteScripts({ page: 1, pageSize: 1 }),
+      getMyCoupons({ status: 1, page: 1, pageSize: 1000 }),
+      getUserPoints()
+    ])
+
+    // 处理预约数据（同时得到 total 和 pending 数量，不需要两次请求）
+    if (reservationRes.status === 'fulfilled') {
+      const res = reservationRes.value
+      if (res.code === 1 || res.code === 200) {
+        const records = res.data.records || []
+        stats.value.reservationCount = res.data.total || records.length
+        pendingItems.value.unpaidCount = records.filter(r => r.status === 0).length
+        pendingItems.value.unusedCount = records.filter(r => r.status === 1).length
+        // 同时用这批数据填充最近案件，避免再发一次请求
+        recentCases.value = records.slice(0, 5).map(r => {
+          const date = new Date(r.createTime)
+          const statusMap = {
+            0: { text: '待付款', type: 'warning', status: 'pending' },
+            1: { text: '待开局', type: 'primary', status: 'upcoming' },
+            2: { text: '已完成', type: 'success', status: 'completed' },
+            3: { text: '已取消', type: 'info', status: 'cancelled' },
+            4: { text: '已退款', type: 'danger', status: 'refunded' }
+          }
+          const statusInfo = statusMap[r.status] || statusMap[0]
+          return {
+            scriptName: r.scriptName || '神秘案件',
+            storeName: r.storeName || '未知地点',
+            role: r.roleName || '',
+            day: date.getDate(),
+            month: (date.getMonth() + 1) + '月',
+            statusText: statusInfo.text,
+            statusType: statusInfo.type,
+            status: statusInfo.status
+          }
+        })
       }
     }
-    
-    // 加载收藏数量
-    const favoriteRes = await getFavoriteScripts({ page: 1, pageSize: 1 })
-    if (favoriteRes.code === 1 || favoriteRes.code === 200) {
-      stats.value.favoriteCount = favoriteRes.data.total || (favoriteRes.data.records || []).length
-    }
-    
-    // 加载优惠券数量（修复：后端total不准确，使用records.length）
-    const couponRes = await getMyCoupons({ status: 1, page: 1, pageSize: 1000 })
-    if (couponRes.code === 1 || couponRes.code === 200) {
-      // 使用records.length获取实际优惠券数量
-      stats.value.couponCount = couponRes.data?.records?.length || 0
-      console.log('个人中心优惠券数量:', stats.value.couponCount)
-    }
-    
-    // 加载积分（从API获取最新数据）
-    try {
-      const pointsRes = await getUserPoints()
-      if (pointsRes.code === 1 || pointsRes.code === 200) {
-        stats.value.points = pointsRes.data.currentPoints || 0
-        console.log('账户中心积分已更新:', stats.value.points)
-      }
-    } catch (error) {
-      console.error('加载积分失败:', error)
-      // 如果API调用失败，尝试从 userStore 获取
-      if (userStore.userInfo && userStore.userInfo.points !== undefined) {
-        stats.value.points = userStore.userInfo.points
+
+    // 处理收藏数量
+    if (favoriteRes.status === 'fulfilled') {
+      const res = favoriteRes.value
+      if (res.code === 1 || res.code === 200) {
+        stats.value.favoriteCount = res.data.total || (res.data.records || []).length
       }
     }
-    
-    // 计算侦探等级
+
+    // 处理优惠券数量
+    if (couponRes.status === 'fulfilled') {
+      const res = couponRes.value
+      if (res.code === 1 || res.code === 200) {
+        stats.value.couponCount = res.data?.records?.length || 0
+      }
+    }
+
+    // 处理积分
+    if (pointsRes.status === 'fulfilled') {
+      const res = pointsRes.value
+      if (res.code === 1 || res.code === 200) {
+        stats.value.points = res.data.currentPoints || 0
+      }
+    } else if (userStore.userInfo?.points !== undefined) {
+      // 积分接口失败时降级用缓存
+      stats.value.points = userStore.userInfo.points
+    }
+
+    // 统一计算侦探等级和成就（数据都齐了再算）
     calculateDetectiveLevel()
-    
-    
-    // 计算成就进度
     calculateAchievements()
-    
-    // 加载最近案件
-    loadRecentCases()
-    
-    console.log('统计数据加载完成:', stats.value)
+
   } catch (error) {
     console.error('加载统计数据失败:', error)
   }
@@ -656,41 +674,6 @@ const calculateDetectiveLevel = () => {
   }
 }
 
-
-// 加载最近案件
-const loadRecentCases = async () => {
-  try {
-    const res = await getMyReservations({ page: 1, pageSize: 5 })
-    if (res.code === 1 || res.code === 200) {
-      const records = res.data.records || []
-      recentCases.value = records.map(r => {
-        // 使用订单创建时间
-        const date = new Date(r.createTime)
-        const statusMap = {
-          0: { text: '待付款', type: 'warning', status: 'pending' },
-          1: { text: '待开局', type: 'primary', status: 'upcoming' },
-          2: { text: '已完成', type: 'success', status: 'completed' },
-          3: { text: '已取消', type: 'info', status: 'cancelled' },
-          4: { text: '已退款', type: 'danger', status: 'refunded' }
-        }
-        const statusInfo = statusMap[r.status] || statusMap[0]
-        
-        return {
-          scriptName: r.scriptName || '神秘案件',
-          storeName: r.storeName || '未知地点',
-          role: r.roleName || '',
-          day: date.getDate(),
-          month: (date.getMonth() + 1) + '月',
-          statusText: statusInfo.text,
-          statusType: statusInfo.type,
-          status: statusInfo.status
-        }
-      })
-    }
-  } catch (error) {
-    console.error('加载最近案件失败:', error)
-  }
-}
 
 // 计算成就进度
 const calculateAchievements = () => {

@@ -15,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Objects;
+
 import java.util.List;
 
 @RestController
@@ -73,16 +75,36 @@ public class ReservationController {
 
     @GetMapping("/{id}")
     @Operation(summary = "查询预约详情")
-    public Result<ReservationVO> getById(@PathVariable Long id) {
+    public Result<ReservationVO> getById(@PathVariable Long id, HttpServletRequest request) {
         log.info("查询预约详情: {}", id);
-        return Result.success(reservationService.getDetailById(id));
+        ReservationVO vo = reservationService.getDetailById(id);
+        // 用户端：校验预约归属
+        String clientType = request.getHeader("X-Client-Type");
+        if (!"admin".equals(clientType) && vo != null) {
+            Long currentUserId = BaseContext.getCurrentId();
+            if (!Objects.equals(currentUserId, vo.getUserId())) {
+                log.warn("用户{}尝试查看不属于自己的预约{}", currentUserId, id);
+                return Result.error("无权查看该预约");
+            }
+        }
+        return Result.success(vo);
     }
 
     @GetMapping("/{id}/detail")
     @Operation(summary = "查询预约详情")
-    public Result<ReservationVO> getDetail(@PathVariable Long id) {
+    public Result<ReservationVO> getDetail(@PathVariable Long id, HttpServletRequest request) {
         log.info("查询预约详情: {}", id);
-        return Result.success(reservationService.getDetailById(id));
+        ReservationVO vo = reservationService.getDetailById(id);
+        // 用户端：校验预约归属
+        String clientType = request.getHeader("X-Client-Type");
+        if (!"admin".equals(clientType) && vo != null) {
+            Long currentUserId = BaseContext.getCurrentId();
+            if (!Objects.equals(currentUserId, vo.getUserId())) {
+                log.warn("用户{}尝试查看不属于自己的预约{}", currentUserId, id);
+                return Result.error("无权查看该预约");
+            }
+        }
+        return Result.success(vo);
     }
 
     @GetMapping("/no/{reservationNo}")

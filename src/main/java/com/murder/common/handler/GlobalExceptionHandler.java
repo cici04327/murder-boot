@@ -5,6 +5,7 @@ import com.murder.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 
@@ -14,6 +15,18 @@ import java.sql.SQLIntegrityConstraintViolationException;
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    /**
+     * 捕获参数类型不匹配异常（如前端传了 "undefined" 给 Long 类型参数）
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public Result<String> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        String paramName = ex.getName();
+        Object value = ex.getValue();
+        log.warn("参数类型不匹配: 参数名={}, 传入值={}, 期望类型={}", paramName, value,
+                ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "未知");
+        return Result.error("参数 [" + paramName + "] 值无效: " + value);
+    }
 
     /**
      * 捕获业务异常

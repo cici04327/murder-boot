@@ -40,6 +40,9 @@ public class Reservation implements Serializable {
     /** 关联的剧本排期ID，用于同步 ScriptSchedule.currentPlayers */
     private Long scheduleId;
 
+    /** 预约时选择的 DM ID（关联 dm.id） */
+    private Long dmId;
+
     private Integer playerCount;
 
     private LocalDateTime reservationTime;

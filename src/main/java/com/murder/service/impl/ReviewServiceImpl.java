@@ -20,6 +20,8 @@ import com.murder.entity.User;
 import com.murder.mapper.UserMapper;
 import com.murder.service.StoreService;
 import com.murder.service.ScriptService;
+import com.murder.service.DmService;
+import com.murder.mapper.DmMapper;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -48,6 +50,12 @@ public class ReviewServiceImpl implements ReviewService {
     
     @Autowired(required = false)
     private UserPointsService userPointsService;
+
+    @Autowired(required = false)
+    private DmService dmService;
+
+    @Autowired(required = false)
+    private DmMapper dmMapper;
 
     /**
      * 创建评价
@@ -146,6 +154,15 @@ public class ReviewServiceImpl implements ReviewService {
             updateStoreAndScriptRating(reviewDTO.getStoreId(), reviewDTO.getScriptId());
         } catch (Exception e) {
             log.error("更新评分失败", e);
+        }
+
+        // 8. 刷新 DM 评分（异步静默，失败不影响主流程）
+        if (reviewDTO.getDmId() != null && dmService != null) {
+            try {
+                dmService.refreshRating(reviewDTO.getDmId());
+            } catch (Exception e) {
+                log.error("刷新 DM 评分失败: dmId={}", reviewDTO.getDmId(), e);
+            }
         }
     }
     
@@ -485,6 +502,19 @@ public class ReviewServiceImpl implements ReviewService {
                     }
                 } catch (Exception e) {
                     log.error("查询剧本信息失败: scriptId={}", review.getScriptId(), e);
+                }
+            }
+
+            // 填充 DM 信息
+            if (review.getDmId() != null && dmMapper != null) {
+                try {
+                    com.murder.entity.Dm dm = dmMapper.selectById(review.getDmId());
+                    if (dm != null) {
+                        vo.setDmName(dm.getName());
+                        vo.setDmAvatar(dm.getAvatar());
+                    }
+                } catch (Exception e) {
+                    log.error("查询 DM 信息失败: dmId={}", review.getDmId(), e);
                 }
             }
         } catch (Exception e) {

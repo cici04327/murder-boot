@@ -6,8 +6,10 @@ import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.dto.ArticleDTO;
 import com.murder.entity.Article;
+import com.murder.entity.ArticleLike;
 import com.murder.vo.ArticleVO;
 import com.murder.mapper.ArticleMapper;
+import com.murder.mapper.ArticleLikeMapper;
 import com.murder.service.ArticleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -30,6 +32,9 @@ public class ArticleServiceImpl implements ArticleService {
 
     @Autowired
     private ArticleMapper articleMapper;
+
+    @Autowired
+    private ArticleLikeMapper articleLikeMapper;
 
     private static final Map<Integer, String> CATEGORY_MAP = new HashMap<>();
 
@@ -185,19 +190,43 @@ public class ArticleServiceImpl implements ArticleService {
     @Override
     public void likeArticle(Long id) {
         log.info("点赞文章: id={}", id);
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new RuntimeException("用户未登录");
+        }
+        if (isLiked(id, userId)) {
+            throw new RuntimeException("已经点赞过了");
+        }
+        ArticleLike articleLike = new ArticleLike();
+        articleLike.setArticleId(id);
+        articleLike.setUserId(userId);
+        articleLikeMapper.insert(articleLike);
         articleMapper.increaseLikeCount(id);
     }
 
     @Override
     public void unlikeArticle(Long id) {
         log.info("取消点赞文章: id={}", id);
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            throw new RuntimeException("用户未登录");
+        }
+        LambdaQueryWrapper<ArticleLike> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ArticleLike::getArticleId, id)
+                .eq(ArticleLike::getUserId, userId);
+        articleLikeMapper.delete(wrapper);
         articleMapper.decreaseLikeCount(id);
     }
 
     @Override
     public boolean isLiked(Long articleId, Long userId) {
-        // TODO: 实现点赞状态检�?
-        return false;
+        if (articleId == null || userId == null) {
+            return false;
+        }
+        LambdaQueryWrapper<ArticleLike> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ArticleLike::getArticleId, articleId)
+                .eq(ArticleLike::getUserId, userId);
+        return articleLikeMapper.selectCount(wrapper) > 0;
     }
 
     private ArticleVO convertToVO(Article article) {

@@ -176,7 +176,7 @@
               <el-icon><ChatLineSquare /></el-icon>
               回复
             </el-button>
-            <el-button type="danger" link size="small" @click="handleDelete(row)">
+            <el-button v-if="isSuperAdmin" type="danger" link size="small" @click="handleDelete(row)">
               <el-icon><Delete /></el-icon>
               删除
             </el-button>
@@ -305,6 +305,8 @@ import {
   View, ChatLineSquare, Delete, Phone, Promotion
 } from '@element-plus/icons-vue'
 import { userService } from '@/utils/request'
+
+const isSuperAdmin = computed(() => localStorage.getItem('admin-login-type') !== 'store')
 
 const loading = ref(false)
 const replying = ref(false)

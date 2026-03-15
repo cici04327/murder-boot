@@ -1,7 +1,10 @@
 package com.murder.controller;
 
+import com.murder.common.context.BaseContext;
 import com.murder.common.result.Result;
 import com.murder.service.PaymentService;
+import com.murder.service.ReservationService;
+import com.murder.vo.ReservationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * 支付控制器
@@ -22,6 +26,9 @@ public class PaymentController {
     @Autowired
     private PaymentService paymentService;
 
+    @Autowired
+    private ReservationService reservationService;
+
     /**
      * 创建支付订单
      */
@@ -31,6 +38,13 @@ public class PaymentController {
             @RequestParam Long reservationId,
             @RequestParam(defaultValue = "mock") String paymentMethod) {
         log.info("创建支付订单: reservationId={}, paymentMethod={}", reservationId, paymentMethod);
+        // 校验预约归属：只能为自己的预约付款
+        Long currentUserId = BaseContext.getCurrentId();
+        ReservationVO vo = reservationService.getDetailById(reservationId);
+        if (vo == null || !Objects.equals(currentUserId, vo.getUserId())) {
+            log.warn("用户{}尝试为不属于自己的预约{}创建支付", currentUserId, reservationId);
+            return Result.error("无权操作该预约");
+        }
         String result = paymentService.createPayment(reservationId, paymentMethod);
         return Result.success(result);
     }
@@ -52,6 +66,13 @@ public class PaymentController {
     @Operation(summary = "查询支付状态")
     public Result<Integer> queryPaymentStatus(@PathVariable Long reservationId) {
         log.info("查询支付状态: reservationId={}", reservationId);
+        // 校验预约归属
+        Long currentUserId = BaseContext.getCurrentId();
+        ReservationVO vo = reservationService.getDetailById(reservationId);
+        if (vo == null || !Objects.equals(currentUserId, vo.getUserId())) {
+            log.warn("用户{}尝试查询不属于自己的预约{}支付状态", currentUserId, reservationId);
+            return Result.error("无权查询该预约");
+        }
         Integer status = paymentService.queryPaymentStatus(reservationId);
         return Result.success(status);
     }
@@ -65,6 +86,13 @@ public class PaymentController {
             @RequestParam Long reservationId,
             @RequestParam String reason) {
         log.info("申请退款: reservationId={}, reason={}", reservationId, reason);
+        // 校验预约归属：只能为自己的预约申请退款
+        Long currentUserId = BaseContext.getCurrentId();
+        ReservationVO vo = reservationService.getDetailById(reservationId);
+        if (vo == null || !Objects.equals(currentUserId, vo.getUserId())) {
+            log.warn("用户{}尝试为不属于自己的预约{}申请退款", currentUserId, reservationId);
+            return Result.error("无权操作该预约");
+        }
         try {
             paymentService.applyRefund(reservationId, reason);
             return Result.success("退款申请已提交，请等待管理员审核");

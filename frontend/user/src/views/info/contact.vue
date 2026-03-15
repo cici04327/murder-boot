@@ -216,8 +216,6 @@
     <!-- 返回顶部 -->
     <BackToTop />
     
-    <!-- 主题切换器 -->
-    <ThemeSwitcher />
   </div>
 </template>
 
@@ -231,15 +229,11 @@ import {
 import InfoPageBreadcrumb from '@/components/InfoPageBreadcrumb.vue'
 import ShareButtons from '@/components/ShareButtons.vue'
 import BackToTop from '@/components/BackToTop.vue'
-import ThemeSwitcher from '@/components/ThemeSwitcher.vue'
 import { useScrollReveal } from '@/composables/useScrollReveal'
-import { useTheme } from '@/composables/useTheme'
 import { submitFeedback as submitFeedbackApi } from '@/api/feedback'
 
 // 初始化
 useScrollReveal()
-const { loadTheme } = useTheme()
-loadTheme()
 
 // 快捷联系方式
 const quickContacts = ref([

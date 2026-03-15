@@ -18,6 +18,12 @@ request.interceptors.request.use(
     if (userStore.token) {
       config.headers['token'] = userStore.token
     }
+
+    // 拦截 URL 中含有 undefined 的请求，避免后端类型转换报错
+    if (config.url && config.url.includes('undefined')) {
+      console.warn('请求被拦截：URL 中含有 undefined，已取消请求:', config.url)
+      return Promise.reject(new Error('请求参数无效（undefined）'))
+    }
     
     return config
   },

@@ -57,6 +57,9 @@ public class VipServiceImpl implements VipService {
     @Autowired
     private UserCouponMapper userCouponMapper;
 
+    @Autowired(required = false)
+    private com.murder.service.NotificationService notificationService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
@@ -131,10 +134,8 @@ public class VipServiceImpl implements VipService {
         user.setVipExpireTime(endTime);
         userMapper.updateById(user);
 
-        // 发放首月优惠?
-        if (vipPackage.getCouponCount() != null && vipPackage.getCouponCount() > 0) {
-            grantMonthlyCoupons(userId);
-        }
+        // 发放首月月度体验券（按VIP等级固定发放，见习2张×10元、银章5张×20元、金章10张×50元、传奇15张×100元）
+        grantMonthlyCoupons(userId);
 
         log.info("用户 {} 购买VIP成功，套餐：{}，订单号：{}", userId, vipPackage.getName(), orderNo);
 
@@ -265,42 +266,65 @@ public class VipServiceImpl implements VipService {
         return vipPackage != null && vipPackage.getPriorityBooking() == 1;
     }
 
+    /**
+     * 各VIP等级月度体验券配置：
+     * 见习侦探(1)：2张 × 10元
+     * 银章侦探(2)：5张 × 20元
+     * 金章侦探(3)：10张 × 50元
+     * 传奇侦探(4)：15张 × 100元
+     */
+    private static final Map<Integer, int[]> LEVEL_MONTHLY_COUPON_MAP;
+    static {
+        LEVEL_MONTHLY_COUPON_MAP = new HashMap<>();
+        LEVEL_MONTHLY_COUPON_MAP.put(1, new int[]{2, 10});   // 见习：2张10元
+        LEVEL_MONTHLY_COUPON_MAP.put(2, new int[]{5, 20});   // 银章：5张20元
+        LEVEL_MONTHLY_COUPON_MAP.put(3, new int[]{10, 50});  // 金章：10张50元
+        LEVEL_MONTHLY_COUPON_MAP.put(4, new int[]{15, 100}); // 传奇：15张100元
+    }
+
     @Override
     @Transactional
     public void grantMonthlyCoupons(Long userId) {
         UserVip currentVip = userVipMapper.getCurrentVip(userId);
-        if (currentVip == null) {
-            log.warn("用户 {} 不是VIP，无法发放月度优惠券", userId);
+        if (currentVip == null || LocalDateTime.now().isAfter(currentVip.getEndTime())) {
+            log.warn("用户 {} 不是VIP或已过期，无法发放月度体验券", userId);
             return;
         }
 
-        VipPackage vipPackage = vipPackageMapper.selectById(currentVip.getPackageId());
-        if (vipPackage == null || vipPackage.getCouponCount() == null || vipPackage.getCouponCount() <= 0) {
+        int level = currentVip.getLevel();
+        int[] config = LEVEL_MONTHLY_COUPON_MAP.get(level);
+        if (config == null) {
+            log.warn("未知VIP等级 {}，跳过发放", level);
             return;
         }
+        int couponCount = config[0];
+        int couponAmount = config[1];
 
-        // 根据VIP等级确定优惠券面额
-        int couponAmount;
-        switch (currentVip.getLevel()) {
-            case 1: couponAmount = 20; break;  // 见习侦探：20元体验券
-            case 2: couponAmount = 50; break;  // 银章侦探：50元体验券
-            case 3: couponAmount = 100; break; // 金章侦探：100元体验券
-            case 4: couponAmount = 150; break; // 传奇侦探：150元体验券
-            default: couponAmount = 20;
+        // 防重复发放：检查本月是否已发放过月度体验券
+        LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime monthEnd = monthStart.plusMonths(1);
+        Coupon template = getOrCreateVipCouponTemplate(level, couponAmount, "月度体验券");
+        if (template == null) {
+            log.error("无法获取VIP月度体验券模板，userId={}, level={}", userId, level);
+            return;
+        }
+        LambdaQueryWrapper<UserCoupon> checkWrapper = new LambdaQueryWrapper<>();
+        checkWrapper.eq(UserCoupon::getUserId, userId)
+                    .eq(UserCoupon::getCouponId, template.getId())
+                    .ge(UserCoupon::getReceiveTime, monthStart)
+                    .lt(UserCoupon::getReceiveTime, monthEnd);
+        Long alreadyGranted = userCouponMapper.selectCount(checkWrapper);
+        if (alreadyGranted > 0) {
+            log.info("用户 {} 本月月度体验券已发放（{}张），跳过重复发放", userId, alreadyGranted);
+            return;
         }
 
         try {
-            // 查找或创建对应面额的VIP专属优惠券模板
-            Coupon template = getOrCreateVipCouponTemplate(currentVip.getLevel(), couponAmount, "月度体验券");
-            if (template == null) {
-                log.error("无法获取VIP优惠券模板，userId={}", userId);
-                return;
-            }
-
-            // 发放指定数量的优惠券
+            // 体验券有效期：当月最后一天23:59:59（用完即止，当月有效）
+            LocalDateTime expireTime = monthEnd.minusSeconds(1);
             LocalDateTime now = LocalDateTime.now();
-            LocalDateTime expireTime = now.plusDays(30); // 30天有效期
-            for (int i = 0; i < vipPackage.getCouponCount(); i++) {
+
+            for (int i = 0; i < couponCount; i++) {
                 UserCoupon userCoupon = UserCoupon.builder()
                         .userId(userId)
                         .couponId(template.getId())
@@ -309,11 +333,29 @@ public class VipServiceImpl implements VipService {
                         .expireTime(expireTime)
                         .build();
                 userCouponMapper.insert(userCoupon);
-                log.info("为VIP用户 {} 发放第{}张月度体验券，面值{}元，有效期至{}", userId, i + 1, couponAmount, expireTime);
             }
-            log.info("为VIP用户 {} 成功发放 {} 张月度体验券（面值{}元）", userId, vipPackage.getCouponCount(), couponAmount);
+            log.info("为VIP用户 {} （{}）成功发放 {} 张月度体验券，面值{}元/张，有效期至{}",
+                    userId, getLevelName(level), couponCount, couponAmount, expireTime);
+
+            // 推送站内通知
+            if (notificationService != null) {
+                String title = "🎁 月度体验券已到账";
+                String content = String.format(
+                        "您好！作为%s会员，本月 %d 张面值 %d 元的体验券已发放至您的账户，" +
+                        "有效期至%d月%d日，请及时使用～",
+                        getLevelName(level), couponCount, couponAmount,
+                        expireTime.getMonthValue(), expireTime.getDayOfMonth());
+                try {
+                    notificationService.sendToUsers(title, content, 2, "VIP_MONTHLY_COUPON", null, userId);
+                    log.info("已向用户 {} 推送月度体验券到账通知", userId);
+                } catch (Exception ne) {
+                    // 通知失败不影响主流程
+                    log.warn("推送月度体验券通知失败，userId={}", userId, ne);
+                }
+            }
         } catch (Exception e) {
-            log.error("为VIP用户发放月度优惠券失败，userId={}", userId, e);
+            log.error("为VIP用户发放月度体验券失败，userId={}", userId, e);
+            throw e;
         }
     }
 
@@ -387,6 +429,122 @@ public class VipServiceImpl implements VipService {
         } catch (Exception e) {
             log.error("发放生日券失败，userId={}", userId, e);
         }
+    }
+
+    @Override
+    public Map<String, Object> getMonthlyCouponStatus(Long userId) {
+        Map<String, Object> result = new HashMap<>();
+        UserVip currentVip = userVipMapper.getCurrentVip(userId);
+        if (currentVip == null || LocalDateTime.now().isAfter(currentVip.getEndTime())) {
+            result.put("isVip", false);
+            result.put("grantedCount", 0);
+            result.put("totalCount", 0);
+            result.put("couponAmount", 0);
+            result.put("nextGrantTime", null);
+            return result;
+        }
+
+        int level = currentVip.getLevel();
+        int[] config = LEVEL_MONTHLY_COUPON_MAP.get(level);
+        if (config == null) {
+            result.put("isVip", true);
+            result.put("grantedCount", 0);
+            result.put("totalCount", 0);
+            result.put("couponAmount", 0);
+            result.put("nextGrantTime", null);
+            return result;
+        }
+        int couponCount = config[0];
+        int couponAmount = config[1];
+
+        // 查本月已发张数
+        LocalDateTime monthStart = LocalDateTime.now()
+                .withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime monthEnd = monthStart.plusMonths(1);
+
+        Coupon template = getOrCreateVipCouponTemplate(level, couponAmount, "月度体验券");
+        long grantedCount = 0;
+        if (template != null) {
+            LambdaQueryWrapper<UserCoupon> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(UserCoupon::getUserId, userId)
+                   .eq(UserCoupon::getCouponId, template.getId())
+                   .ge(UserCoupon::getReceiveTime, monthStart)
+                   .lt(UserCoupon::getReceiveTime, monthEnd);
+            grantedCount = userCouponMapper.selectCount(wrapper);
+        }
+
+        // 下次发放时间：下月1日凌晨1点
+        LocalDateTime nextGrantTime = monthEnd.withHour(1).withMinute(0).withSecond(0).withNano(0);
+
+        result.put("isVip", true);
+        result.put("level", level);
+        result.put("levelName", getLevelName(level));
+        result.put("grantedCount", grantedCount);
+        result.put("totalCount", couponCount);
+        result.put("couponAmount", couponAmount);
+        result.put("alreadyGranted", grantedCount >= couponCount);
+        result.put("nextGrantTime", nextGrantTime);
+        // 距离下次发放的秒数（前端倒计时用）
+        long secondsUntilNext = java.time.Duration.between(LocalDateTime.now(), nextGrantTime).getSeconds();
+        result.put("secondsUntilNext", Math.max(0, secondsUntilNext));
+        return result;
+    }
+
+    @Override
+    @Transactional
+    public void adminGrantMonthlyCoupons(Long userId, int year, int month, String reason) {
+        UserVip currentVip = userVipMapper.getCurrentVip(userId);
+        if (currentVip == null) {
+            throw new RuntimeException("用户 " + userId + " 当前不是VIP，无法补发");
+        }
+
+        int level = currentVip.getLevel();
+        int[] config = LEVEL_MONTHLY_COUPON_MAP.get(level);
+        if (config == null) {
+            throw new RuntimeException("未知VIP等级：" + level);
+        }
+        int couponCount = config[0];
+        int couponAmount = config[1];
+
+        Coupon template = getOrCreateVipCouponTemplate(level, couponAmount, "月度体验券");
+        if (template == null) {
+            throw new RuntimeException("无法获取体验券模板");
+        }
+
+        // 补发的有效期：指定月份最后一天23:59:59
+        LocalDateTime specMonthStart = LocalDateTime.of(year, month, 1, 0, 0, 0);
+        LocalDateTime expireTime = specMonthStart.plusMonths(1).minusSeconds(1);
+        LocalDateTime now = LocalDateTime.now();
+
+        for (int i = 0; i < couponCount; i++) {
+            UserCoupon uc = UserCoupon.builder()
+                    .userId(userId)
+                    .couponId(template.getId())
+                    .status(1)
+                    .receiveTime(now)
+                    .expireTime(expireTime)
+                    .build();
+            userCouponMapper.insert(uc);
+        }
+
+        // 推送补发通知
+        if (notificationService != null) {
+            String title = "🎁 月度体验券已补发";
+            String content = String.format(
+                    "您好！管理员已为您补发 %d 月份的 %d 张面值 %d 元月度体验券，" +
+                    "有效期至%d年%d月%d日，原因：%s。",
+                    month, couponCount, couponAmount,
+                    expireTime.getYear(), expireTime.getMonthValue(), expireTime.getDayOfMonth(),
+                    reason != null ? reason : "管理员补发");
+            try {
+                notificationService.sendToUsers(title, content, 2, "VIP_MONTHLY_COUPON_REISSUE", null, userId);
+            } catch (Exception e) {
+                log.warn("推送补发通知失败，userId={}", userId, e);
+            }
+        }
+
+        log.info("管理员手动补发月度体验券成功：userId={}, level={}, year={}, month={}, count={}, reason={}",
+                userId, getLevelName(level), year, month, couponCount, reason);
     }
 
     @Override

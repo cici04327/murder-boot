@@ -164,6 +164,32 @@ public class VipManageController {
     }
 
     /**
+     * 手动补发月度体验券
+     */
+    @PostMapping("/grant-monthly-coupons")
+    @Operation(summary = "手动补发月度体验券")
+    public Result<String> grantMonthlyCoupons(
+            @RequestParam Long userId,
+            @RequestParam(defaultValue = "0") int year,
+            @RequestParam(defaultValue = "0") int month,
+            @RequestParam(required = false) String reason) {
+        // 默认补发当月
+        if (year == 0 || month == 0) {
+            java.time.LocalDate today = java.time.LocalDate.now();
+            year = today.getYear();
+            month = today.getMonthValue();
+        }
+        log.info("管理员补发月度体验券：userId={}, year={}, month={}, reason={}", userId, year, month, reason);
+        try {
+            vipService.adminGrantMonthlyCoupons(userId, year, month, reason);
+            return Result.success("补发成功");
+        } catch (Exception e) {
+            log.error("补发月度体验券失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
      * 获取VIP统计数据
      */
     @GetMapping("/statistics")

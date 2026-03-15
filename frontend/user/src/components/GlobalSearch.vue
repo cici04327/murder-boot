@@ -56,8 +56,12 @@
         </div>
       </template>
 
-      <!-- 搜索面板 -->
-      <div class="search-panel" :class="{ 'has-results': hasResults }">
+      <!-- 搜索面板：mousedown 时标记正在点击，防止 blur 误关闭面板 -->
+      <div class="search-panel" :class="{ 'has-results': hasResults }"
+        @mousedown="isPanelClicking = true"
+        @mouseup="isPanelClicking = false"
+        @mouseleave="isPanelClicking = false"
+      >
         <!-- 分类筛选标签 -->
         <div class="filter-tabs" v-if="searchKeyword">
           <div 
@@ -454,6 +458,8 @@ let recognition = null
 // 防抖定时器
 let debounceTimer = null
 let placeholderTimer = null
+// 标记用户是否正在点击面板内部（mousedown 先于 blur 触发）
+let isPanelClicking = false
 
 // ========== 初始化 ==========
 const initSpeechRecognition = () => {
@@ -546,14 +552,13 @@ const handleFocus = () => {
 }
 
 const handleBlur = () => {
+  // 如果用户正在点击面板内部，不关闭（mousedown 比 blur 先触发）
+  if (isPanelClicking) return
   setTimeout(() => {
-    const popover = document.querySelector('.search-popover')
-    if (popover && popover.matches(':hover')) {
-      return
-    }
+    if (isPanelClicking) return
     isFocused.value = false
     showPanel.value = false
-  }, 200)
+  }, 300)
 }
 
 const handleEsc = () => {

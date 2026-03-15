@@ -477,7 +477,7 @@ const copyToClipboard = (text) => {
   })
 }
 
-// 保存浏览历史
+// 保存浏览历史（FIFO，最多保留 100 条）
 const saveBrowseHistory = (scriptId) => {
   try {
     const script = recommendedScripts.value.find(s => s.id === scriptId)
@@ -489,7 +489,7 @@ const saveBrowseHistory = (scriptId) => {
       history = JSON.parse(savedHistory)
     }
     
-    // 添加新记录（去重）
+    // 去重后插入最新记录到队首
     history = history.filter(item => item.id !== scriptId)
     history.unshift({
       id: script.id,
@@ -498,8 +498,10 @@ const saveBrowseHistory = (scriptId) => {
       viewTime: new Date().toISOString()
     })
     
-    // 只保留最近20条
-    history = history.slice(0, 20)
+    // FIFO：超出 100 条时丢弃最旧的记录
+    if (history.length > 100) {
+      history = history.slice(0, 100)
+    }
     
     localStorage.setItem('browseHistory', JSON.stringify(history))
   } catch (error) {
@@ -612,24 +614,33 @@ const loadRecommendedScripts = async () => {
       return
     }
     
-    // 转换为页面需要的格式
-    recommendedScripts.value = recommendedList.map((item, index) => {
-      // 前30%标记为热门
-      const isHot = index < Math.ceil(recommendedList.length * 0.3)
-      
+    // 转换为页面需要的格式，直接使用后端真实数据
+    recommendedScripts.value = recommendedList.map((item) => {
+      // 使用后端真实 recommendScore 作为匹配度，没有时取 null 不显示环形进度
+      const matchScore = item.recommendScore
+        ? Math.round(Number(item.recommendScore))
+        : null
+
+      // 使用后端真实推荐理由
+      const recommendReason = item.recommendReason || item.reason || '为你推荐'
+
+      // 热门标记：仅当后端 recommendationType === 3（热门推荐）时显示
+      const isHot = item.recommendationType === 3
+
       return {
-        id: item.scriptId || item.id,
-        name: item.scriptName || item.name,
-        cover: item.cover || '/default-script.jpg',
+        id: item.id || item.scriptId,
+        name: item.name || item.scriptName,
+        cover: item.cover || item.coverImage || '/default-script.jpg',
         type: item.categoryName || item.type || '其他',
         difficulty: item.difficulty || 2,
         playerCount: item.playerCount || 6,
         price: item.price || 0,
         rating: item.rating || 4.5,
-        matchScore: item.matchScore || 75,
-        recommendReason: item.reason || '为你推荐',
-        isHot: isHot,
-        isFavorited: false
+        matchScore,
+        recommendReason,
+        recommendationType: item.recommendationType,
+        isHot,
+        isFavorited: item.isFavorite || false
       }
     })
     
@@ -642,164 +653,7 @@ const loadRecommendedScripts = async () => {
   }
 }
 
-// 基于浏览历史获取推荐（协同过滤 + 内容相似度）
-const getRecommendationsBasedOnHistory = async (history, allScripts) => {
-  // 分析浏览历史中的剧本特征
-  const historyIds = history.map(h => h.id)
-  const viewedScripts = allScripts.filter(s => historyIds.includes(s.id))
-  
-  if (viewedScripts.length === 0) {
-    return allScripts.slice(0, 12)
-  }
-  
-  // 统计用户偏好
-  const preferences = analyzeUserPreferences(viewedScripts)
-  console.log('用户偏好分析:', preferences)
-  
-  // 计算每个剧本与用户偏好的相似度
-  const scoredScripts = allScripts.map(script => ({
-    ...script,
-    similarityScore: calculateSimilarityScore(script, preferences, viewedScripts)
-  }))
-  
-  // 按相似度排序
-  scoredScripts.sort((a, b) => b.similarityScore - a.similarityScore)
-  
-  return scoredScripts.slice(0, 20) // 返回前20个最相似的
-}
-
-// 分析用户偏好
-const analyzeUserPreferences = (viewedScripts) => {
-  const preferences = {
-    categories: {},
-    difficulties: {},
-    playerCounts: {},
-    avgRating: 0,
-    avgPrice: 0
-  }
-  
-  viewedScripts.forEach(script => {
-    // 统计类型偏好
-    const category = script.categoryName || script.type || '其他'
-    preferences.categories[category] = (preferences.categories[category] || 0) + 1
-    
-    // 统计难度偏好
-    const difficulty = script.difficulty || 2
-    preferences.difficulties[difficulty] = (preferences.difficulties[difficulty] || 0) + 1
-    
-    // 统计人数偏好
-    const playerCount = script.playerCount || 6
-    preferences.playerCounts[playerCount] = (preferences.playerCounts[playerCount] || 0) + 1
-    
-    // 累计评分和价格
-    preferences.avgRating += (script.rating || 0)
-    preferences.avgPrice += (script.price || 0)
-  })
-  
-  // 计算平均值
-  preferences.avgRating /= viewedScripts.length
-  preferences.avgPrice /= viewedScripts.length
-  
-  // 找出最喜欢的类型
-  preferences.favoriteCategory = Object.keys(preferences.categories).reduce((a, b) => 
-    preferences.categories[a] > preferences.categories[b] ? a : b
-  , '')
-  
-  return preferences
-}
-
-// 计算相似度得分
-const calculateSimilarityScore = (script, preferences, viewedScripts) => {
-  let score = 0
-  
-  // 1. 类型相似度（权重40%）
-  const category = script.categoryName || script.type || '其他'
-  if (preferences.categories[category]) {
-    score += 40 * (preferences.categories[category] / viewedScripts.length)
-  }
-  
-  // 2. 难度相似度（权重20%）
-  const difficulty = script.difficulty || 2
-  if (preferences.difficulties[difficulty]) {
-    score += 20 * (preferences.difficulties[difficulty] / viewedScripts.length)
-  }
-  
-  // 3. 人数相似度（权重15%）
-  const playerCount = script.playerCount || 6
-  if (preferences.playerCounts[playerCount]) {
-    score += 15 * (preferences.playerCounts[playerCount] / viewedScripts.length)
-  }
-  
-  // 4. 评分相似度（权重15%）
-  const ratingDiff = Math.abs((script.rating || 0) - preferences.avgRating)
-  score += 15 * (1 - ratingDiff / 5) // 评分差异越小分数越高
-  
-  // 5. 价格相似度（权重10%）
-  const priceDiff = Math.abs((script.price || 0) - preferences.avgPrice)
-  const maxPriceDiff = Math.max(preferences.avgPrice, 200)
-  score += 10 * (1 - Math.min(priceDiff / maxPriceDiff, 1))
-  
-  return score
-}
-
-// 计算匹配度评分（基于浏览历史）
-const calculateMatchScore = (script, history = []) => {
-  let score = 50 // 基础分
-  
-  // 如果有浏览历史，基于历史计算
-  if (history.length > 0) {
-    // 获取相似度分数（来自推荐算法）
-    if (script.similarityScore !== undefined) {
-      // 将相似度分数(0-100)转换为匹配度(70-99)
-      score = 70 + (script.similarityScore / 100) * 29
-    }
-  }
-  
-  // 根据用户偏好标签进一步调整
-  if (userPreferences.value.length > 0) {
-    const category = script.categoryName || script.type
-    if (userPreferences.value.includes(category)) {
-      score += 5
-    }
-    
-    const difficultyMap = { 1: '简单', 2: '普通', 3: '困难', 4: '极难' }
-    if (userPreferences.value.includes(difficultyMap[script.difficulty])) {
-      score += 3
-    }
-  }
-  
-  // 添加一些随机性使推荐更自然
-  score += Math.floor(Math.random() * 5)
-  
-  return Math.min(99, Math.max(70, Math.floor(score)))
-}
-
-// 获取推荐理由（基于浏览历史）
-const getRecommendReason = (script, matchScore, history = []) => {
-  const category = script.categoryName || script.type || '其他'
-  
-  // 如果有浏览历史
-  if (history.length > 0) {
-    if (matchScore >= 90) {
-      return `与你浏览的剧本高度相似`
-    } else if (matchScore >= 85) {
-      return `你可能喜欢这个${category}剧本`
-    } else if (matchScore >= 80) {
-      return `与你最近浏览的剧本相似`
-    } else if (matchScore >= 75) {
-      return `根据你的浏览记录推荐`
-    }
-  }
-  
-  // 没有历史时的推荐理由
-  if (script.rating >= 4.7) {
-    return '高评分热门剧本'
-  } else if (userPreferences.value.includes(category)) {
-    return `你感兴趣的${category}类型`
-  } else {
-    return '为你推荐的优质剧本'
-  }
-}
+// 以下相似度计算已由后端承担，前端直接使用后端返回的 recommendScore 和 recommendReason
 
 // 加载推荐门店
 const loadRecommendedStores = async () => {

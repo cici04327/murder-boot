@@ -51,6 +51,21 @@ public interface ScriptService {
      * 查询剧本分类列表
      */
     List<ScriptCategory> getCategories();
+
+    /**
+     * 新增剧本分类
+     */
+    void addCategory(ScriptCategory category);
+
+    /**
+     * 更新剧本分类
+     */
+    void updateCategory(Long id, ScriptCategory category);
+
+    /**
+     * 删除剧本分类
+     */
+    void deleteCategory(Long id);
     
     /**
      * 根据剧本ID获取角色列表

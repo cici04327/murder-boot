@@ -240,7 +240,7 @@
             <el-button class="entry-btn" @click="router.push('/store')">找门店</el-button>
             <el-button class="entry-btn" @click="router.push('/group')">拼车大厅</el-button>
             <el-button class="entry-btn" @click="router.push('/recommend/enhanced')">智能推荐</el-button>
-            <el-button class="entry-btn" @click="router.push('/info/help')">新手指南</el-button>
+            <el-button class="entry-btn" @click="router.push('/help')">新手指南</el-button>
           </div>
         </el-card>
       </div>
@@ -706,20 +706,22 @@ onMounted(() => {
 }
 
 .entry-btn {
-  border-radius: 12px;
-  border: 2px solid rgba(139, 0, 0, 0.3);
-  font-weight: 500;
-  transition: all 0.3s;
-  background: rgba(35, 35, 60, 0.8);
-  color: rgba(255, 255, 255, 0.9);
+  border-radius: 12px !important;
+  border: 1.5px solid rgba(139, 0, 0, 0.35) !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  transition: all 0.3s !important;
+  background: rgba(35, 35, 60, 0.85) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  height: 38px !important;
 }
 
 .entry-btn:hover {
-  border-color: #8B0000;
-  color: #fff;
-  background: rgba(139, 0, 0, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+  border-color: #c0392b !important;
+  color: #fff !important;
+  background: linear-gradient(135deg, rgba(139, 0, 0, 0.4), rgba(192, 57, 43, 0.3)) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 14px rgba(139, 0, 0, 0.35) !important;
 }
 
 /* 搜索和排序 - 剧本杀风格 */
@@ -782,37 +784,44 @@ onMounted(() => {
 
 /* 搜索按钮 */
 .search-input :deep(.el-input-group__append) {
-  background: linear-gradient(135deg, #8B0000 0%, #b01020 100%);
-  border: 1px solid #8B0000;
-  border-left: none;
-  color: #fff;
-  border-radius: 0;
-  padding: 0 24px;
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  cursor: pointer;
+  background: linear-gradient(135deg, #8B0000 0%, #c0392b 100%) !important;
+  border: none !important;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 0 12px 12px 0 !important;
+  box-shadow: 2px 0 0 0 transparent;
   transition: all 0.3s;
-  height: 46px;
-  display: flex;
-  align-items: center;
-  white-space: nowrap;
 }
 
 .search-input :deep(.el-input-group__append:hover) {
-  background: linear-gradient(135deg, #a01020 0%, #c01530 100%);
-  box-shadow: 0 0 16px rgba(139, 0, 0, 0.5);
+  background: linear-gradient(135deg, #a01020 0%, #e74c3c 100%) !important;
+  box-shadow: 0 0 20px rgba(192, 57, 43, 0.6);
 }
 
 .search-input :deep(.el-input-group__append .el-button) {
   background: transparent !important;
   border: none !important;
   color: #fff !important;
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 1px;
-  padding: 0;
-  height: 100%;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  letter-spacing: 2px !important;
+  padding: 0 28px !important;
+  height: 46px !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transition: all 0.3s;
+}
+
+.search-input :deep(.el-input-group__append .el-button:hover) {
+  color: #fff !important;
+  opacity: 0.95;
+}
+
+.search-input :deep(.el-input-group__append .el-button .el-icon) {
+  color: #fff !important;
+  margin-right: 6px;
+  font-size: 16px !important;
 }
 
 /* 排序选择器 */
@@ -841,6 +850,19 @@ onMounted(() => {
 
 .sort-select :deep(.el-input__suffix .el-icon) {
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* 排序选择器已选中值文字 */
+.sort-select :deep(.el-select__selected-item) {
+  color: #fff !important;
+}
+
+.sort-select :deep(.el-select__selected-item span) {
+  color: #fff !important;
+}
+
+.sort-select :deep(.el-select__placeholder) {
+  color: rgba(255, 255, 255, 0.5) !important;
 }
 
 /* 文章卡片 - 剧本杀风格 */
@@ -899,7 +921,7 @@ onMounted(() => {
   width: 100%;
   height: 200px;
   overflow: hidden;
-  background: #f5f7fa;
+  background: rgba(35, 35, 60, 0.9);
 }
 
 .article-cover img {
@@ -1029,12 +1051,55 @@ onMounted(() => {
   border: 1px solid rgba(139, 0, 0, 0.2);
 }
 
+/* 分页数字颜色 */
+.pagination-wrapper :deep(.el-pagination) {
+  color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.pagination-wrapper :deep(.el-pagination .el-pager li) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 6px;
+}
+
 .pagination-wrapper :deep(.el-pagination.is-background .el-pager li.is-active) {
-  background: #8B0000;
+  background: linear-gradient(135deg, #8B0000, #c0392b) !important;
+  color: #fff !important;
+  font-weight: 700;
 }
 
 .pagination-wrapper :deep(.el-pagination.is-background .el-pager li:hover) {
-  color: #8B0000;
+  color: #fff !important;
+  background: rgba(139, 0, 0, 0.4) !important;
+}
+
+.pagination-wrapper :deep(.el-pagination button) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  border-radius: 6px;
+}
+
+.pagination-wrapper :deep(.el-pagination button:hover) {
+  color: #fff !important;
+  background: rgba(139, 0, 0, 0.4) !important;
+}
+
+.pagination-wrapper :deep(.el-pagination .el-pagination__total) {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.pagination-wrapper :deep(.el-pagination .el-pagination__jump) {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+.pagination-wrapper :deep(.el-pagination .el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.pagination-wrapper :deep(.el-pagination .el-input__inner) {
+  color: #fff !important;
 }
 
 /* 响应式 */

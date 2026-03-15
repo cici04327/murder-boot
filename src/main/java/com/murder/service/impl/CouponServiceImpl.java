@@ -361,16 +361,16 @@ public class CouponServiceImpl implements CouponService {
         log.info("查询到优惠券模板: id={}, name={}, type={}, discountValue={}, minAmount={}", 
             coupon.getId(), coupon.getName(), coupon.getType(), coupon.getDiscountValue(), coupon.getMinAmount());
         
-        // 检查最低消费金额
-        if (coupon.getMinAmount() != null && orderAmount != null && orderAmount.compareTo(coupon.getMinAmount()) < 0) {
-            log.warn("订单金额未达到优惠券使用门槛: orderAmount={}, minAmount={}", orderAmount, coupon.getMinAmount());
-            throw new CouponException("订单金额未达到优惠券使用门槛");
-        }
-        
-        // 检查订单金额是否为空
+        // 检查订单金额是否为空或为零
         if (orderAmount == null || orderAmount.compareTo(BigDecimal.ZERO) <= 0) {
             log.warn("订单金额为空或小于等于0: orderAmount={}", orderAmount);
             return BigDecimal.ZERO;
+        }
+        
+        // 检查最低消费金额
+        if (coupon.getMinAmount() != null && orderAmount.compareTo(coupon.getMinAmount()) < 0) {
+            log.warn("订单金额未达到优惠券使用门槛: orderAmount={}, minAmount={}", orderAmount, coupon.getMinAmount());
+            throw new CouponException("订单金额未达到优惠券使用门槛");
         }
         
         BigDecimal discount = BigDecimal.ZERO;
@@ -381,10 +381,10 @@ public class CouponServiceImpl implements CouponService {
                 discount = coupon.getDiscountValue();
                 log.info("满减券，优惠金额: {}", discount);
                 break;
-            case 2: // 折扣券
-                discount = orderAmount.multiply(BigDecimal.ONE.subtract(coupon.getDiscountValue()))
+            case 2: // 折扣券：discountValue 表示优惠比例（如0.20表示打8折优惠20%），优惠金额 = 订单金额 × 优惠比例
+                discount = orderAmount.multiply(coupon.getDiscountValue())
                         .setScale(2, RoundingMode.HALF_UP);
-                log.info("折扣券，折扣率: {}, 优惠金额: {}", coupon.getDiscountValue(), discount);
+                log.info("折扣券，优惠比例: {}, 优惠金额: {}", coupon.getDiscountValue(), discount);
                 break;
             case 3: // 代金券
                 discount = coupon.getDiscountValue();

@@ -341,6 +341,8 @@ import {
   ArrowDown, Sunny
 } from '@element-plus/icons-vue'
 import { submitFeedback as submitFeedbackAPI } from '@/api/ai'
+import request from '@/utils/request'
+import { useUserStore } from '@/store/user'
 
 const router = useRouter()
 const isOpen = ref(false)
@@ -362,6 +364,142 @@ const hasMoreMessages = ref(false)
 const loadingMore = ref(false)
 const chatSessions = ref([])
 const currentSessionId = ref(null)
+
+// ========== 人工客服会话 ==========
+const humanSessionId = ref(null)  // 当前人工客服会话ID
+const isHumanMode = ref(false)    // 是否处于人工客服模式
+let serviceWs = null              // 客服WebSocket连接
+
+// 转人工客服
+const transferToHuman = async () => {
+  const userStore = useUserStore()
+
+  // 检查是否已登录
+  if (!userStore.isLoggedIn || !userStore.userInfo) {
+    addAIMessage('<div class="kb-answer"><p>⚠️ 请先<strong>登录</strong>后再使用人工客服服务。</p></div>', [], false)
+    return
+  }
+
+  // 如果已有进行中的人工会话，直接切换到人工模式
+  if (isHumanMode.value && humanSessionId.value) {
+    addAIMessage('<div class="kb-answer"><p>✅ 您已在人工客服对话中，请直接输入您的问题。</p></div>', [], false)
+    return
+  }
+
+  isTyping.value = true
+  connectionStatus.value = '连接人工客服中...'
+  try {
+    // 查询是否有活跃会话
+    const activeRes = await request.get('/service/session/active')
+    let sessionId = null
+    if (activeRes.data && activeRes.data.id) {
+      sessionId = activeRes.data.id
+    } else {
+      // 创建新会话
+      const lastUserMsg = messages.value.filter(m => m.type === 'user').slice(-1)[0]
+      const question = lastUserMsg ? lastUserMsg.content : '需要人工客服协助'
+      const createRes = await request.post('/service/session/create', {
+        userName: userStore.nickname || userStore.username || '用户',
+        question
+      })
+      sessionId = createRes.data
+    }
+
+    humanSessionId.value = sessionId
+    isHumanMode.value = true
+    connectionStatus.value = '等待客服接入...'
+
+    // 显示转接成功提示
+    addAIMessage(
+      '<div class="kb-answer"><p>✅ 已为您<strong>发起人工客服请求</strong>，请稍等，客服接入后您可以直接在此对话框发送消息。</p><p style="color:#999;font-size:12px;">⏰ 正常等待时间 1~5 分钟，感谢您的耐心。</p></div>',
+      [], false
+    )
+
+    // 连接客服WebSocket接收消息
+    connectServiceWs(sessionId, userStore.userId)
+  } catch (e) {
+    console.error('创建人工客服会话失败:', e)
+    connectionStatus.value = '在线服务中'
+    addAIMessage(
+      '<div class="kb-answer"><p>😔 暂时无法连接人工客服，请稍后重试，或拨打客服热线：<strong style="color:#8B0000;">400-123-4567</strong></p></div>',
+      [], false
+    )
+  } finally {
+    isTyping.value = false
+  }
+}
+
+// 连接客服WebSocket
+const connectServiceWs = (sessionId, userId) => {
+  if (serviceWs) {
+    serviceWs.close()
+    serviceWs = null
+  }
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  const wsUrl = `${protocol}//${location.host}/api/ws/service?userId=${userId}&role=user`
+  serviceWs = new WebSocket(wsUrl)
+
+  serviceWs.onmessage = (event) => {
+    if (event.data === 'pong') return
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'session_accepted' && data.sessionId === sessionId) {
+        connectionStatus.value = '人工客服服务中'
+        addAIMessage('<div class="kb-answer"><p>🎉 <strong>客服已接入</strong>，请开始咨询！</p></div>', [], false)
+      } else if (data.type === 'service_message' && data.sessionId === sessionId && data.senderType === 'admin') {
+        // 收到客服消息，以 AI 消息形式显示（区别标记）
+        addHumanAgentMessage(data.content)
+      } else if (data.type === 'session_closed' && data.sessionId === sessionId) {
+        isHumanMode.value = false
+        humanSessionId.value = null
+        connectionStatus.value = '在线服务中'
+        if (serviceWs) { serviceWs.close(); serviceWs = null }
+        addAIMessage('<div class="kb-answer"><p>本次人工客服会话已结束。如还有问题，可以继续问我或重新发起人工服务。</p></div>', [], false)
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  serviceWs.onclose = () => {
+    if (isHumanMode.value) {
+      // 断线后5秒重连
+      setTimeout(() => {
+        if (isHumanMode.value && humanSessionId.value) {
+          const userStore = useUserStore()
+          if (userStore.userId) {
+            connectServiceWs(humanSessionId.value, userStore.userId)
+          }
+        }
+      }, 5000)
+    }
+  }
+
+  // 心跳保活
+  const heartbeat = setInterval(() => {
+    if (serviceWs && serviceWs.readyState === WebSocket.OPEN) {
+      serviceWs.send('ping')
+    } else {
+      clearInterval(heartbeat)
+    }
+  }, 30000)
+}
+
+// 添加人工客服消息（与AI消息区分显示）
+const addHumanAgentMessage = (content) => {
+  const msg = {
+    id: Date.now(),
+    type: 'ai',
+    content: `<div class="kb-answer"><p><strong>👤 人工客服：</strong></p><p>${content}</p></div>`,
+    actions: [],
+    suggestions: [],
+    showFeedback: false,
+    feedbackGiven: false,
+    time: getCurrentTime(),
+    isHuman: true
+  }
+  messages.value.push(msg)
+  if (!isOpen.value) unreadCount.value++
+  scrollToBottom()
+}
 
 // 表情列表
 const emojis = ref([
@@ -456,9 +594,9 @@ const knowledgeBase = {
     showFeedback: true
   },
   '人工|客服|联系|咨询|电话|转人工': {
-    answer: `<div class="kb-answer"><p><strong>📞 联系我们：</strong></p><ul><li>☎️ 客服热线：<strong style="color: #8B0000;">400-123-4567</strong></li><li>⏰ 服务时间：9:00-22:00（全年无休）</li><li>📧 邮箱：service@jubensha.com</li><li>💬 微信公众号：剧本杀预约平台</li></ul><p><strong>💡 温馨提示：</strong></p><ul><li>非紧急问题可以先问我哦~</li><li>请准备好订单号以便快速处理</li></ul></div>`,
-    actions: [{ label: '💬 意见反馈', route: '/contact', type: 'primary' }],
-    showFeedback: true
+    answer: `<div class="kb-answer"><p><strong>📞 联系方式：</strong></p><ul><li>☎️ 客服热线：<strong style="color: #8B0000;">400-123-4567</strong></li><li>⏰ 服务时间：9:00-22:00（全年无休）</li><li>📧 邮箱：service@jubensha.com</li></ul><p><strong>💡 也可以点击下方按钮直接转接在线人工客服：</strong></p></div>`,
+    actions: [{ label: '👤 转接人工客服', type: 'transfer', primary: true }],
+    showFeedback: false
   },
   'VIP|会员|开通|特权': {
     answer: `<div class="kb-answer"><p><strong>👑 VIP会员特权：</strong></p><ul><li>💰 专属折扣（最高8折）</li><li>🎫 每月专属优惠券</li><li>⭐ 积分加成（最高2倍）</li><li>🎯 优先预约热门剧本</li><li>🎁 生日专属礼包</li></ul></div>`,
@@ -565,8 +703,29 @@ const sendMessage = async () => {
   addUserMessage(userMessage)
   inputMessage.value = ''
   showQuickQuestions.value = false
-  isTyping.value = true
 
+  // 检测转人工关键词（优先处理）
+  const transferKeywords = ['转人工', '人工客服', '转客服', '人工服务', '真人客服', '联系客服', '转接人工']
+  if (transferKeywords.some(kw => userMessage.includes(kw))) {
+    await transferToHuman()
+    return
+  }
+
+  // 如果处于人工客服模式，将消息发送给客服
+  if (isHumanMode.value && humanSessionId.value) {
+    try {
+      await request.post(`/service/session/${humanSessionId.value}/message`, {
+        content: userMessage,
+        msgType: 'text'
+      })
+    } catch (e) {
+      console.error('发送人工客服消息失败:', e)
+      ElMessage.error('发送失败，请重试')
+    }
+    return
+  }
+
+  isTyping.value = true
   try {
     const { sendMessage: sendAIMessage } = await import('@/api/ai')
     const response = await sendAIMessage({
@@ -658,7 +817,9 @@ const giveFeedback = async (msgId, helpful, rating = 3) => {
 }
 
 const handleAction = (action) => {
-  if (action.route) {
+  if (action.type === 'transfer') {
+    transferToHuman()
+  } else if (action.route) {
     router.push(action.route)
     closeChat()
   } else if (action.type === 'copy') {
@@ -902,6 +1063,11 @@ onUnmounted(() => {
   saveCurrentSession()
   // 停止语音
   window.speechSynthesis?.cancel()
+  // 关闭客服WebSocket
+  if (serviceWs) {
+    serviceWs.close()
+    serviceWs = null
+  }
 })
 </script>
 

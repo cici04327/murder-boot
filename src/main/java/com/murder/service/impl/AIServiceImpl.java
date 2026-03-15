@@ -46,10 +46,27 @@ public class AIServiceImpl implements AIService {
         this.objectMapper = objectMapper;
     }
 
+    // 转人工关键词列表
+    private static final List<String> TRANSFER_KEYWORDS = Arrays.asList(
+        "转人工", "人工客服", "转客服", "人工服务", "真人客服", "找客服", "联系客服"
+    );
+
     @Override
     public Map<String, Object> chat(String message, String sessionId, List<Map<String, Object>> history, Map<String, Object> context) {
         log.info("AI对话: provider={}, message={}", aiProvider, message);
-        
+
+        // 优先检测转人工意图，直接返回转接标记，不调用 AI 接口
+        if (TRANSFER_KEYWORDS.stream().anyMatch(message::contains)) {
+            log.info("检测到转人工意图，直接返回转接响应");
+            Map<String, Object> response = new HashMap<>();
+            response.put("reply", "好的，马上为您转接人工客服，请稍等...");
+            response.put("suggestions", Collections.emptyList());
+            response.put("actions", Arrays.asList(Map.of("label", "点击转接人工客服", "type", "transfer")));
+            response.put("triggerTransfer", true);
+            response.put("timestamp", System.currentTimeMillis());
+            return response;
+        }
+
         try {
             // 根据不同的AI提供商调用不同的API
             switch (aiProvider.toLowerCase()) {

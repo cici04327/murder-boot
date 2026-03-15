@@ -4,6 +4,7 @@ import com.murder.entity.ScriptSchedule;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 剧本排期服务接口
@@ -75,4 +76,11 @@ public interface ScriptScheduleService {
      * @return 可约场次列表（status=1 且 currentPlayers < maxPlayers）
      */
     List<ScriptSchedule> getAvailableSchedules(Long scriptId, Long storeId, Integer days);
+
+    /**
+     * 实时冲突检测（前端表单填写时调用）
+     * @param excludeId 编辑时排除自身ID，新增时传null
+     */
+    Map<String, Object> checkConflict(Long storeId, Long roomId, String scheduleDate,
+                                      String startTime, String endTime, Long excludeId);
 }

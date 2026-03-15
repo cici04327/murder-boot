@@ -60,9 +60,24 @@ public interface VipService {
     boolean hasPriorityBooking(Long userId);
 
     /**
-     * 发放月度优惠�?
+     * 发放月度体验券
      */
     void grantMonthlyCoupons(Long userId);
+
+    /**
+     * 查询用户本月月度体验券发放情况
+     * 返回：本月已发张数、面值、下次发放时间
+     */
+    Map<String, Object> getMonthlyCouponStatus(Long userId);
+
+    /**
+     * 管理员手动补发月度体验券（指定用户，指定年月）
+     * @param userId 用户ID
+     * @param year   年份（如2026）
+     * @param month  月份（1-12）
+     * @param reason 补发原因
+     */
+    void adminGrantMonthlyCoupons(Long userId, int year, int month, String reason);
 
     /**
      * 续费VIP

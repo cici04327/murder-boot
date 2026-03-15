@@ -67,9 +67,9 @@ public interface StoreService {
     void batchUpdateStatus(List<Long> ids, Integer status);
 
     /**
-     * 获取门店统计信息
+     * 获取门店统计信息（storeId为null时统计全部，否则统计指定门店）
      */
-    StoreStatisticsVO getStatistics();
+    StoreStatisticsVO getStatistics(Long storeId);
 
     /**
      * 获取所有门店列表（不分页）

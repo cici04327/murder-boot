@@ -132,6 +132,9 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
         wrapper.eq(AdminNotification::getIsRead, 0);
 
         List<AdminNotification> list = adminNotificationMapper.selectList(wrapper);
+        if (list == null || list.isEmpty()) {
+            return;
+        }
         LocalDateTime now = LocalDateTime.now();
         for (AdminNotification n : list) {
             n.setIsRead(1);
@@ -210,6 +213,9 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
         
         // 按类型统计
         List<AdminNotification> allNotifications = adminNotificationMapper.selectList(allWrapper);
+        if (allNotifications == null) {
+            allNotifications = Collections.emptyList();
+        }
         Map<String, Long> typeCount = allNotifications.stream()
                 .collect(Collectors.groupingBy(
                         n -> getTypeName(n.getType()),

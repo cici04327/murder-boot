@@ -147,18 +147,35 @@
             <div class="cp-tip">📌 每月最后一天到期，请及时使用</div>
           </div>
         </div>
-        <div class="coupon-perk-card">
+        <div class="coupon-perk-card" :class="{ 'highlight-card': monthlyCouponStatus?.alreadyGranted }">
           <div class="cp-icon">🎫</div>
           <div class="cp-body">
             <div class="cp-title">月度体验券</div>
             <div class="cp-desc">每月1日自动发放到账户</div>
             <div class="cp-detail">
-              <span class="cp-level l1">见习 ¥20×1</span>
-              <span class="cp-level l2">银章 ¥50×2</span>
-              <span class="cp-level l3">金章 ¥100×5</span>
-              <span class="cp-level l4">传奇 ¥150×10</span>
+              <span class="cp-level l1">见习 2张×¥10</span>
+              <span class="cp-level l2">银章 5张×¥20</span>
+              <span class="cp-level l3">金章 10张×¥50</span>
+              <span class="cp-level l4">传奇 15张×¥100</span>
             </div>
-            <div class="cp-tip">📌 30天内有效，可叠加折扣使用</div>
+
+            <!-- 当前用户本月发放状态（仅VIP用户显示） -->
+            <div class="cp-grant-status" v-if="monthlyCouponStatus?.isVip">
+              <div class="grant-row" v-if="monthlyCouponStatus.alreadyGranted">
+                <span class="grant-done">✅ 本月已发放</span>
+                <span class="grant-count">{{ monthlyCouponStatus.grantedCount }} 张 × ¥{{ monthlyCouponStatus.couponAmount }}</span>
+              </div>
+              <div class="grant-row" v-else>
+                <span class="grant-pending">⏳ 本月待发放</span>
+                <span class="grant-count">{{ monthlyCouponStatus.totalCount }} 张 × ¥{{ monthlyCouponStatus.couponAmount }}</span>
+              </div>
+              <div class="countdown-row" v-if="countdownText">
+                <span class="countdown-label">🕐 下次发放倒计时：</span>
+                <span class="countdown-value">{{ countdownText }}</span>
+              </div>
+            </div>
+
+            <div class="cp-tip">📌 当月最后一天到期，可叠加折扣使用</div>
           </div>
         </div>
         <div class="coupon-perk-card">
@@ -405,13 +422,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Medal, Present, ShoppingBag, Check, CircleCheck, StarFilled,
   TrendCharts, ChatLineRound, Calendar, Trophy, Picture, Discount, Clock
 } from '@element-plus/icons-vue'
-import { getVipPackages, getUserVipInfo, purchaseVip } from '@/api/vip'
+import { getVipPackages, getUserVipInfo, purchaseVip, getMonthlyCouponStatus } from '@/api/vip'
 import { useUserStore } from '@/store/user'
 import { useRouter } from 'vue-router'
 
@@ -427,6 +444,35 @@ const selectedPackage = ref(null)
 const showPaymentDialog = ref(false)
 const paymentMethod = ref('')
 const purchasing = ref(false)
+
+// 月度体验券状态
+const monthlyCouponStatus = ref(null)
+// 倒计时显示文本
+const countdownText = ref('')
+let countdownTimer = null
+
+// 启动倒计时
+const startCountdown = (secondsUntilNext) => {
+  if (countdownTimer) clearInterval(countdownTimer)
+  let remaining = secondsUntilNext
+
+  const format = (s) => {
+    const d = Math.floor(s / 86400)
+    const h = Math.floor((s % 86400) / 3600)
+    const m = Math.floor((s % 3600) / 60)
+    const sec = s % 60
+    if (d > 0) return `${d}天${h}小时${m}分`
+    if (h > 0) return `${h}小时${m}分${sec}秒`
+    return `${m}分${sec}秒`
+  }
+
+  countdownText.value = format(remaining)
+  countdownTimer = setInterval(() => {
+    remaining = Math.max(0, remaining - 1)
+    countdownText.value = format(remaining)
+    if (remaining <= 0) clearInterval(countdownTimer)
+  }, 1000)
+}
 
 // 等级列表
 const levelList = [
@@ -505,9 +551,10 @@ const benefits = [
 const loadData = async () => {
   try {
     loading.value = true
-    const [packagesRes, vipInfoRes] = await Promise.all([
+    const [packagesRes, vipInfoRes, couponStatusRes] = await Promise.all([
       getVipPackages(),
-      getUserVipInfo()
+      getUserVipInfo(),
+      getMonthlyCouponStatus()
     ])
     
     if (packagesRes.code === 200 || packagesRes.code === 1) {
@@ -517,6 +564,13 @@ const loadData = async () => {
     if (vipInfoRes.code === 200 || vipInfoRes.code === 1) {
       userVipInfo.value = vipInfoRes.data
     }
+
+    if (couponStatusRes.code === 200 || couponStatusRes.code === 1) {
+      monthlyCouponStatus.value = couponStatusRes.data
+      if (couponStatusRes.data?.secondsUntilNext > 0) {
+        startCountdown(couponStatusRes.data.secondsUntilNext)
+      }
+    }
   } catch (error) {
     console.error('加载VIP数据失败:', error)
     ElMessage.error('加载数据失败')
@@ -524,6 +578,10 @@ const loadData = async () => {
     loading.value = false
   }
 }
+
+onUnmounted(() => {
+  if (countdownTimer) clearInterval(countdownTimer)
+})
 
 // 选择套餐
 const selectPackage = (pkg) => {
@@ -1576,6 +1634,50 @@ onMounted(() => {
 
 // 专属券福利
 .coupon-perks-section { margin-bottom: 30px; }
+
+// 月度体验券发放状态
+.cp-grant-status {
+  margin: 10px 0 8px;
+  background: rgba(102, 126, 234, 0.1);
+  border: 1px solid rgba(102, 126, 234, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.grant-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.grant-done { color: #67c23a; font-weight: 600; }
+.grant-pending { color: #e6a23c; font-weight: 600; }
+.grant-count { color: #fff; font-weight: 700; }
+
+.countdown-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  border-top: 1px dashed rgba(255,255,255,0.15);
+  padding-top: 6px;
+}
+.countdown-label { color: rgba(255,255,255,0.6); }
+.countdown-value {
+  color: #a0b0ff;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+.highlight-card {
+  border-color: rgba(103, 194, 58, 0.5) !important;
+  box-shadow: 0 0 12px rgba(103, 194, 58, 0.15);
+}
 
 .coupon-perks-grid {
   display: grid;

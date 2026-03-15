@@ -17,6 +17,74 @@
     <!-- 聊天窗口 -->
     <transition name="slide-up">
       <div v-if="isOpen" class="chat-window">
+
+        <!-- ========== 人工客服模式 ========== -->
+        <template v-if="isHumanMode">
+          <div class="chat-header">
+            <div class="header-left">
+              <el-button text @click="backToAI" style="color:white; padding: 0;">
+                <el-icon><ArrowDown style="transform: rotate(90deg)" /></el-icon>
+              </el-button>
+              <div class="header-info">
+                <div class="header-title">人工客服</div>
+                <div class="header-status">
+                  <span class="status-dot" :style="{ background: humanConnected ? '#67c23a' : '#e6a23c' }"></span>
+                  <span>{{ humanConnected ? '客服已接入' : '等待客服接入...' }}</span>
+                </div>
+              </div>
+            </div>
+            <div class="header-right">
+              <el-button text @click="endHumanSession" title="结束会话" style="color:white;">
+                <el-icon><Close /></el-icon>
+              </el-button>
+            </div>
+          </div>
+
+          <!-- 人工消息列表 -->
+          <div class="chat-messages" ref="humanMessagesRef">
+            <template v-for="(msg, index) in humanMessages" :key="msg.id">
+              <div v-if="msg.senderType === 'system'" class="human-system-msg">
+                {{ msg.content }}
+              </div>
+              <div v-else :class="['message', msg.senderType === 'user' ? 'user' : 'bot']">
+                <el-avatar v-if="msg.senderType !== 'user'" :size="32" class="message-avatar">
+                  <el-icon><Service /></el-icon>
+                </el-avatar>
+                <div class="message-content">
+                  <div class="message-bubble">{{ msg.content }}</div>
+                </div>
+                <el-avatar v-if="msg.senderType === 'user'" :size="32" class="message-avatar">
+                  <el-icon><User /></el-icon>
+                </el-avatar>
+              </div>
+            </template>
+            <div v-if="humanMessages.length === 0" style="text-align:center; color:#c0c4cc; padding: 40px 0;">
+              等待客服接入中...
+            </div>
+          </div>
+
+          <!-- 人工输入框 -->
+          <div class="chat-input">
+            <el-input
+              v-model="humanInput"
+              placeholder="输入消息..."
+              @keydown.enter.prevent="sendHumanMessage"
+              :disabled="!humanConnected"
+            >
+              <template #suffix>
+                <el-button text :icon="Promotion" @click="sendHumanMessage" :disabled="!humanInput.trim() || !humanConnected">
+                  发送
+                </el-button>
+              </template>
+            </el-input>
+          </div>
+          <div class="chat-footer">
+            <el-text size="small" type="info">人工客服服务时间 9:00-22:00</el-text>
+          </div>
+        </template>
+
+        <!-- ========== AI 模式 ========== -->
+        <template v-else>
         <!-- 头部 -->
         <div class="chat-header">
           <div class="header-left">
@@ -43,70 +111,81 @@
 
         <!-- 消息列表 -->
         <div class="chat-messages" ref="messagesContainer">
-          <div v-for="(msg, index) in messages" :key="index" class="message-wrapper">
-            <div :class="['message', msg.type]">
-              <el-avatar v-if="msg.type === 'bot'" :size="32" class="message-avatar">
-                <el-icon><Service /></el-icon>
-              </el-avatar>
-              
-              <div class="message-content">
-                <div class="message-bubble" v-html="msg.content"></div>
-                
-                <!-- 快捷建议 -->
-                <div v-if="msg.suggestions && msg.suggestions.length > 0" class="message-suggestions">
-                  <el-tag
-                    v-for="(suggestion, i) in msg.suggestions"
-                    :key="i"
-                    size="small"
-                    type="info"
-                    effect="plain"
-                    @click="askQuestion(suggestion)"
-                    style="cursor: pointer; margin: 4px;"
-                  >
-                    {{ suggestion }}
-                  </el-tag>
-                </div>
-                
-                <!-- 操作按钮 -->
-                <div v-if="msg.actions && msg.actions.length > 0" class="message-actions">
-                  <el-button
-                    v-for="(action, i) in msg.actions"
-                    :key="i"
-                    size="small"
-                    type="primary"
-                    @click="handleAction(action)"
-                  >
-                    {{ action.label }}
-                  </el-button>
-                </div>
-                
-                <!-- 满意度评价 -->
-                <div v-if="msg.showFeedback" class="message-feedback">
-                  <span style="margin-right: 8px;">这个回答有帮助吗？</span>
-                  <el-button
-                    size="small"
-                    @click="submitFeedback(msg.id, 5, '很有帮助')"
-                    :disabled="msg.feedbackSubmitted"
-                  >
-                    👍 有帮助
-                  </el-button>
-                  <el-button
-                    size="small"
-                    @click="submitFeedback(msg.id, 1, '没有帮助')"
-                    :disabled="msg.feedbackSubmitted"
-                  >
-                    👎 没帮助
-                  </el-button>
-                </div>
-                
-                <div class="message-time">{{ formatTime(msg.timestamp) }}</div>
-              </div>
-
-              <el-avatar v-if="msg.type === 'user'" :size="32" class="message-avatar">
-                <el-icon><User /></el-icon>
-              </el-avatar>
+          <template v-for="(msg, index) in messages" :key="msg.id">
+            <!-- 时间分隔线：与上一条消息间隔超过5分钟才显示 -->
+            <div
+              v-if="index === 0 || msg.timestamp - messages[index - 1].timestamp > 5 * 60 * 1000"
+              class="time-divider"
+            >
+              {{ formatTime(msg.timestamp) }}
             </div>
-          </div>
+
+            <div class="message-wrapper">
+              <div :class="['message', msg.type]">
+                <el-avatar v-if="msg.type === 'bot'" :size="32" class="message-avatar">
+                  <el-icon><Service /></el-icon>
+                </el-avatar>
+                
+                <div class="message-content">
+                  <div class="message-bubble" v-html="msg.content"></div>
+                  
+                  <!-- 快捷建议 -->
+                  <div v-if="msg.suggestions && msg.suggestions.length > 0" class="message-suggestions">
+                    <el-tag
+                      v-for="(suggestion, i) in msg.suggestions"
+                      :key="i"
+                      size="small"
+                      type="info"
+                      effect="plain"
+                      @click="askQuestion(suggestion)"
+                      style="cursor: pointer; margin: 4px;"
+                    >
+                      {{ suggestion }}
+                    </el-tag>
+                  </div>
+                  
+                  <!-- 操作按钮 -->
+                  <div v-if="msg.actions && msg.actions.length > 0" class="message-actions">
+                    <el-button
+                      v-for="(action, i) in msg.actions"
+                      :key="i"
+                      size="small"
+                      type="primary"
+                      @click="handleAction(action)"
+                    >
+                      {{ action.label }}
+                    </el-button>
+                  </div>
+                  
+                  <!-- 满意度评价 -->
+                  <div v-if="msg.showFeedback" class="message-feedback">
+                    <span style="margin-right: 8px;">这个回答有帮助吗？</span>
+                    <el-button size="small" @click="submitFeedback(msg.id, 5, '很有帮助')" :disabled="msg.feedbackSubmitted">
+                      👍 有帮助
+                    </el-button>
+                    <el-button size="small" @click="submitFeedback(msg.id, 1, '没有帮助')" :disabled="msg.feedbackSubmitted">
+                      👎 没帮助
+                    </el-button>
+                  </div>
+
+                  <!-- 发送失败重试 -->
+                  <div v-if="msg.failed" class="message-retry">
+                    <span class="retry-hint">⚠️ 发送失败</span>
+                    <el-button size="small" text type="danger" @click="retryMessage(msg)">重试</el-button>
+                  </div>
+
+                  <!-- 复制按钮（仅bot消息显示） -->
+                  <div v-if="msg.type === 'bot'" class="message-copy" @click="copyMessage(msg)">
+                    <el-icon><CopyDocument /></el-icon>
+                  </div>
+                </div>
+
+                <el-avatar v-if="msg.type === 'user'" :size="32" class="message-avatar">
+                  <el-icon><User /></el-icon>
+                </el-avatar>
+              </div>
+            </div>
+          </template>
 
           <!-- 正在输入提示 -->
           <div v-if="isTyping" class="typing-indicator">
@@ -117,10 +196,13 @@
           </div>
         </div>
 
-        <!-- 快捷问题 -->
-        <div v-if="messages.length === 0" class="quick-questions">
-          <div class="quick-title">常见问题</div>
-          <div class="quick-buttons">
+        <!-- 快捷问题：始终显示，有消息时折叠为小标题 -->
+        <div class="quick-questions" :class="{ 'collapsed': messages.length > 0 }">
+          <div class="quick-title" @click="toggleQuickQuestions">
+            常见问题
+            <el-icon class="quick-toggle"><ArrowUp v-if="quickExpanded || messages.length === 0" /><ArrowDown v-else /></el-icon>
+          </div>
+          <div v-show="quickExpanded || messages.length === 0" class="quick-buttons">
             <el-button
               v-for="q in quickQuestions"
               :key="q.id"
@@ -132,12 +214,22 @@
           </div>
         </div>
 
+        <!-- 转人工按钮 -->
+        <div class="transfer-bar">
+          <el-button size="small" text @click="transferToHuman" :loading="transferring">
+            <el-icon><Phone /></el-icon>
+            转接人工客服
+          </el-button>
+        </div>
+
         <!-- 输入框 -->
         <div class="chat-input">
           <el-input
             v-model="inputMessage"
             placeholder="输入您的问题..."
-            @keyup.enter="sendMessage"
+            @keydown.enter.prevent="handleEnter"
+            @compositionstart="isComposing = true"
+            @compositionend="isComposing = false"
             :disabled="isTyping"
           >
             <template #suffix>
@@ -160,6 +252,9 @@
             AI客服24小时在线为您服务
           </el-text>
         </div>
+        </template>
+        <!-- ========== AI 模式结束 ========== -->
+
       </div>
     </transition>
   </div>
@@ -169,9 +264,10 @@
 import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Service, Close, Delete, User, Promotion } from '@element-plus/icons-vue'
+import { Service, Close, Delete, User, Promotion, CopyDocument, ArrowUp, ArrowDown, Phone } from '@element-plus/icons-vue'
 import aiService from '@/utils/aiService'
 import { submitFeedback as submitFeedbackAPI } from '@/api/ai'
+import { createServiceSession, sendUserMessage, getSessionMessages, closeSession } from '@/api/service'
 
 const router = useRouter()
 
@@ -181,13 +277,26 @@ const inputMessage = ref('')
 const isTyping = ref(false)
 const unreadCount = ref(0)
 const messagesContainer = ref(null)
+const isComposing = ref(false)       // 中文输入法组合中标志
+const quickExpanded = ref(false)     // 有消息时快捷问题是否展开
+
+// 人工客服相关
+const isHumanMode = ref(false)       // 是否在人工客服模式
+const humanSessionId = ref(null)     // 当前人工会话ID
+const humanMessages = ref([])        // 人工会话消息列表
+const humanInput = ref('')           // 人工会话输入框
+const transferring = ref(false)      // 转接中
+const humanConnected = ref(false)    // 人工客服是否已接入
+let serviceWs = null                 // 客服专用 WebSocket
 
 // 快捷问题
 const quickQuestions = ref([
   { id: 1, label: '如何预约剧本？', question: '如何预约剧本？' },
   { id: 2, label: '支付方式', question: '支持哪些支付方式？' },
   { id: 3, label: '退款政策', question: '如何申请退款？' },
-  { id: 4, label: '热门推荐', question: '有什么热门剧本推荐？' }
+  { id: 4, label: '热门推荐', question: '有什么热门剧本推荐？' },
+  { id: 5, label: '游戏玩法', question: '剧本杀怎么玩？' },
+  { id: 6, label: '团体预约', question: '支持团体预约吗？' }
 ])
 
 // 打开/关闭聊天
@@ -215,44 +324,91 @@ const getGreeting = () => {
   return '晚上好！'
 }
 
-// 发送消息
+// 中文输入法兼容：仅在非组合输入时发送
+const handleEnter = () => {
+  if (!isComposing.value) {
+    sendMessage()
+  }
+}
+
+// 展开/收起快捷问题
+const toggleQuickQuestions = () => {
+  if (messages.value.length > 0) {
+    quickExpanded.value = !quickExpanded.value
+  }
+}
+
+// 复制消息内容
+const copyMessage = async (msg) => {
+  const text = msg.content.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+  try {
+    await navigator.clipboard.writeText(text)
+    ElMessage.success({ message: '已复制', duration: 1500 })
+  } catch {
+    ElMessage.error('复制失败，请手动复制')
+  }
+}
+
+// 重试失败的消息
+const retryMessage = async (failedMsg) => {
+  // 找到该失败消息的原始用户输入（失败消息前一条）
+  const idx = messages.value.findIndex(m => m.id === failedMsg.id)
+  const userMsg = idx > 0 ? messages.value[idx - 1] : null
+  if (!userMsg) return
+
+  // 移除失败的bot消息
+  messages.value.splice(idx, 1)
+  failedMsg.failed = false
+
+  isTyping.value = true
+  try {
+    const response = await Promise.race([
+      aiService.chat(userMsg.content, { page: router.currentRoute.value.path }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('请求超时')), 8000))
+    ])
+    await new Promise(resolve => setTimeout(resolve, 500))
+    addBotMessage(response.message, response.suggestions || [], response.actions || [], !response.fallback)
+  } catch (error) {
+    addBotMessage('', [], [], false, true) // failed = true
+  } finally {
+    isTyping.value = false
+    scrollToBottom()
+  }
+}
+
+// 发送消息（含超时控制）
 const sendMessage = async () => {
   if (!inputMessage.value.trim() || isTyping.value) return
 
   const userMessage = inputMessage.value.trim()
   inputMessage.value = ''
 
-  // 添加用户消息
   addUserMessage(userMessage)
-
-  // 显示正在输入
   isTyping.value = true
 
   try {
-    // 调用AI服务（已内置降级处理）
-    const response = await aiService.chat(userMessage, {
-      page: router.currentRoute.value.path
-    })
-
-    // 模拟打字延迟
-    await new Promise(resolve => setTimeout(resolve, 800))
-
-    // 添加AI回复
-    addBotMessage(
-      response.message,
-      response.suggestions || [],
-      response.actions || [],
-      !response.fallback // 非降级响应才显示反馈按钮
-    )
-
+    const response = await Promise.race([
+      aiService.chat(userMessage, { page: router.currentRoute.value.path }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('请求超时')), 8000))
+    ])
+    await new Promise(resolve => setTimeout(resolve, 500))
+    addBotMessage(response.message, response.suggestions || [], response.actions || [], !response.fallback)
+    // 检测到转人工意图，自动触发转接
+    if (response.triggerTransfer) {
+      setTimeout(() => transferToHuman(), 800)
+    }
   } catch (error) {
     console.error('AI对话失败:', error)
-    // 即使出现意外错误，也提供友好的回复
+    const isTimeout = error.message === '请求超时'
+    // 标记最后一条用户消息发送失败，显示重试按钮
     addBotMessage(
-      `<div class="kb-answer"><p>🤔 抱歉，我遇到了一点小问题。</p><p><strong>您可以尝试：</strong></p><ul><li>💡 点击上方常见问题</li><li>🔄 重新描述您的问题</li><li>📞 联系人工客服：<strong>400-123-4567</strong></li></ul></div>`,
+      isTimeout
+        ? `<div class="kb-answer"><p>⏱️ 响应超时，请稍后重试。</p><p>📞 人工客服：<strong>400-123-4567</strong></p></div>`
+        : `<div class="kb-answer"><p>🤔 抱歉，我遇到了一点小问题。</p><p>📞 人工客服：<strong>400-123-4567</strong></p></div>`,
       ['如何预约剧本？', '如何申请退款？', '联系人工客服'],
       [],
-      false
+      false,
+      true // failed = true，显示重试按钮
     )
   } finally {
     isTyping.value = false
@@ -278,7 +434,7 @@ const addUserMessage = (content) => {
 }
 
 // 添加机器人消息
-const addBotMessage = (content, suggestions = [], actions = [], showFeedback = false) => {
+const addBotMessage = (content, suggestions = [], actions = [], showFeedback = false, failed = false) => {
   const messageId = Date.now()
   messages.value.push({
     id: messageId,
@@ -288,6 +444,7 @@ const addBotMessage = (content, suggestions = [], actions = [], showFeedback = f
     actions,
     showFeedback,
     feedbackSubmitted: false,
+    failed,
     timestamp: Date.now()
   })
   
@@ -320,8 +477,7 @@ const handleAction = (action) => {
     router.push(action.route)
     toggleChat()
   } else if (action.type === 'transfer') {
-    ElMessage.info('正在为您转接人工客服...')
-    // TODO: 实现人工客服转接
+    transferToHuman()
   }
 }
 
@@ -371,13 +527,24 @@ const formatTime = (timestamp) => {
   })
 }
 
-// 保存对话历史
+// 保存对话历史（FIFO，最多200条，防止 localStorage 超限）
 const saveChatHistory = () => {
-  if (messages.value.length > 0) {
-    localStorage.setItem('ai_chat_history', JSON.stringify({
-      messages: messages.value,
-      timestamp: Date.now()
-    }))
+  if (messages.value.length === 0) return
+  try {
+    let msgs = messages.value
+    if (msgs.length > 200) {
+      msgs = msgs.slice(-200)
+    }
+    const data = JSON.stringify({ messages: msgs, timestamp: Date.now() })
+    localStorage.setItem('ai_chat_history', data)
+  } catch (e) {
+    // QuotaExceededError：清空历史重新保存
+    if (e.name === 'QuotaExceededError') {
+      try {
+        const msgs = messages.value.slice(-50)
+        localStorage.setItem('ai_chat_history', JSON.stringify({ messages: msgs, timestamp: Date.now() }))
+      } catch { /* 忽略 */ }
+    }
   }
 }
 
@@ -397,6 +564,112 @@ const restoreChatHistory = () => {
   }
 }
 
+// ==================== 人工客服相关 ====================
+
+const transferToHuman = async () => {
+  const userInfo = JSON.parse(localStorage.getItem('user-info') || '{}')
+  if (!userInfo.id) {
+    ElMessage.warning('请先登录后再使用人工客服服务')
+    return
+  }
+  transferring.value = true
+  try {
+    const lastUserMsg = [...messages.value].reverse().find(m => m.type === 'user')
+    const question = lastUserMsg?.content?.replace(/<[^>]+>/g, '') || ''
+    const res = await createServiceSession({
+      userName: userInfo.nickname || userInfo.name || '用户',
+      question
+    })
+    if (res.code === 1 || res.code === 200) {
+      humanSessionId.value = res.data
+      isHumanMode.value = true
+      humanMessages.value = []
+      humanConnected.value = false
+      await loadHumanMessages()
+      connectServiceWs(userInfo.id)
+    }
+  } catch (e) {
+    ElMessage.error('转接失败，请稍后重试')
+  } finally {
+    transferring.value = false
+  }
+}
+
+const loadHumanMessages = async () => {
+  if (!humanSessionId.value) return
+  const res = await getSessionMessages(humanSessionId.value)
+  if (res.code === 1 || res.code === 200) {
+    humanMessages.value = (res.data || []).map(m => ({
+      ...m, createTime: new Date(m.createTime).getTime()
+    }))
+    scrollHumanToBottom()
+  }
+}
+
+const humanMessagesRef = ref(null)
+
+const connectServiceWs = (userId) => {
+  if (serviceWs) serviceWs.close()
+  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+  serviceWs = new WebSocket(`${protocol}//${location.host}/api/ws/service?userId=${userId}&role=user`)
+  serviceWs.onmessage = (event) => {
+    if (event.data === 'pong') return
+    try {
+      const data = JSON.parse(event.data)
+      if (data.type === 'session_accepted') {
+        humanConnected.value = true
+        humanMessages.value.push({ id: Date.now(), senderType: 'system', content: '客服已接入，请开始咨询。', createTime: Date.now() })
+        scrollHumanToBottom()
+      } else if (data.type === 'service_message' && data.senderType === 'admin') {
+        humanMessages.value.push({ id: Date.now(), senderType: 'admin', content: data.content, createTime: Date.now() })
+        scrollHumanToBottom()
+      } else if (data.type === 'session_closed') {
+        humanConnected.value = false
+        humanMessages.value.push({ id: Date.now(), senderType: 'system', content: '会话已结束，感谢您的咨询。', createTime: Date.now() })
+        scrollHumanToBottom()
+      }
+    } catch (e) { /* 忽略 */ }
+  }
+  serviceWs.onclose = () => {
+    if (isHumanMode.value) setTimeout(() => connectServiceWs(userId), 5000)
+  }
+  const hb = setInterval(() => {
+    if (serviceWs?.readyState === WebSocket.OPEN) serviceWs.send('ping')
+    else clearInterval(hb)
+  }, 30000)
+}
+
+const sendHumanMessage = async () => {
+  if (!humanInput.value.trim() || !humanSessionId.value) return
+  const content = humanInput.value.trim()
+  humanInput.value = ''
+  humanMessages.value.push({ id: Date.now(), senderType: 'user', content, createTime: Date.now() })
+  scrollHumanToBottom()
+  try {
+    await sendUserMessage(humanSessionId.value, { content })
+  } catch (e) {
+    ElMessage.error('发送失败，请重试')
+  }
+}
+
+const endHumanSession = async () => {
+  if (!humanSessionId.value) return
+  await closeSession(humanSessionId.value)
+  isHumanMode.value = false
+  humanSessionId.value = null
+  humanConnected.value = false
+  if (serviceWs) { serviceWs.close(); serviceWs = null }
+  ElMessage.success('会话已结束')
+}
+
+const backToAI = () => { isHumanMode.value = false }
+
+const scrollHumanToBottom = () => {
+  nextTick(() => {
+    if (humanMessagesRef.value) humanMessagesRef.value.scrollTop = humanMessagesRef.value.scrollHeight
+  })
+}
+
 // 生命周期
 onMounted(() => {
   restoreChatHistory()
@@ -404,6 +677,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   saveChatHistory()
+  if (serviceWs) serviceWs.close()
 })
 </script>
 
@@ -480,14 +754,29 @@ onUnmounted(() => {
 }
 
 .chat-window {
-  width: 380px;
-  height: 600px;
+  width: min(380px, 92vw);
+  height: min(600px, 85vh);
   background: white;
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .chat-window {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    position: fixed;
+    bottom: 0;
+    right: 0;
+  }
+  .ai-customer-service {
+    bottom: 0;
+    right: 0;
+  }
 }
 
 .chat-header {
@@ -749,6 +1038,120 @@ onUnmounted(() => {
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
   background: #c0c4cc;
+}
+
+/* 时间分隔线 */
+.time-divider {
+  text-align: center;
+  font-size: 11px;
+  color: #c0c4cc;
+  margin: 8px 0;
+  position: relative;
+}
+
+.time-divider::before,
+.time-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 30%;
+  height: 1px;
+  background: #e4e7ed;
+}
+
+.time-divider::before { left: 0; }
+.time-divider::after { right: 0; }
+
+/* 复制按钮 */
+.message-copy {
+  display: none;
+  cursor: pointer;
+  color: #c0c4cc;
+  font-size: 12px;
+  margin-top: 4px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.2s;
+}
+
+.message-wrapper:hover .message-copy {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.message-copy:hover {
+  color: #667eea;
+}
+
+/* 重试按钮 */
+.message-retry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.retry-hint {
+  font-size: 12px;
+  color: #f56c6c;
+}
+
+/* 快捷问题折叠状态 */
+.quick-questions.collapsed {
+  padding: 8px 16px;
+}
+
+.quick-questions.collapsed .quick-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  margin-bottom: 0;
+  user-select: none;
+}
+
+.quick-questions.collapsed .quick-title:hover {
+  color: #667eea;
+}
+
+.quick-toggle {
+  font-size: 12px;
+  transition: transform 0.2s;
+}
+
+.quick-questions.collapsed .quick-buttons {
+  padding-top: 8px;
+}
+
+/* 转人工按钮栏 */
+.transfer-bar {
+  padding: 4px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: center;
+}
+
+.transfer-bar .el-button {
+  color: #909399;
+  font-size: 12px;
+}
+
+.transfer-bar .el-button:hover {
+  color: #667eea;
+}
+
+/* 人工客服系统消息 */
+.human-system-msg {
+  text-align: center;
+  font-size: 12px;
+  color: #909399;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  padding: 6px 16px;
+  margin: 4px auto;
+  max-width: 80%;
 }
 
 /* 知识库回答样式 */

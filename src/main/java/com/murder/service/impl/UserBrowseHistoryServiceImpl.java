@@ -104,14 +104,18 @@ public class UserBrowseHistoryServiceImpl extends ServiceImpl<UserBrowseHistoryM
         Map<Long, Script> scriptMap = new java.util.HashMap<>();
         if (!scriptIds.isEmpty()) {
             List<Script> scripts = scriptMapper.selectBatchIds(scriptIds);
-            scriptMap = scripts.stream().collect(Collectors.toMap(Script::getId, s -> s, (a, b) -> a));
+            if (scripts != null && !scripts.isEmpty()) {
+                scriptMap = scripts.stream().collect(Collectors.toMap(Script::getId, s -> s, (a, b) -> a));
+            }
         }
 
         // 批量查询门店信息
         Map<Long, Store> storeMap = new java.util.HashMap<>();
         if (!storeIds.isEmpty()) {
             List<Store> stores = storeMapper.selectBatchIds(storeIds);
-            storeMap = stores.stream().collect(Collectors.toMap(Store::getId, s -> s, (a, b) -> a));
+            if (stores != null && !stores.isEmpty()) {
+                storeMap = stores.stream().collect(Collectors.toMap(Store::getId, s -> s, (a, b) -> a));
+            }
         }
 
         // 转换为VO
@@ -181,7 +185,8 @@ public class UserBrowseHistoryServiceImpl extends ServiceImpl<UserBrowseHistoryM
             // 更新浏览时间和时长
             existingHistory.setBrowseTime(LocalDateTime.now());
             if (duration != null && duration > 0) {
-                existingHistory.setDuration(existingHistory.getDuration() + duration);
+                int currentDuration = existingHistory.getDuration() != null ? existingHistory.getDuration() : 0;
+                existingHistory.setDuration(currentDuration + duration);
             }
             this.updateById(existingHistory);
         } else {
@@ -210,13 +215,9 @@ public class UserBrowseHistoryServiceImpl extends ServiceImpl<UserBrowseHistoryM
     @Override
     @Transactional
     public int clearHistory(Long userId) {
-        // 使用remove方法，@TableLogic会自动将删除转换为更新isDeleted字段
         LambdaQueryWrapper<UserBrowseHistory> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserBrowseHistory::getUserId, userId);
-        this.remove(wrapper);
-        
-        // 返回受影响的行数（这里简化处理）
-        return 1;
+        return this.baseMapper.delete(wrapper);
     }
 
     @Override

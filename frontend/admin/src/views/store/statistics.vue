@@ -173,6 +173,8 @@ import { ElMessage } from 'element-plus'
 import { Shop, Reading, User, Star } from '@element-plus/icons-vue'
 import request from '@/utils/request'
 
+const isSuperAdmin = computed(() => localStorage.getItem('admin-login-type') !== 'store')
+
 const loading = ref(false)
 const detailLoading = ref(false)
 const detailDialogVisible = ref(false)
@@ -200,7 +202,11 @@ const detailRating = computed(() => {
 
 const fetchStatistics = async () => {
   try {
-    const res = await request.get('/store/statistics')
+    const params = {}
+    if (!isSuperAdmin.value) {
+      params.storeId = localStorage.getItem('admin-store-id')
+    }
+    const res = await request.get('/store/statistics', { params })
     Object.assign(statistics, res.data)
   } catch (error) {
     console.error('获取统计数据失败:', error)
@@ -211,8 +217,16 @@ const fetchStatistics = async () => {
 const fetchStoreList = async () => {
   loading.value = true
   try {
-    const res = await request.get('/store/list')
-    storeList.value = res.data
+    let res
+    if (isSuperAdmin.value) {
+      res = await request.get('/store/list')
+      storeList.value = res.data
+    } else {
+      // 门店管理员只看自己的门店
+      const storeId = localStorage.getItem('admin-store-id')
+      res = await request.get(`/store/detail/${storeId}`)
+      storeList.value = res.data ? [res.data] : []
+    }
   } catch (error) {
     console.error('获取门店列表失败:', error)
     ElMessage.error('获取门店列表失败')

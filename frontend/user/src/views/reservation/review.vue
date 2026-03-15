@@ -81,6 +81,53 @@
           </div>
         </el-tab-pane>
 
+        <!-- DM 评价 Tab -->
+        <el-tab-pane label="DM 评价" name="dm">
+          <div class="tab-content">
+            <div class="review-section-title">
+              <el-icon><Avatar /></el-icon>
+              <span>对主持人（DM）的评价</span>
+            </div>
+            <div v-if="!dmInfo" class="dm-no-info">
+              <el-empty description="本次预约暂无 DM 信息，可跳过此项" :image-size="60" />
+            </div>
+            <template v-else>
+              <!-- DM 信息展示 -->
+              <div class="dm-profile">
+                <el-avatar :size="56" :src="dmInfo.avatar">🎭</el-avatar>
+                <div class="dm-meta">
+                  <div class="dm-name">{{ dmInfo.name }}</div>
+                  <div class="dm-tags">
+                    <el-tag v-for="tag in (dmInfo.styleTagList || [])" :key="tag" size="small" style="margin:2px">{{ tag }}</el-tag>
+                  </div>
+                  <el-rate :model-value="Number(dmInfo.rating)" disabled show-score size="small" />
+                </div>
+              </div>
+            </template>
+            <el-form label-width="100px" class="review-form" style="margin-top:20px">
+              <el-form-item label="DM 评分">
+                <el-rate v-model="dmReviewForm.rating" :max="5" show-text
+                  :texts="['很差', '较差', '一般', '不错', '超棒']" />
+              </el-form-item>
+              <el-form-item label="评价内容">
+                <el-input
+                  v-model="dmReviewForm.content"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="分享你对本次 DM 主持体验的感受～"
+                  maxlength="300"
+                  show-word-limit
+                />
+              </el-form-item>
+              <el-form-item label="评价标签">
+                <el-checkbox-group v-model="dmReviewForm.tags">
+                  <el-checkbox-button v-for="tag in dmTags" :key="tag" :label="tag">{{ tag }}</el-checkbox-button>
+                </el-checkbox-group>
+              </el-form-item>
+            </el-form>
+          </div>
+        </el-tab-pane>
+
         <!-- 门店评价 Tab -->
         <el-tab-pane label="门店评价" name="store">
           <div class="tab-content">
@@ -193,7 +240,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Film, Shop } from '@element-plus/icons-vue'
+import { Plus, Film, Shop, Avatar } from '@element-plus/icons-vue'
 import { getReservationDetail } from '@/api/reservation'
 import request from '@/utils/request'
 
@@ -251,11 +298,25 @@ const storeReviewForm = reactive({
   tags: []
 })
 
+// DM 信息
+const dmInfo = ref(null)
+
+// DM 评价标签
+const dmTags = ['专业投入', '引导到位', '氛围烘托好', '反应灵活', '值得再约', '幽默风趣', '沉浸感强']
+
+// DM 评价表单
+const dmReviewForm = reactive({
+  rating: 5,
+  content: '',
+  tags: []
+})
+
 // 通用表单（匿名等）
 const form = reactive({
   reservationId: null,
   storeId: null,
   scriptId: null,
+  dmId: null,
   isAnonymous: 0
 })
 
@@ -290,6 +351,21 @@ const loadReservation = async () => {
       form.reservationId = res.data.id
       form.storeId = res.data.storeId
       form.scriptId = res.data.scriptId
+
+      // 尝试加载排期关联的 DM 信息
+      if (res.data.scheduleId) {
+        try {
+          const scheduleRes = await request({ url: `/api/script/schedule/${res.data.scheduleId}`, method: 'get' })
+          const schedule = scheduleRes.data
+          if (schedule?.dmId) {
+            form.dmId = schedule.dmId
+            const dmRes = await request({ url: `/api/dm/${schedule.dmId}`, method: 'get' })
+            dmInfo.value = dmRes.data
+          }
+        } catch (e) {
+          console.warn('加载 DM 信息失败', e)
+        }
+      }
       
       // 检查订单状态
       if (res.data.status !== 3) {
@@ -352,6 +428,8 @@ const handleSubmit = async () => {
       reservationId: form.reservationId,
       storeId: form.storeId,
       scriptId: form.scriptId,
+      dmId: form.dmId || null,
+      dmRating: dmReviewForm.rating || null,
       isAnonymous: form.isAnonymous,
       images,
       // 剧本评价
@@ -489,6 +567,31 @@ onMounted(() => {
 .review-section-title .el-icon {
   color: #8B0000;
   font-size: 20px;
+}
+
+/* DM 信息卡片 */
+.dm-profile {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.dm-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.dm-tags {
+  margin-bottom: 6px;
+}
+
+.dm-no-info {
+  padding: 20px 0;
 }
 
 .review-form {

@@ -353,23 +353,29 @@ public class RecommendationServiceImpl implements RecommendationService {
     public void updateUserPreference(Long userId, Long scriptId, Integer actionType) {
         Script script = scriptMapper.selectById(scriptId);
         if (script == null) return;
-        
-        // 根据行为类型计算权重分数
-        double score = calculateActionScore(actionType);
-        
+
+        // 根据行为类型计算权重分数（含时间衰减，行为发生在当前时刻）
+        double score = calculateActionScore(actionType, LocalDateTime.now());
+
         // 更新分类偏好
-        userPreferenceMapper.incrementPreference(userId, "category_" + script.getCategoryId(), 
-                String.valueOf(script.getCategoryId()), score);
-        
+        if (script.getCategoryId() != null) {
+            userPreferenceMapper.incrementPreference(userId, "category_" + script.getCategoryId(),
+                    String.valueOf(script.getCategoryId()), score);
+        }
+
         // 更新类型偏好
-        userPreferenceMapper.incrementPreference(userId, "type_" + script.getType(), 
-                String.valueOf(script.getType()), score);
-        
+        if (script.getType() != null) {
+            userPreferenceMapper.incrementPreference(userId, "type_" + script.getType(),
+                    String.valueOf(script.getType()), score);
+        }
+
         // 更新难度偏好
-        userPreferenceMapper.incrementPreference(userId, "difficulty_" + script.getDifficulty(), 
-                String.valueOf(script.getDifficulty()), score);
-        
-        // 更新标签偏好
+        if (script.getDifficulty() != null) {
+            userPreferenceMapper.incrementPreference(userId, "difficulty_" + script.getDifficulty(),
+                    String.valueOf(script.getDifficulty()), score);
+        }
+
+        // 更新标签偏好（批量获取）
         List<String> tags = scriptTagMapper.getScriptTags(scriptId);
         for (String tag : tags) {
             userPreferenceMapper.incrementPreference(userId, "tag_" + tag, tag, score);
@@ -722,6 +728,43 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     /**
+     * 批量查询分类名称 Map（scriptId -> categoryName）
+     */
+    private Map<Long, String> batchGetCategoryNames(List<Script> scripts) {
+        Set<Long> categoryIds = scripts.stream()
+                .map(Script::getCategoryId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (categoryIds.isEmpty()) return Collections.emptyMap();
+
+        List<ScriptCategory> categories = scriptCategoryMapper.selectBatchIds(categoryIds);
+        return categories.stream()
+                .collect(Collectors.toMap(ScriptCategory::getId, ScriptCategory::getName, (a, b) -> a));
+    }
+
+    /**
+     * 批量查询标签 Map（scriptId -> List<String>）
+     */
+    private Map<Long, List<String>> batchGetTags(List<Script> scripts) {
+        List<Long> scriptIds = scripts.stream().map(Script::getId).collect(Collectors.toList());
+        if (scriptIds.isEmpty()) return Collections.emptyMap();
+        return scriptTagMapper.batchGetScriptTags(scriptIds);
+    }
+
+    /**
+     * 批量查询收藏状态 Set（已收藏的 scriptId 集合）
+     */
+    private Set<Long> batchGetFavoriteIds(Long userId, List<Script> scripts) {
+        if (userId == null || scripts.isEmpty()) return Collections.emptySet();
+        List<Long> scriptIds = scripts.stream().map(Script::getId).collect(Collectors.toList());
+        LambdaQueryWrapper<ScriptFavorite> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ScriptFavorite::getUserId, userId).in(ScriptFavorite::getScriptId, scriptIds);
+        return scriptFavoriteMapper.selectList(wrapper).stream()
+                .map(ScriptFavorite::getScriptId)
+                .collect(Collectors.toSet());
+    }
+
+    /**
      * 构建推荐VO列表
      */
     private List<RecommendationVO> buildRecommendationVOs(List<Long> scriptIds, Long userId, 
@@ -735,214 +778,182 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     /**
-     * 构建协同过滤推荐VO列表（使用真实的协同过滤分数）
+     * 构建协同过滤推荐VO列表（批量查询，避免 N+1）
      */
     private List<RecommendationVO> buildCollaborativeRecommendationVOs(List<Long> scriptIds, Long userId,
                                                                         Map<Long, Integer> scriptViewCounts, int maxViewCount) {
-        if (scriptIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        
+        if (scriptIds.isEmpty()) return Collections.emptyList();
+
         List<Script> scripts = scriptMapper.selectBatchIds(scriptIds);
-        
+        Map<Long, String> categoryNameMap = batchGetCategoryNames(scripts);
+        Map<Long, List<String>> tagsMap = batchGetTags(scripts);
+        Set<Long> favoriteIds = batchGetFavoriteIds(userId, scripts);
+
         return scripts.stream().map(script -> {
             RecommendationVO vo = new RecommendationVO();
             BeanUtils.copyProperties(script, vo);
-            
-            // 设置分类名称
-            if (script.getCategoryId() != null) {
-                ScriptCategory category = scriptCategoryMapper.selectById(script.getCategoryId());
-                if (category != null) {
-                    vo.setCategoryName(category.getName());
-                }
-            }
-            
-            // 设置标签
-            List<String> tags = scriptTagMapper.getScriptTags(script.getId());
-            vo.setTags(tags);
-            
-            // 设置推荐信息
-            vo.setRecommendationType(1); // 协同过滤
+            vo.setCategoryName(categoryNameMap.get(script.getCategoryId()));
+            vo.setTags(tagsMap.getOrDefault(script.getId(), Collections.emptyList()));
+            vo.setRecommendationType(1);
             vo.setRecommendReason("看了这个的人还看了");
-            
-            // 计算协同过滤分数：基于共同浏览用户数 + 剧本评分
+            vo.setIsFavorite(favoriteIds.contains(script.getId()));
+
             double cfScore = calculateCollaborativeScore(script.getId(), scriptViewCounts, maxViewCount);
             double ratingBonus = script.getRating() != null ? script.getRating().doubleValue() * 2 : 0;
-            double finalScore = Math.min(100.0, cfScore * 0.7 + ratingBonus + 20); // 基础分20
+            double finalScore = Math.min(100.0, cfScore * 0.7 + ratingBonus + 20);
             vo.setRecommendScore(BigDecimal.valueOf(finalScore).setScale(2, RoundingMode.HALF_UP));
-            
-            // 检查是否收藏
-            if (userId != null) {
-                LambdaQueryWrapper<ScriptFavorite> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(ScriptFavorite::getUserId, userId)
-                       .eq(ScriptFavorite::getScriptId, script.getId());
-                vo.setIsFavorite(scriptFavoriteMapper.selectCount(wrapper) > 0);
-            } else {
-                vo.setIsFavorite(false);
-            }
-            
+
             return vo;
         }).collect(Collectors.toList());
     }
 
     /**
-     * 构建热门推荐VO列表（使用真实的热门分数）
+     * 构建热门推荐VO列表（批量查询，避免 N+1）
      */
     private List<RecommendationVO> buildHotRecommendationVOs(List<Long> scriptIds, Map<Long, HotRanking> rankingMap) {
-        if (scriptIds.isEmpty()) {
-            return Collections.emptyList();
-        }
-        
+        if (scriptIds.isEmpty()) return Collections.emptyList();
+
         List<Script> scripts = scriptMapper.selectBatchIds(scriptIds);
-        
+        Map<Long, String> categoryNameMap = batchGetCategoryNames(scripts);
+        Map<Long, List<String>> tagsMap = batchGetTags(scripts);
+
         return scripts.stream().map(script -> {
             RecommendationVO vo = new RecommendationVO();
             BeanUtils.copyProperties(script, vo);
-            
-            // 设置分类名称
-            if (script.getCategoryId() != null) {
-                ScriptCategory category = scriptCategoryMapper.selectById(script.getCategoryId());
-                if (category != null) {
-                    vo.setCategoryName(category.getName());
-                }
-            }
-            
-            // 设置标签
-            List<String> tags = scriptTagMapper.getScriptTags(script.getId());
-            vo.setTags(tags);
-            
-            // 设置推荐信息
-            vo.setRecommendationType(3); // 热门推荐
+            vo.setCategoryName(categoryNameMap.get(script.getCategoryId()));
+            vo.setTags(tagsMap.getOrDefault(script.getId(), Collections.emptyList()));
+            vo.setRecommendationType(3);
             vo.setRecommendReason("热门推荐");
-            
-            // 计算热门分数
+            vo.setIsFavorite(false);
+
             HotRanking ranking = rankingMap.get(script.getId());
             double hotScore = calculateHotScore(script, ranking);
             vo.setRecommendScore(BigDecimal.valueOf(hotScore).setScale(2, RoundingMode.HALF_UP));
-            
-            vo.setIsFavorite(false);
-            
+
             return vo;
         }).collect(Collectors.toList());
     }
 
     /**
-     * 构建新品推荐VO列表（使用真实的新品分数）
+     * 构建新品推荐VO列表（批量查询，避免 N+1）
      */
     private List<RecommendationVO> buildNewScriptRecommendationVOs(List<Script> scripts) {
+        if (scripts.isEmpty()) return Collections.emptyList();
+
+        Map<Long, String> categoryNameMap = batchGetCategoryNames(scripts);
+        Map<Long, List<String>> tagsMap = batchGetTags(scripts);
+
         return scripts.stream().map(script -> {
             RecommendationVO vo = new RecommendationVO();
             BeanUtils.copyProperties(script, vo);
-            
-            // 设置分类名称
-            if (script.getCategoryId() != null) {
-                ScriptCategory category = scriptCategoryMapper.selectById(script.getCategoryId());
-                if (category != null) {
-                    vo.setCategoryName(category.getName());
-                }
-            }
-            
-            // 设置标签
-            List<String> tags = scriptTagMapper.getScriptTags(script.getId());
-            vo.setTags(tags);
-            
-            // 设置推荐信息
-            vo.setRecommendationType(3); // 新品推荐归类到热门推荐类型
+            vo.setCategoryName(categoryNameMap.get(script.getCategoryId()));
+            vo.setTags(tagsMap.getOrDefault(script.getId(), Collections.emptyList()));
+            vo.setRecommendationType(5); // 新品推荐独立类型
             vo.setRecommendReason("新品上架");
-            
-            // 计算新品分数
+            vo.setIsFavorite(false);
+
             double newScore = calculateNewScriptScore(script);
             vo.setRecommendScore(BigDecimal.valueOf(newScore).setScale(2, RoundingMode.HALF_UP));
-            
-            vo.setIsFavorite(false);
-            
+
             return vo;
         }).collect(Collectors.toList());
     }
 
     /**
-     * 构建基于内容的推荐VO列表（使用真实的内容相似度分数）
+     * 构建基于内容的推荐VO列表（批量查询，避免 N+1）
      */
     private List<RecommendationVO> buildContentBasedRecommendationVOs(Script sourceScript, List<Script> targetScripts, Long userId) {
+        if (targetScripts.isEmpty()) return Collections.emptyList();
+
+        Map<Long, String> categoryNameMap = batchGetCategoryNames(targetScripts);
+        Map<Long, List<String>> tagsMap = batchGetTags(targetScripts);
+        Set<Long> favoriteIds = batchGetFavoriteIds(userId, targetScripts);
+
         return targetScripts.stream().map(script -> {
             RecommendationVO vo = new RecommendationVO();
             BeanUtils.copyProperties(script, vo);
-            
-            // 设置分类名称
-            if (script.getCategoryId() != null) {
-                ScriptCategory category = scriptCategoryMapper.selectById(script.getCategoryId());
-                if (category != null) {
-                    vo.setCategoryName(category.getName());
-                }
-            }
-            
-            // 设置标签
-            List<String> tags = scriptTagMapper.getScriptTags(script.getId());
-            vo.setTags(tags);
-            
-            // 设置推荐信息
-            vo.setRecommendationType(2); // 内容推荐
+            vo.setCategoryName(categoryNameMap.get(script.getCategoryId()));
+            vo.setTags(tagsMap.getOrDefault(script.getId(), Collections.emptyList()));
+            vo.setRecommendationType(2);
             vo.setRecommendReason("相似风格");
-            
-            // 计算内容相似度分数
+            vo.setIsFavorite(favoriteIds.contains(script.getId()));
+
             double contentScore = calculateContentSimilarityScore(sourceScript, script);
             vo.setRecommendScore(BigDecimal.valueOf(contentScore).setScale(2, RoundingMode.HALF_UP));
-            
-            // 检查是否收藏
-            if (userId != null) {
-                LambdaQueryWrapper<ScriptFavorite> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(ScriptFavorite::getUserId, userId)
-                       .eq(ScriptFavorite::getScriptId, script.getId());
-                vo.setIsFavorite(scriptFavoriteMapper.selectCount(wrapper) > 0);
-            } else {
-                vo.setIsFavorite(false);
-            }
-            
+
             return vo;
         }).collect(Collectors.toList());
     }
 
     /**
-     * 转换为推荐VO（使用真实的相似度分数计算）
+     * 转换为推荐VO（批量查询，避免 N+1）
      */
-    private List<RecommendationVO> convertToRecommendationVOs(List<Script> scripts, Long userId, 
+    private List<RecommendationVO> convertToRecommendationVOs(List<Script> scripts, Long userId,
                                                               Integer recommendationType, String reason) {
+        if (scripts.isEmpty()) return Collections.emptyList();
+
+        // 批量查询分类名、标签、收藏状态
+        Map<Long, String> categoryNameMap = batchGetCategoryNames(scripts);
+        Map<Long, List<String>> tagsMap = batchGetTags(scripts);
+        Set<Long> favoriteIds = batchGetFavoriteIds(userId, scripts);
+
+        // 批量计算用户偏好分（只查一次）
+        List<UserPreference> preferences = Collections.emptyList();
+        if (userId != null) {
+            try {
+                preferences = userPreferenceMapper.getUserTopPreferences(userId, 10);
+            } catch (Exception e) {
+                log.debug("获取用户偏好失败: {}", e.getMessage());
+            }
+        }
+        final List<UserPreference> finalPreferences = preferences;
+
         return scripts.stream().map(script -> {
             RecommendationVO vo = new RecommendationVO();
             BeanUtils.copyProperties(script, vo);
-            
-            // 设置分类名称
-            if (script.getCategoryId() != null) {
-                ScriptCategory category = scriptCategoryMapper.selectById(script.getCategoryId());
-                if (category != null) {
-                    vo.setCategoryName(category.getName());
-                }
-            }
-            
-            // 设置标签
-            List<String> tags = scriptTagMapper.getScriptTags(script.getId());
-            vo.setTags(tags);
-            
-            // 设置推荐信息
+
+            vo.setCategoryName(categoryNameMap.get(script.getCategoryId()));
+            vo.setTags(tagsMap.getOrDefault(script.getId(), Collections.emptyList()));
             vo.setRecommendationType(recommendationType);
             vo.setRecommendReason(reason);
-            
-            // 使用真实的综合分数计算替代随机分数
-            double realScore = calculateComprehensiveScore(script, userId, recommendationType, reason);
+            vo.setIsFavorite(favoriteIds.contains(script.getId()));
+
+            double realScore = calculateComprehensiveScoreWithPrefs(script, userId, recommendationType, finalPreferences);
             vo.setRecommendScore(BigDecimal.valueOf(realScore).setScale(2, RoundingMode.HALF_UP));
-            
-            // 检查是否收藏（如果有用户ID）
-            if (userId != null) {
-                LambdaQueryWrapper<ScriptFavorite> wrapper = new LambdaQueryWrapper<>();
-                wrapper.eq(ScriptFavorite::getUserId, userId)
-                       .eq(ScriptFavorite::getScriptId, script.getId());
-                vo.setIsFavorite(scriptFavoriteMapper.selectCount(wrapper) > 0);
-            } else {
-                vo.setIsFavorite(false);
-            }
-            
+
             return vo;
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * 综合分数计算（接受已查好的偏好列表，避免重复查 DB）
+     */
+    private double calculateComprehensiveScoreWithPrefs(Script script, Long userId,
+                                                        Integer recommendationType,
+                                                        List<UserPreference> preferences) {
+        double score = 60.0;
+
+        if (script.getRating() != null) {
+            score += script.getRating().doubleValue() / 5.0 * 20;
+        }
+
+        switch (recommendationType != null ? recommendationType : 0) {
+            case 1: score += 5; break;  // 协同过滤
+            case 2: score += 3; break;  // 内容推荐
+            case 3: score += 8; break;  // 热门推荐
+            case 4: score += 10; break; // 历史推荐
+        }
+
+        if (script.getIsExclusive() != null && script.getIsExclusive() == 1) {
+            score += 5;
+        }
+
+        if (userId != null && !preferences.isEmpty()) {
+            double prefScore = calculateUserPreferenceScore(script, preferences);
+            score += prefScore * 0.15;
+        }
+
+        return Math.min(100.0, Math.max(0.0, score));
     }
 
     /**
@@ -986,16 +997,26 @@ public class RecommendationServiceImpl implements RecommendationService {
     }
 
     /**
-     * 计算行为分数
+     * 计算行为分数（含时间衰减）
+     * 衰减公式：score * e^(-λ * daysSince)，λ = 0.02（约35天衰减到50%）
      */
     private double calculateActionScore(Integer actionType) {
+        return calculateActionScore(actionType, LocalDateTime.now());
+    }
+
+    private double calculateActionScore(Integer actionType, LocalDateTime actionTime) {
+        double baseScore;
         switch (actionType) {
-            case 1: return 1.0;  // 浏览
-            case 2: return 3.0;  // 收藏
-            case 3: return 5.0;  // 预约
-            case 4: return 2.0;  // 评价
-            default: return 1.0;
+            case 1: baseScore = 1.0; break;  // 浏览
+            case 2: baseScore = 3.0; break;  // 收藏
+            case 3: baseScore = 5.0; break;  // 预约
+            case 4: baseScore = 2.0; break;  // 评价
+            default: baseScore = 1.0;
         }
+        // 时间衰减：距今越久权重越低，最低保留 10%
+        long daysSince = ChronoUnit.DAYS.between(actionTime, LocalDateTime.now());
+        double decayFactor = Math.max(0.1, Math.exp(-0.02 * daysSince));
+        return baseScore * decayFactor;
     }
 
     /**

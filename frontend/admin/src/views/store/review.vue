@@ -3,7 +3,7 @@
     <el-card>
       <!-- 查询表单 -->
       <el-form :inline="true" :model="queryForm" class="query-form">
-        <el-form-item label="门店">
+        <el-form-item v-if="!isStoreAdmin" label="门店">
           <el-select v-model="queryForm.storeId" placeholder="请选择门店" clearable filterable>
             <el-option
               v-for="store in storeList"
@@ -15,7 +15,7 @@
         </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="handleQuery">查询</el-button>
-          <el-button @click="handleReset">重置</el-button>
+          <el-button v-if="!isStoreAdmin" @click="handleReset">重置</el-button>
         </el-form-item>
       </el-form>
 
@@ -168,8 +168,13 @@ const replyFormRef = ref(null)
 const storeList = ref([])
 const currentReview = ref({})
 
+// 门店管理员身份
+const loginType = localStorage.getItem('admin-login-type') || 'admin'
+const isStoreAdmin = loginType === 'store'
+const fixedStoreId = isStoreAdmin ? Number(localStorage.getItem('admin-store-id')) : null
+
 const queryForm = reactive({
-  storeId: null,
+  storeId: fixedStoreId || null,
   page: 1,
   pageSize: 10
 })
@@ -194,7 +199,10 @@ const fetchData = async () => {
       page: queryForm.page,
       pageSize: queryForm.pageSize
     }
-    if (queryForm.storeId) {
+    // 门店管理员固定使用自己的门店ID
+    if (fixedStoreId) {
+      params.storeId = fixedStoreId
+    } else if (queryForm.storeId) {
       params.storeId = queryForm.storeId
     }
     const res = await request.get('/store/review/page', { params })

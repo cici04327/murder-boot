@@ -49,11 +49,11 @@
                 </el-button>
               </div>
               
-              <!-- 滚动提示 -->
-              <div class="scroll-indicator">
-                <span class="scroll-text">向下滑动探索更多</span>
-                <span class="scroll-arrow">↓</span>
-              </div>
+            </div>
+            <!-- 滚动提示（放在 banner-item 底部，独立于 banner-content） -->
+            <div class="scroll-indicator">
+              <span class="scroll-text">向下滑动探索更多</span>
+              <span class="scroll-arrow">↓</span>
             </div>
           </div>
         </el-carousel-item>
@@ -494,7 +494,7 @@ const banners = ref([
     title: '在线预约，快速便捷',
     description: '随时随地预约，享受优惠',
     image: PLACEHOLDERS.POSTER3,
-    link: '/reservation/create',
+    link: '/script',
     buttonText: '立即预约',
     badge: '限时优惠'
   },
@@ -532,7 +532,7 @@ const quickEntries = ref([
     description: '一键预约剧本体验',
     emoji: '🎭',
     color: '#faad14',
-    path: '/reservation/create'
+    path: '/script'
   },
   {
     id: 4,
@@ -1311,6 +1311,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   color: rgba(255, 255, 255, 0.8);
+  z-index: 3;
+  pointer-events: none;
 }
 
 .scroll-text {
@@ -1336,7 +1338,7 @@ onBeforeUnmount(() => {
 
 /* 数据统计区域 - 剧本杀主题 */
 .statistics-section {
-  margin: -60px auto 40px;
+  margin: 40px auto;
   max-width: 1200px;
   padding: 0 20px;
   position: relative;
@@ -1351,7 +1353,7 @@ onBeforeUnmount(() => {
   margin-bottom: 20px;
   font-size: 18px;
   font-weight: 600;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .stats-icon {
@@ -1438,10 +1440,8 @@ onBeforeUnmount(() => {
 /* 快速入口 */
 /* 快速入口 - 剧本杀主题 */
 .quick-entry {
-  margin-bottom: 60px;
+  margin: 0 auto 60px;
   max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
   padding: 0 20px;
 }
 

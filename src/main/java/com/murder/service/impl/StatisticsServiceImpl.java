@@ -457,6 +457,126 @@ public class StatisticsServiceImpl implements StatisticsService {
         return result;
     }
 
+    @Override
+    public Map<String, Object> getStoreDailyReport(Long storeId) {
+        Map<String, Object> result = new HashMap<>();
+        String sw = storeId != null ? " AND store_id = " + storeId : "";
+
+        LocalDateTime todayStart     = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
+        LocalDateTime yesterdayStart = todayStart.minusDays(1);
+        LocalDateTime weekStart      = todayStart.minusDays(todayStart.getDayOfWeek().getValue() - 1);
+        LocalDateTime monthStart     = LocalDateTime.of(LocalDate.now().withDayOfMonth(1), LocalTime.MIN);
+
+        // ── 今日 ──
+        String revSql = "SELECT COALESCE(SUM(actual_amount),0) FROM reservation_order WHERE create_time>=? AND create_time<? AND pay_status=1 AND is_deleted=0" + sw;
+        String cntSql = "SELECT COUNT(*) FROM reservation_order WHERE create_time>=? AND create_time<? AND is_deleted=0" + sw;
+        String paidSql= "SELECT COUNT(*) FROM reservation_order WHERE create_time>=? AND create_time<? AND pay_status=1 AND is_deleted=0" + sw;
+
+        BigDecimal todayRevenue    = safeQueryBig(revSql,  todayStart, todayStart.plusDays(1));
+        BigDecimal yesterdayRevenue= safeQueryBig(revSql,  yesterdayStart, todayStart);
+        BigDecimal weekRevenue     = safeQueryBig(revSql,  weekStart,  todayStart.plusDays(1));
+        BigDecimal monthRevenue    = safeQueryBig(revSql,  monthStart, todayStart.plusDays(1));
+
+        int todayCnt    = safeQueryInt(cntSql,  todayStart, todayStart.plusDays(1));
+        int yesterdayCnt= safeQueryInt(cntSql,  yesterdayStart, todayStart);
+        int weekCnt     = safeQueryInt(cntSql,  weekStart,  todayStart.plusDays(1));
+        int monthCnt    = safeQueryInt(cntSql,  monthStart, todayStart.plusDays(1));
+
+        int todayPaid   = safeQueryInt(paidSql, todayStart, todayStart.plusDays(1));
+        int weekPaid    = safeQueryInt(paidSql, weekStart,  todayStart.plusDays(1));
+        int monthPaid   = safeQueryInt(paidSql, monthStart, todayStart.plusDays(1));
+
+        // 环比增长率（今日 vs 昨日）
+        BigDecimal revenueGrowth     = calculateGrowth(todayRevenue, yesterdayRevenue);
+        BigDecimal reservationGrowth = calculateGrowth(BigDecimal.valueOf(todayCnt), BigDecimal.valueOf(yesterdayCnt));
+
+        // 平均客单价
+        BigDecimal todayAvg = todayPaid > 0
+                ? todayRevenue.divide(BigDecimal.valueOf(todayPaid), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        // 今日各小时预约分布（热力图数据）
+        List<Map<String, Object>> hourlyDist = new ArrayList<>();
+        try {
+            String hourSql = "SELECT HOUR(create_time) as h, COUNT(*) as cnt " +
+                    "FROM reservation_order WHERE create_time>=? AND create_time<? AND is_deleted=0" + sw +
+                    " GROUP BY HOUR(create_time) ORDER BY h";
+            hourlyDist = jdbcTemplate.queryForList(hourSql, todayStart, todayStart.plusDays(1));
+        } catch (Exception e) { log.warn("小时分布查询失败: {}", e.getMessage()); }
+
+        // 本周每日营收趋势
+        List<String> weekDates   = new ArrayList<>();
+        List<BigDecimal> weekRevs= new ArrayList<>();
+        List<Integer> weekCnts   = new ArrayList<>();
+        try {
+            String weekTrendSql = "SELECT DATE(create_time) as d, " +
+                    "SUM(CASE WHEN pay_status=1 THEN actual_amount ELSE 0 END) as rev, COUNT(*) as cnt " +
+                    "FROM reservation_order WHERE create_time>=? AND create_time<? AND is_deleted=0" + sw +
+                    " GROUP BY DATE(create_time) ORDER BY d";
+            List<Map<String, Object>> rows = jdbcTemplate.queryForList(weekTrendSql, weekStart, todayStart.plusDays(1));
+            for (Map<String, Object> row : rows) {
+                weekDates.add(String.valueOf(row.get("d")));
+                Object rev = row.get("rev");
+                weekRevs.add(rev != null ? new BigDecimal(rev.toString()).setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO);
+                weekCnts.add(((Number) row.get("cnt")).intValue());
+            }
+        } catch (Exception e) { log.warn("周趋势查询失败: {}", e.getMessage()); }
+
+        // 今日剧本热度 TOP5
+        List<Map<String, Object>> topScripts = new ArrayList<>();
+        try {
+            String topSql = "SELECT s.name as scriptName, COUNT(r.id) as cnt, " +
+                    "SUM(CASE WHEN r.pay_status=1 THEN r.actual_amount ELSE 0 END) as rev " +
+                    "FROM reservation_order r LEFT JOIN script s ON r.script_id=s.id " +
+                    "WHERE r.create_time>=? AND r.create_time<? AND r.is_deleted=0" + sw +
+                    " GROUP BY r.script_id, s.name ORDER BY cnt DESC LIMIT 5";
+            topScripts = jdbcTemplate.queryForList(topSql, todayStart, todayStart.plusDays(1));
+        } catch (Exception e) { log.warn("剧本热度查询失败: {}", e.getMessage()); }
+
+        // 今日退款/取消数
+        int todayRefund = safeQueryInt(
+                "SELECT COUNT(*) FROM reservation_order WHERE create_time>=? AND create_time<? AND refund_status=2 AND is_deleted=0" + sw,
+                todayStart, todayStart.plusDays(1));
+        int todayCancel = safeQueryInt(
+                "SELECT COUNT(*) FROM reservation_order WHERE create_time>=? AND create_time<? AND status IN(3,4) AND is_deleted=0" + sw,
+                todayStart, todayStart.plusDays(1));
+
+        result.put("todayRevenue",      todayRevenue);
+        result.put("yesterdayRevenue",  yesterdayRevenue);
+        result.put("weekRevenue",       weekRevenue);
+        result.put("monthRevenue",      monthRevenue);
+        result.put("revenueGrowth",     revenueGrowth);
+        result.put("todayReservations", todayCnt);
+        result.put("yesterdayReservations", yesterdayCnt);
+        result.put("weekReservations",  weekCnt);
+        result.put("monthReservations", monthCnt);
+        result.put("reservationGrowth", reservationGrowth);
+        result.put("todayPaid",         todayPaid);
+        result.put("weekPaid",          weekPaid);
+        result.put("monthPaid",         monthPaid);
+        result.put("todayAvgAmount",    todayAvg);
+        result.put("todayRefund",       todayRefund);
+        result.put("todayCancel",       todayCancel);
+        result.put("hourlyDistribution",hourlyDist);
+        result.put("weekTrendDates",    weekDates);
+        result.put("weekTrendRevenues", weekRevs);
+        result.put("weekTrendCounts",   weekCnts);
+        result.put("topScripts",        topScripts);
+        result.put("storeId",           storeId);
+        result.put("generatedAt",       LocalDateTime.now().toString());
+        return result;
+    }
+
+    private BigDecimal safeQueryBig(String sql, Object... args) {
+        try {
+            BigDecimal r = jdbcTemplate.queryForObject(sql, BigDecimal.class, args);
+            return r != null ? r : BigDecimal.ZERO;
+        } catch (Exception e) {
+            log.warn("safeQueryBig: {}", e.getMessage());
+            return BigDecimal.ZERO;
+        }
+    }
+
     /** 安全执行 COUNT 查询，失败返回0 */
     private int safeQueryInt(String sql, Object... args) {
         try {

@@ -3,7 +3,6 @@ package com.murder.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import java.io.Serializable;
-import java.math.BigDecimal;
 
 /**
  * 剧本评价DTO
@@ -19,7 +18,7 @@ public class ScriptReviewDTO implements Serializable {
     private Long userId;
     
     @Schema(description = "评分")
-    private BigDecimal rating;
+    private Integer rating;
     
     @Schema(description = "评价内容")
     private String content;

@@ -219,11 +219,15 @@ public class UserPointsController {
     }
     
     /**
-     * 收藏剧本奖励积分
+     * 收藏剧本奖励积分（内部调用，强制使用当前登录用户）
      */
     @PostMapping("/reward-favorite")
     @Operation(summary = "收藏剧本奖励积分")
-    public Result<String> rewardForFavorite(@RequestParam Long userId) {
+    public Result<String> rewardForFavorite() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("请先登录");
+        }
         log.info("收藏剧本奖励积分: userId={}", userId);
         try {
             userPointsService.rewardForFavorite(userId);
@@ -235,13 +239,18 @@ public class UserPointsController {
     }
     
     /**
-     * 完成预约奖励积分
+     * 完成预约奖励积分（仅管理端可调用）
      */
     @PostMapping("/reward-reservation")
     @Operation(summary = "完成预约奖励积分")
     public Result<String> rewardForReservation(
             @RequestParam Long userId, 
             @RequestParam Long reservationId) {
+        String clientType = getClientType();
+        if (!"admin".equals(clientType)) {
+            log.warn("非管理端尝试调用奖励积分接口: userId={}", userId);
+            return Result.error("无权操作");
+        }
         log.info("完成预约奖励积分: userId={}, reservationId={}", userId, reservationId);
         try {
             userPointsService.rewardForReservation(userId, reservationId);
@@ -253,17 +262,22 @@ public class UserPointsController {
     }
     
     /**
-     * 预约支付成功奖励积分
+     * 预约支付成功奖励积分（仅管理端可调用）
      */
     @PostMapping("/reward/reservation")
     @Operation(summary = "预约支付成功奖励积分")
     public Result<String> rewardForPayment(
             @RequestParam Long userId, 
             @RequestParam Long reservationId) {
+        String clientType = getClientType();
+        if (!"admin".equals(clientType)) {
+            log.warn("非管理端尝试调用支付奖励接口: userId={}", userId);
+            return Result.error("无权操作");
+        }
         log.info("预约支付成功奖励积分: userId={}, reservationId={}", userId, reservationId);
         try {
             userPointsService.rewardForReservation(userId, reservationId);
-            return Result.success("支付成功，获�?00积分奖励");
+            return Result.success("支付成功，获得100积分奖励");
         } catch (Exception e) {
             log.error("预约支付奖励失败: {}", e.getMessage());
             return Result.error(e.getMessage());
@@ -271,19 +285,24 @@ public class UserPointsController {
     }
     
     /**
-     * 退款扣除积分
+     * 退款扣除积分（仅管理端可调用）
      */
     @PostMapping("/deduct/refund")
     @Operation(summary = "退款扣除积分")
     public Result<String> deductForRefund(
             @RequestParam Long userId, 
             @RequestParam Long reservationId) {
+        String clientType = getClientType();
+        if (!"admin".equals(clientType)) {
+            log.warn("非管理端尝试调用退款扣积分接口: userId={}", userId);
+            return Result.error("无权操作");
+        }
         log.info("退款扣除积分: userId={}, reservationId={}", userId, reservationId);
         try {
             userPointsService.deductForRefund(userId, reservationId);
-            return Result.success("退款成功，已扣�?00积分");
+            return Result.success("退款成功，已扣除100积分");
         } catch (Exception e) {
-            log.error("退款扣除积分失�? {}", e.getMessage());
+            log.error("退款扣除积分失败: {}", e.getMessage());
             return Result.error(e.getMessage());
         }
     }

@@ -181,6 +181,18 @@
                   <span class="ri-label">房间</span>
                   <span class="ri-value">🚪 {{ selectedSchedule.roomName }}</span>
                 </div>
+                <!-- 排期绑定的 DM 信息 -->
+                <div class="readonly-row" v-if="selectedSchedule.dmName">
+                  <span class="ri-label">主持 DM</span>
+                  <span class="ri-value dm-readonly-info">
+                    <el-avatar :size="28" :src="selectedSchedule.dmAvatar" style="vertical-align:middle;margin-right:6px">🎭</el-avatar>
+                    {{ selectedSchedule.dmName }}
+                  </span>
+                </div>
+                <div class="readonly-row" v-else>
+                  <span class="ri-label">主持 DM</span>
+                  <span class="ri-value" style="color:#999">待分配</span>
+                </div>
               </div>
               <!-- 自由模式：下拉选择 -->
               <el-form-item prop="storeId" v-else>
@@ -206,6 +218,38 @@
                 </el-select>
               </el-form-item>
               
+              <!-- DM 选择（自由模式，门店已选且有 DM 时显示） -->
+              <el-form-item v-if="!selectedSchedule && dmOptions.length > 0">
+                <template #label><span class="form-label">选择主持 DM（可选）</span></template>
+                <div class="dm-select-grid">
+                  <!-- 不选 DM 选项 -->
+                  <div
+                    class="dm-card"
+                    :class="{ selected: selectedDmId === null }"
+                    @click="selectedDmId = null"
+                  >
+                    <div class="dm-card-avatar">🎭</div>
+                    <div class="dm-card-name">不指定</div>
+                    <div class="dm-card-check" v-if="selectedDmId === null">✓</div>
+                  </div>
+                  <div
+                    v-for="dm in dmOptions"
+                    :key="dm.id"
+                    class="dm-card"
+                    :class="{ selected: selectedDmId === dm.id }"
+                    @click="selectedDmId = dm.id"
+                  >
+                    <el-avatar :size="44" :src="dm.avatar" class="dm-card-avatar">🎭</el-avatar>
+                    <div class="dm-card-name">{{ dm.name }}</div>
+                    <el-rate :model-value="Number(dm.rating)" disabled show-score size="small" />
+                    <div class="dm-card-tags">
+                      <el-tag v-for="tag in (dm.styleTagList || []).slice(0,2)" :key="tag" size="small">{{ tag }}</el-tag>
+                    </div>
+                    <div class="dm-card-check" v-if="selectedDmId === dm.id">✓</div>
+                  </div>
+                </div>
+              </el-form-item>
+
               <!-- 房间选择（自由模式才显示） -->
               <el-form-item prop="roomId" v-if="!selectedSchedule && rooms.length > 0">
                 <div class="room-label">选择房间</div>
@@ -548,6 +592,7 @@ import { createGroup, getGroupList } from '@/api/group'
 import { getMyCoupons } from '@/api/coupon'
 import { getUserVipInfo } from '@/api/vip'
 import { useUserStore } from '@/store/user'
+import request from '@/utils/request'
 
 const route = useRoute()
 const router = useRouter()
@@ -607,6 +652,7 @@ const groupCount = ref(null)
 let groupCheckTimer = null
 
 // VIP折扣相关
+const vipInfo = ref(null)           // 完整VIP信息对象
 const vipDiscountRate = ref(null)   // 折扣率，如 0.9 表示9折
 const vipLevelName = ref('')        // 等级名称，如"银章侦探"
 const vipDiscountMap = { 1: 0.95, 2: 0.90, 3: 0.85, 4: 0.80 }
@@ -615,21 +661,45 @@ const vipLevelNameMap = { 1: '见习侦探', 2: '银章侦探', 3: '金章侦探
 const loadVipInfo = async () => {
   try {
     const res = await getUserVipInfo()
-    if ((res.code === 1 || res.code === 200) && res.data?.isVip) {
-      const level = res.data.level
-      vipDiscountRate.value = vipDiscountMap[level] || null
-      vipLevelName.value = vipLevelNameMap[level] || ''
+    if ((res.code === 1 || res.code === 200) && res.data) {
+      vipInfo.value = res.data
+      if (res.data.isVip) {
+        const level = res.data.level
+        vipDiscountRate.value = vipDiscountMap[level] || null
+        vipLevelName.value = vipLevelNameMap[level] || ''
+      } else {
+        vipDiscountRate.value = null
+        vipLevelName.value = ''
+      }
     } else {
+      vipInfo.value = null
       vipDiscountRate.value = null
       vipLevelName.value = ''
     }
   } catch (e) {
+    vipInfo.value = null
     vipDiscountRate.value = null
   }
 }
 
 // 当前选中的排期对象（从可约场次列表点击进来时填充）
 const selectedSchedule = ref(null)
+
+// DM 相关
+const dmOptions = ref([])
+const selectedDmId = ref(null)
+
+const loadDmOptions = async (storeId) => {
+  if (!storeId) { dmOptions.value = []; return }
+  try {
+    const res = await request({ url: '/dm/list', method: 'get', params: { storeId } })
+    if (res.code === 1 || res.code === 200) {
+      dmOptions.value = res.data || []
+    }
+  } catch (e) {
+    dmOptions.value = []
+  }
+}
 
 const form = reactive({
   scriptId: null,
@@ -925,15 +995,19 @@ const handleCouponChange = (couponId) => {
 const handleStoreChange = async (storeId) => {
   form.roomId = null
   rooms.value = []
-  
+  selectedDmId.value = null
+  dmOptions.value = []
+
   try {
-    const res = await getStoreRooms(storeId)
-    if (res.data) {
-      rooms.value = res.data
+    const [roomRes] = await Promise.all([
+      getStoreRooms(storeId),
+      loadDmOptions(storeId)
+    ])
+    if (roomRes.data) {
+      rooms.value = roomRes.data
     }
   } catch (error) {
     console.error('加载房间失败:', error)
-    // 模拟数据
     rooms.value = [
       { id: 1, name: '推理房A', capacity: 6, status: 1 },
       { id: 2, name: '推理房B', capacity: 8, status: 1 }
@@ -1013,6 +1087,9 @@ const handleSubmit = async () => {
         const actualAmount = parseFloat(finalPrice.value)
         
         // 构建预约数据
+        // 确定 dmId：排期驱动用排期绑定的 DM，自由模式用用户选择的 DM
+        const dmId = selectedSchedule.value?.dmId || selectedDmId.value || null
+
         const reservationData = {
           storeId: form.storeId,
           roomId: form.roomId,
@@ -1030,7 +1107,8 @@ const handleSubmit = async () => {
           remark: form.remark,
           userId: userStore.userInfo?.id,
           userCouponId: form.userCouponId || null,
-          scheduleId: form.scheduleId || null  // 关联排期ID，后端用于同步 currentPlayers
+          scheduleId: form.scheduleId || null,  // 关联排期ID，后端用于同步 currentPlayers
+          dmId: dmId                            // 主持 DM
         }
         console.log('预约提交数据:', reservationData)
         
@@ -1128,6 +1206,19 @@ watch(rooms, (newRooms) => {
 })
 
 onMounted(async () => {
+  // 没有 scheduleId 时强制跳转排期选择页，统一走排期预约流程
+  if (!route.query.scheduleId) {
+    const scriptIdParam = route.query.scriptId
+    if (scriptIdParam) {
+      ElMessage.warning('请先选择场次再进行预约')
+      router.replace(`/reservation/schedule?scriptId=${scriptIdParam}`)
+    } else {
+      ElMessage.warning('请先选择剧本和场次')
+      router.replace('/script/list')
+    }
+    return
+  }
+
   // 先加载剧本、门店列表、优惠券和VIP信息
   await Promise.all([loadScripts(), loadStores(), loadAvailableCoupons(), loadVipInfo()])
   
@@ -1243,6 +1334,73 @@ onMounted(async () => {
   font-size: 15px;
   font-weight: 600;
   color: #fff;
+}
+
+/* DM 只读展示 */
+.dm-readonly-info {
+  display: flex;
+  align-items: center;
+}
+
+/* DM 选择网格 */
+.dm-select-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.dm-card {
+  position: relative;
+  width: 110px;
+  padding: 12px 8px;
+  border: 2px solid #e4e7ed;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #fff;
+}
+
+.dm-card:hover {
+  border-color: #8b0000;
+  box-shadow: 0 2px 8px rgba(139,0,0,0.12);
+}
+
+.dm-card.selected {
+  border-color: #8b0000;
+  background: rgba(139,0,0,0.04);
+}
+
+.dm-card-avatar {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+
+.dm-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dm-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.dm-card-check {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: #8b0000;
+  font-weight: 700;
+  font-size: 14px;
 }
 
 .sb-remain {

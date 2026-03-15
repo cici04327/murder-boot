@@ -95,11 +95,11 @@
               </div>
               
               <div class="action-buttons">
-                <el-button type="primary" size="large" @click="handleReserve">
+                <el-button class="btn-reserve" size="large" @click="handleReserve">
                   <el-icon><Calendar /></el-icon>
                   立即预约
                 </el-button>
-                <el-button size="large" @click="handleCall">
+                <el-button class="btn-call" size="large" @click="handleCall">
                   <el-icon><Phone /></el-icon>
                   电话咨询
                 </el-button>
@@ -1330,6 +1330,73 @@ onMounted(() => {
   font-weight: 600;
 }
 
+/* 卡片头部 el-tag 深色主题适配（暂无排期、X间可预约、X分） */
+.card-header :deep(.el-tag) {
+  color: #fff !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.15) !important;
+  font-weight: 600;
+}
+
+.card-header :deep(.el-tag--success) {
+  background: rgba(103, 194, 58, 0.25) !important;
+  border-color: rgba(103, 194, 58, 0.5) !important;
+  color: #95e77d !important;
+}
+
+.card-header :deep(.el-tag--warning) {
+  background: rgba(230, 162, 60, 0.25) !important;
+  border-color: rgba(230, 162, 60, 0.5) !important;
+  color: #f5d18a !important;
+}
+
+.card-header :deep(.el-tag--danger) {
+  background: rgba(245, 108, 108, 0.25) !important;
+  border-color: rgba(245, 108, 108, 0.5) !important;
+  color: #f98989 !important;
+}
+
+.card-header :deep(.el-tag--info) {
+  background: rgba(144, 147, 153, 0.25) !important;
+  border-color: rgba(144, 147, 153, 0.5) !important;
+  color: #c0c4cc !important;
+}
+
+/* el-descriptions 深色主题适配 */
+.store-desc :deep(.el-descriptions__body) {
+  background: transparent !important;
+}
+
+.store-desc :deep(.el-descriptions__cell) {
+  background: transparent !important;
+}
+
+.store-desc :deep(.el-descriptions__label) {
+  color: rgba(255, 255, 255, 0.6) !important;
+  background: transparent !important;
+  font-size: 14px;
+}
+
+.store-desc :deep(.el-descriptions__content) {
+  color: rgba(255, 255, 255, 0.9) !important;
+  background: transparent !important;
+  font-size: 14px;
+}
+
+/* 评价对话框深色适配 */
+.store-desc :deep(.el-descriptions__table) {
+  background: transparent !important;
+}
+
+/* 地址行内距离标签 */
+.address-with-distance {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .review-count {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.6);
@@ -1385,7 +1452,70 @@ onMounted(() => {
   border: 1px solid rgba(139, 0, 0, 0.3);
 }
 
-/* 操作按钮 */
+/* 操作按钮区域 */
+.action-buttons {
+  display: flex;
+  gap: 14px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+}
+
+/* 立即预约按钮 */
+.action-buttons :deep(.btn-reserve) {
+  flex: 1;
+  min-width: 140px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  border: none !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #c0392b 0%, #8B0000 60%, #6b0000 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 18px rgba(139, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.action-buttons :deep(.btn-reserve:hover) {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 60%, #8B0000 100%) !important;
+  box-shadow: 0 6px 24px rgba(192, 57, 43, 0.6);
+  transform: translateY(-2px);
+}
+
+.action-buttons :deep(.btn-reserve:active) {
+  transform: translateY(0);
+  box-shadow: 0 2px 10px rgba(139, 0, 0, 0.4);
+}
+
+/* 电话咨询按钮 */
+.action-buttons :deep(.btn-call) {
+  flex: 1;
+  min-width: 140px;
+  height: 48px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(8px);
+  transition: all 0.3s ease;
+}
+
+.action-buttons :deep(.btn-call:hover) {
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.55) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.action-buttons :deep(.btn-call:active) {
+  transform: translateY(0);
+}
+
+/* 兼容旧的 store-actions */
 .store-actions {
   display: flex;
   gap: 12px;

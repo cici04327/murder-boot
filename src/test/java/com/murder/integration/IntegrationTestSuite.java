@@ -11,10 +11,15 @@ import org.junit.platform.suite.api.SuiteDisplayName;
 @Suite
 @SuiteDisplayName("剧本杀系统集成测试套件")
 @SelectClasses({
-        UserIntegrationTest.class,
-        StoreIntegrationTest.class,
+        CouponIntegrationTest.class,
+        FeedbackIntegrationTest.class,
+        NotificationIntegrationTest.class,
+        PaymentIntegrationTest.class,
+        ReservationIntegrationTest.class,
         ScriptIntegrationTest.class,
-        ReservationIntegrationTest.class
+        StoreIntegrationTest.class,
+        UserIntegrationTest.class,
+        VipIntegrationTest.class
 })
 public class IntegrationTestSuite {
     // 测试套件类，无需实现任何方法

@@ -392,7 +392,7 @@ function buildRoomUsage(schedules) {
 async function loadSummary() {
   const requests = [
     fetchAllRecords('/reservation/page'),
-    request.get('/reservation/page', { params: { page: 1, pageSize: 1, hasRefund: true } }),
+    request.get('/reservation/page', { params: { page: 1, pageSize: 1, refundStatus: 1 } }),
     fetchAllRecords('/store/review/page'),
     userService.get('/admin/notification/unread-count')
   ]

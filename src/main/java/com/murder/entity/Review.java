@@ -61,6 +61,16 @@ public class Review implements Serializable {
      * 服务评分
      */
     private Integer serviceRating;
+
+    /**
+     * DM ID（主持人）
+     */
+    private Long dmId;
+
+    /**
+     * DM 评分（1-5星）
+     */
+    private Integer dmRating;
     
     /**
      * 评价内容

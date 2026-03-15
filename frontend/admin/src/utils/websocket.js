@@ -93,17 +93,9 @@ class NotificationWebSocket {
    * 获取 WebSocket URL
    */
   getWebSocketUrl(userId) {
-    // 判断是开发环境还是生产环境
+    // 使用当前页面的 host（含端口），开发环境下 Vite 代理会将 /api/ws 转发到后端
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = window.location.hostname
-    
-    // 开发环境：使用前端开发服务器端口，通过Vite代理转发到后端
-    if (process.env.NODE_ENV === 'development') {
-      // 前端运行在3000端口，Vite会将 /api 代理到 localhost:8080
-      return `${protocol}//${host}:3000/api/ws/admin-notification?adminId=${userId}`
-    }
-    
-    // 生产环境：直接访问后端
+    const host = window.location.host
     return `${protocol}//${host}/api/ws/admin-notification?adminId=${userId}`
   }
 

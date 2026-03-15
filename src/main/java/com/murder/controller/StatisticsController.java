@@ -79,4 +79,16 @@ public class StatisticsController {
         log.info("获取经营看板数据: days={}, storeId={}", days, storeId);
         return Result.success(statisticsService.getOperationBoard(days, storeId));
     }
+
+    /**
+     * 门店营收日报（门店端专用）
+     * 返回今日/昨日/本周/本月营收、预约数、客单价、小时分布、剧本热度TOP5
+     */
+    @GetMapping("/store-daily-report")
+    @Operation(summary = "门店营收日报", description = "门店端专用，返回今日/昨日/本周/本月多维度营收数据")
+    public Result<java.util.Map<String, Object>> getStoreDailyReport(
+            @RequestParam(required = false) Long storeId) {
+        log.info("获取门店营收日报: storeId={}", storeId);
+        return Result.success(statisticsService.getStoreDailyReport(storeId));
+    }
 }

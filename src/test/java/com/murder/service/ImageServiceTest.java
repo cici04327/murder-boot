@@ -49,7 +49,7 @@ class ImageServiceTest {
     void testToCdnUrl_CdnDisabled() {
         // Given
         when(cdnConfig.isEnabled()).thenReturn(false);
-        String localUrl = "http://localhost:8080/upload/images/2025/01/test.jpg";
+        String localUrl = "/upload/images/2025/01/test.jpg";
 
         // When
         String result = imageService.toCdnUrl(localUrl);
@@ -132,7 +132,7 @@ class ImageServiceTest {
     void testGetThumbnailUrl_CdnDisabled() {
         // Given
         when(cdnConfig.isEnabled()).thenReturn(false);
-        String imageUrl = "http://localhost:8080/upload/images/test.jpg";
+        String imageUrl = "/upload/images/test.jpg";
 
         // When
         String result = imageService.getThumbnailUrl(imageUrl);

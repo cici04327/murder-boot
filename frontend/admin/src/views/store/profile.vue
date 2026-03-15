@@ -56,18 +56,20 @@
           
           <el-form-item label="营业时间" prop="openTime">
             <div class="time-range">
-              <el-time-picker 
-                v-model="form.openTime" 
-                placeholder="开门时间" 
-                format="HH:mm" 
-                value-format="HH:mm:ss"
+              <el-time-select
+                v-model="form.openTime"
+                placeholder="开门时间"
+                start="06:00"
+                step="00:30"
+                end="23:30"
               />
               <span class="time-separator">至</span>
-              <el-time-picker 
-                v-model="form.closeTime" 
-                placeholder="关门时间" 
-                format="HH:mm" 
-                value-format="HH:mm:ss"
+              <el-time-select
+                v-model="form.closeTime"
+                placeholder="关门时间"
+                start="06:00"
+                step="00:30"
+                end="23:30"
               />
             </div>
           </el-form-item>
@@ -204,6 +206,8 @@ const loadStoreInfo = async () => {
     if (res.code === 1 || res.code === 200) {
       const data = res.data
       Object.assign(store, data)
+      // el-time-select 需要 "HH:mm" 格式，后端返回 "HH:mm:ss"，截取前5位
+      const toHHmm = (t) => t ? String(t).substring(0, 5) : ''
       Object.assign(form, {
         id: data.id,
         name: data.name || '',
@@ -211,8 +215,8 @@ const loadStoreInfo = async () => {
         phone: data.phone || '',
         description: data.description || '',
         images: data.images || '',
-        openTime: data.openTime || '09:00:00',
-        closeTime: data.closeTime || '22:00:00',
+        openTime: toHHmm(data.openTime) || '09:00',
+        closeTime: toHHmm(data.closeTime) || '22:00',
         status: data.status ?? 1
       })
     }
@@ -272,34 +276,41 @@ const resetForm = () => {
 const handleSubmit = async () => {
   try {
     await formRef.value.validate()
-    
-    // 验证营业时间
-    if (form.openTime && form.closeTime && form.openTime >= form.closeTime) {
-      ElMessage.error('开门时间必须早于关门时间')
-      return
-    }
-    
-    submitting.value = true
-    
+  } catch {
+    // 表单验证失败，直接返回
+    return
+  }
+
+  // 验证营业时间
+  const openStr = typeof form.openTime === 'string' ? form.openTime : ''
+  const closeStr = typeof form.closeTime === 'string' ? form.closeTime : ''
+  if (openStr && closeStr && openStr >= closeStr) {
+    ElMessage.error('开门时间必须早于关门时间')
+    return
+  }
+
+  submitting.value = true
+  try {
+    // el-time-select 返回 "HH:mm"，后端需要 "HH:mm:ss"
+    const toHHmmss = (t) => t && t.length === 5 ? t + ':00' : (t || '')
     const res = await request.put('/store', {
       id: form.id,
       phone: form.phone,
       description: form.description,
       images: form.images,
-      openTime: form.openTime,
-      closeTime: form.closeTime,
+      openTime: toHHmmss(form.openTime),
+      closeTime: toHHmmss(form.closeTime),
       status: form.status
     })
-    
+
     if (res.code === 1 || res.code === 200) {
       ElMessage.success('门店信息更新成功')
-      // 更新本地存储的门店名称
-      localStorage.setItem('admin-store-name', form.name)
     } else {
       ElMessage.error(res.msg || '更新失败')
     }
   } catch (error) {
     console.error('提交失败', error)
+    ElMessage.error('保存失败，请重试')
   } finally {
     submitting.value = false
   }

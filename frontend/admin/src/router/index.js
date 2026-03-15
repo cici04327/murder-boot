@@ -24,8 +24,11 @@ const routes = [
   {
     path: '/store',
     component: Layout,
-    redirect: '/store/list',
-    meta: { title: '门店管理', icon: 'Shop', roles: ['admin'] },
+    redirect: (to) => {
+      const loginType = localStorage.getItem('admin-login-type')
+      return loginType === 'store' ? '/store/operation-board' : '/store/list'
+    },
+    meta: { title: '门店管理', icon: 'Shop', roles: ['admin', 'store'] },
     children: [
       {
         path: 'list',
@@ -56,7 +59,13 @@ const routes = [
         path: 'room',
         name: 'StoreRoom',
         component: () => import('@/views/store/room.vue'),
-        meta: { title: '房间管理', icon: 'Operation', roles: ['admin', 'store'] }
+        meta: { title: '房间管理', icon: 'Operation', roles: ['admin'] }
+      },
+      {
+        path: 'dm',
+        name: 'StoreDm',
+        component: () => import('@/views/store/dm.vue'),
+        meta: { title: 'DM管理', icon: 'Avatar', roles: ['admin', 'store'] }
       },
       {
         path: 'review',
@@ -69,20 +78,29 @@ const routes = [
         name: 'StoreProfile',
         component: () => import('@/views/store/profile.vue'),
         meta: { title: '门店信息', icon: 'Setting', roles: ['store'] }
+      },
+      {
+        path: 'daily-report',
+        name: 'StoreDailyReport',
+        component: () => import('@/views/store/daily-report.vue'),
+        meta: { title: '营收日报', icon: 'TrendCharts', roles: ['admin', 'store'] }
       }
     ]
   },
   {
     path: '/script',
     component: Layout,
-    redirect: '/script/list',
+    redirect: (to) => {
+      const loginType = localStorage.getItem('admin-login-type')
+      return loginType === 'store' ? '/script/schedule' : '/script/list'
+    },
     meta: { title: '剧本管理', icon: 'Reading', roles: ['admin', 'store'] },
     children: [
       {
         path: 'list',
         name: 'ScriptList',
         component: () => import('@/views/script/list.vue'),
-        meta: { title: '剧本列表', icon: 'List', roles: ['admin', 'store'] }
+        meta: { title: '剧本列表', icon: 'List', roles: ['admin'] }
       },
       {
         path: 'add',
@@ -107,7 +125,7 @@ const routes = [
         path: 'review',
         name: 'ScriptReview',
         component: () => import('@/views/script/review.vue'),
-        meta: { title: '剧本评价', icon: 'Comment', roles: ['admin', 'store'] }
+        meta: { title: '剧本评价', icon: 'Comment', roles: ['admin'] }
       },
       {
         path: 'schedule',
@@ -225,7 +243,7 @@ const routes = [
     path: '/coupon',
     component: Layout,
     redirect: '/coupon/list',
-    meta: { title: '优惠券管理', icon: 'Ticket', roles: ['admin'] },
+    meta: { title: '优惠券管理', icon: 'Ticket', roles: ['admin', 'store'] },
     children: [
       {
         path: 'list',
@@ -237,7 +255,7 @@ const routes = [
         path: 'user-coupon',
         name: 'UserCoupon',
         component: () => import('@/views/coupon/user-coupon.vue'),
-        meta: { title: '用户优惠券', icon: 'Tickets', roles: ['admin'] }
+        meta: { title: '用户优惠券', icon: 'Tickets', roles: ['admin', 'store'] }
       }
     ]
   },
@@ -266,6 +284,20 @@ const routes = [
         name: 'FeedbackList',
         component: () => import('@/views/feedback/list.vue'),
         meta: { title: '留言列表', icon: 'List', roles: ['admin'] }
+      }
+    ]
+  },
+  {
+    path: '/service',
+    component: Layout,
+    redirect: '/service/index',
+    meta: { title: '客服中心', icon: 'Service', roles: ['admin'] },
+    children: [
+      {
+        path: 'index',
+        name: 'ServiceCenter',
+        component: () => import('@/views/service/index.vue'),
+        meta: { title: '客服中心', icon: 'Service', roles: ['admin'] }
       }
     ]
   }

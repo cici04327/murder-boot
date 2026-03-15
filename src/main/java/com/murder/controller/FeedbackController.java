@@ -1,15 +1,20 @@
 package com.murder.controller;
 
 import com.murder.common.context.BaseContext;
+import com.murder.common.constant.JwtClaimsConstant;
+import com.murder.common.properties.JwtProperties;
 import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
+import com.murder.common.utils.JwtUtil;
 import com.murder.dto.FeedbackDTO;
 import com.murder.service.FeedbackService;
 import com.murder.vo.FeedbackVO;
+import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,19 +32,16 @@ public class FeedbackController {
     @Autowired
     private FeedbackService feedbackService;
 
+    @Autowired
+    private JwtProperties jwtProperties;
+
     /**
      * 提交留言（用户端）
      */
     @PostMapping("/submit")
     @Operation(summary = "提交留言")
     public Result<String> submit(@Valid @RequestBody FeedbackDTO feedbackDTO, HttpServletRequest request) {
-        // 尝试获取当前登录用户ID（可能为空，游客也可留言）
-        Long userId = null;
-        try {
-            userId = BaseContext.getCurrentId();
-        } catch (Exception e) {
-            log.debug("游客提交留言");
-        }
+        Long userId = resolveOptionalUserId(request);
         
         // 获取IP地址
         String ipAddress = getClientIp(request);
@@ -49,6 +51,43 @@ public class FeedbackController {
         
         feedbackService.submit(feedbackDTO, userId, ipAddress);
         return Result.success("留言提交成功，我们会尽快处理！");
+    }
+
+    /**
+     * 公开接口下，优先复用拦截器写入的上下文；没有上下文时再尝试从用户端 token 中解析用户ID。
+     */
+    private Long resolveOptionalUserId(HttpServletRequest request) {
+        try {
+            Long currentId = BaseContext.getCurrentId();
+            if (currentId != null) {
+                return currentId;
+            }
+        } catch (Exception ignored) {
+            // 公开接口可能未经过鉴权拦截，这里继续尝试从请求头解析用户 token。
+        }
+
+        String token = request.getHeader(jwtProperties.getUserTokenName());
+        if (!StringUtils.hasText(token) && StringUtils.hasText(jwtProperties.getTokenName())) {
+            token = request.getHeader(jwtProperties.getTokenName());
+        }
+        if (!StringUtils.hasText(token)) {
+            log.debug("游客提交留言");
+            return null;
+        }
+
+        try {
+            Claims claims = JwtUtil.parseJWT(jwtProperties.getUserSecretKey(), token);
+            Object userId = claims.get(JwtClaimsConstant.USER_ID);
+            if (userId instanceof Number number) {
+                return number.longValue();
+            }
+            if (userId instanceof String userIdText && StringUtils.hasText(userIdText)) {
+                return Long.valueOf(userIdText);
+            }
+        } catch (Exception e) {
+            log.debug("留言提交时解析用户 token 失败，按游客处理");
+        }
+        return null;
     }
 
     /**
@@ -123,11 +162,15 @@ public class FeedbackController {
     }
 
     /**
-     * 删除留言（管理端）
+     * 删除留言（仅超级管理员）
      */
     @DeleteMapping("/{id}")
     @Operation(summary = "删除留言")
     public Result<String> delete(@PathVariable Long id) {
+        String role = com.murder.common.context.BaseContext.getRole();
+        if (!"SUPER_ADMIN".equals(role)) {
+            throw new com.murder.common.exception.BaseException("无权限，仅超级管理员可删除留言");
+        }
         log.info("删除留言: id={}", id);
         feedbackService.delete(id);
         return Result.success("删除成功");

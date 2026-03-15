@@ -186,7 +186,7 @@
         <EmptyState
           v-if="!loading && reservations.length === 0"
           type="no-reservation"
-          @action="$router.push('/reservation/create')"
+          @action="$router.push('/script/list')"
         />
       </div>
 
@@ -346,6 +346,10 @@ const handleTabChange = () => {
 }
 
 const handlePay = (item) => {
+  if (!item?.id) {
+    ElMessage.error('预约ID无效')
+    return
+  }
   router.push(`/payment/${item.id}`)
 }
 

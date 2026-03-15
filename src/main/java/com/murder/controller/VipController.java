@@ -146,6 +146,20 @@ public class VipController {
     }
 
     /**
+     * 查询本月月度体验券发放状态（已发张数、下次发放倒计时）
+     */
+    @GetMapping("/monthly-coupon-status")
+    @Operation(summary = "查询本月月度体验券发放状态")
+    public Result<Map<String, Object>> getMonthlyCouponStatus() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("请先登录");
+        }
+        Map<String, Object> status = vipService.getMonthlyCouponStatus(userId);
+        return Result.success(status);
+    }
+
+    /**
      * 检查VIP状态
      */
     @GetMapping("/check-status")
