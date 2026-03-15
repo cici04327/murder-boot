@@ -17,6 +17,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
@@ -133,13 +134,26 @@ class ReviewServiceTest {
                 when(reviewMapper.insert(any(Review.class))).thenReturn(1);
                 doNothing().when(userPointsService).addPoints(anyLong(), anyInt(), anyString());
                 when(reviewMapper.selectList(any(LambdaQueryWrapper.class))).thenReturn(new ArrayList<>());
+                ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
                 // When
-                assertDoesNotThrow(() -> reviewService.create(testReviewDTO));
+                reviewService.create(testReviewDTO);
 
                 // Then
-                verify(reviewMapper, times(1)).insert(any(Review.class));
-                verify(userPointsService, times(1)).addPoints(eq(1L), anyInt(), anyString());
+                verify(reviewMapper, times(1)).insert(reviewCaptor.capture());
+                verify(userPointsService, times(1)).addPoints(1L, 65, "评价所得");
+
+                Review created = reviewCaptor.getValue();
+                assertEquals(100L, created.getReservationId());
+                assertEquals(1L, created.getUserId());
+                assertEquals(10L, created.getStoreId());
+                assertEquals(20L, created.getScriptId());
+                assertEquals(5L, created.getDmId());
+                assertEquals(5, created.getOverallRating());
+                assertEquals(2, created.getStatus());
+                assertEquals(65, created.getRewardPoints());
+                assertEquals(testReviewDTO.getImages(), created.getImages());
+                assertEquals(testReviewDTO.getContent(), created.getContent());
             }
         }
 
@@ -370,16 +384,19 @@ class ReviewServiceTest {
                 baseContextMock.when(BaseContext::getCurrentId).thenReturn(2L);
                 
                 when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
+                ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
                 // When
-                assertDoesNotThrow(() -> reviewService.audit(1L, 2, "已通过"));
+                reviewService.audit(1L, 2, "已通过");
 
                 // Then
-                verify(reviewMapper, times(1)).updateById(argThat(review ->
-                    review.getId().equals(1L) &&
-                    review.getStatus().equals(2) &&
-                    review.getAuditReason().equals("已通过")
-                ));
+                verify(reviewMapper, times(1)).updateById(reviewCaptor.capture());
+                Review updated = reviewCaptor.getValue();
+                assertEquals(1L, updated.getId());
+                assertEquals(2, updated.getStatus());
+                assertEquals("已通过", updated.getAuditReason());
+                assertEquals(2L, updated.getAuditUserId());
+                assertNotNull(updated.getAuditTime());
             }
         }
 
@@ -391,16 +408,19 @@ class ReviewServiceTest {
                 baseContextMock.when(BaseContext::getCurrentId).thenReturn(2L);
                 
                 when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
+                ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
                 // When
-                assertDoesNotThrow(() -> reviewService.audit(1L, 3, "违反社区规则"));
+                reviewService.audit(1L, 3, "违反社区规则");
 
                 // Then
-                verify(reviewMapper, times(1)).updateById(argThat(review ->
-                    review.getId().equals(1L) &&
-                    review.getStatus().equals(3) &&
-                    review.getAuditReason().equals("违反社区规则")
-                ));
+                verify(reviewMapper, times(1)).updateById(reviewCaptor.capture());
+                Review updated = reviewCaptor.getValue();
+                assertEquals(1L, updated.getId());
+                assertEquals(3, updated.getStatus());
+                assertEquals("违反社区规则", updated.getAuditReason());
+                assertEquals(2L, updated.getAuditUserId());
+                assertNotNull(updated.getAuditTime());
             }
         }
 
@@ -412,12 +432,18 @@ class ReviewServiceTest {
                 baseContextMock.when(BaseContext::getCurrentId).thenReturn(null);
                 
                 when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
+                ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
                 // When & Then
-                assertDoesNotThrow(() -> reviewService.audit(1L, 2, "已通过"));
-                verify(reviewMapper, times(1)).updateById(argThat(review ->
-                    review.getAuditUserId() == null
-                ));
+                reviewService.audit(1L, 2, "已通过");
+                verify(reviewMapper, times(1)).updateById(reviewCaptor.capture());
+
+                Review updated = reviewCaptor.getValue();
+                assertEquals(1L, updated.getId());
+                assertEquals(2, updated.getStatus());
+                assertEquals("已通过", updated.getAuditReason());
+                assertNull(updated.getAuditUserId());
+                assertNotNull(updated.getAuditTime());
             }
         }
 
@@ -475,16 +501,17 @@ class ReviewServiceTest {
             // Given
             String replyContent = "感谢您的评价，我们会继续努力！";
             when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
+            ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
             // When
-            assertDoesNotThrow(() -> reviewService.reply(1L, replyContent));
+            reviewService.reply(1L, replyContent);
 
             // Then
-            verify(reviewMapper, times(1)).updateById(argThat(review ->
-                review.getId().equals(1L) &&
-                review.getReplyContent().equals(replyContent) &&
-                review.getReplyTime() != null
-            ));
+            verify(reviewMapper, times(1)).updateById(reviewCaptor.capture());
+            Review updated = reviewCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(replyContent, updated.getReplyContent());
+            assertNotNull(updated.getReplyTime());
         }
 
         @Test
@@ -493,15 +520,17 @@ class ReviewServiceTest {
             // Given
             String replyContent = "";
             when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
+            ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
             // When
-            assertDoesNotThrow(() -> reviewService.reply(1L, replyContent));
+            reviewService.reply(1L, replyContent);
 
             // Then
-            verify(reviewMapper, times(1)).updateById(argThat(review ->
-                review.getId().equals(1L) &&
-                review.getReplyContent().equals("")
-            ));
+            verify(reviewMapper, times(1)).updateById(reviewCaptor.capture());
+            Review updated = reviewCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals("", updated.getReplyContent());
+            assertNotNull(updated.getReplyTime());
         }
 
         @Test
@@ -514,15 +543,17 @@ class ReviewServiceTest {
             }
             String replyContent = sb.toString();
             when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
+            ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
             // When
-            assertDoesNotThrow(() -> reviewService.reply(1L, replyContent));
+            reviewService.reply(1L, replyContent);
 
             // Then
-            verify(reviewMapper, times(1)).updateById(argThat(review ->
-                review.getId().equals(1L) &&
-                review.getReplyContent().equals(replyContent)
-            ));
+            verify(reviewMapper, times(1)).updateById(reviewCaptor.capture());
+            Review updated = reviewCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(replyContent, updated.getReplyContent());
+            assertNotNull(updated.getReplyTime());
         }
 
         @Test
@@ -590,7 +621,7 @@ class ReviewServiceTest {
             when(reviewMapper.deleteById(1L)).thenReturn(1);
 
             // When
-            assertDoesNotThrow(() -> reviewService.delete(1L));
+            reviewService.delete(1L);
 
             // Then
             verify(reviewMapper, times(1)).deleteById(1L);
@@ -603,7 +634,7 @@ class ReviewServiceTest {
             when(reviewMapper.deleteById(999L)).thenReturn(0);
 
             // When
-            assertDoesNotThrow(() -> reviewService.delete(999L));
+            reviewService.delete(999L);
 
             // Then
             verify(reviewMapper, times(1)).deleteById(999L);
@@ -620,13 +651,21 @@ class ReviewServiceTest {
             // Given
             when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
             when(reviewMapper.selectById(1L)).thenReturn(testReview);
+            ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
             // When
-            assertDoesNotThrow(() -> reviewService.setFeatured(1L, 1));
+            reviewService.setFeatured(1L, 1);
 
             // Then
-            verify(reviewMapper, atLeast(1)).updateById(any(Review.class));
+            verify(reviewMapper, times(2)).updateById(reviewCaptor.capture());
             verify(reviewMapper, times(1)).selectById(1L);
+
+            List<Review> updates = reviewCaptor.getAllValues();
+            assertEquals(1L, updates.get(0).getId());
+            assertEquals(1, updates.get(0).getIsFeatured());
+            assertEquals(1L, updates.get(1).getId());
+            assertEquals(1, updates.get(1).getIsFeatured());
+            assertEquals(125, updates.get(1).getRewardPoints());
         }
 
         @Test
@@ -634,15 +673,16 @@ class ReviewServiceTest {
         void testSetFeatured_NotFeatured() {
             // Given
             when(reviewMapper.updateById(any(Review.class))).thenReturn(1);
+            ArgumentCaptor<Review> reviewCaptor = ArgumentCaptor.forClass(Review.class);
 
             // When
-            assertDoesNotThrow(() -> reviewService.setFeatured(1L, 0));
+            reviewService.setFeatured(1L, 0);
 
             // Then
-            verify(reviewMapper, times(1)).updateById(argThat(review ->
-                review.getId().equals(1L) &&
-                review.getIsFeatured().equals(0)
-            ));
+            verify(reviewMapper, times(1)).updateById(reviewCaptor.capture());
+            Review updated = reviewCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(0, updated.getIsFeatured());
         }
     }
 

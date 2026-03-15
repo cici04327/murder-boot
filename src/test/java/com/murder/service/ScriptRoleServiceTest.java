@@ -106,19 +106,25 @@ class ScriptRoleServiceTest {
         @DisplayName("新增角色 - 成功")
         void testAdd_Success() {
             when(scriptRoleMapper.insert(any(ScriptRole.class))).thenReturn(1);
+            ArgumentCaptor<ScriptRole> roleCaptor = ArgumentCaptor.forClass(ScriptRole.class);
 
             ScriptRole newRole = new ScriptRole();
             newRole.setScriptId(10L);
             newRole.setRoleName("新角色");
 
-            assertDoesNotThrow(() -> scriptRoleService.add(newRole));
-            verify(scriptRoleMapper, times(1)).insert(newRole);
+            scriptRoleService.add(newRole);
+            verify(scriptRoleMapper, times(1)).insert(roleCaptor.capture());
+
+            ScriptRole saved = roleCaptor.getValue();
+            assertEquals(10L, saved.getScriptId());
+            assertEquals("新角色", saved.getRoleName());
         }
 
         @Test
         @DisplayName("批量新增角色 - 成功")
         void testAddBatch_Success() {
             when(scriptRoleMapper.insert(any(ScriptRole.class))).thenReturn(1);
+            ArgumentCaptor<ScriptRole> roleCaptor = ArgumentCaptor.forClass(ScriptRole.class);
 
             ScriptRole role1 = new ScriptRole();
             role1.setScriptId(10L);
@@ -129,14 +135,18 @@ class ScriptRoleServiceTest {
             role2.setRoleName("角色2");
 
             List<ScriptRole> roles = Arrays.asList(role1, role2);
-            assertDoesNotThrow(() -> scriptRoleService.addBatch(roles));
-            verify(scriptRoleMapper, times(2)).insert(any(ScriptRole.class));
+            scriptRoleService.addBatch(roles);
+            verify(scriptRoleMapper, times(2)).insert(roleCaptor.capture());
+
+            List<ScriptRole> inserted = roleCaptor.getAllValues();
+            assertEquals(Arrays.asList("角色1", "角色2"),
+                    inserted.stream().map(ScriptRole::getRoleName).toList());
         }
 
         @Test
         @DisplayName("批量新增角色 - 空列表")
         void testAddBatch_EmptyList() {
-            assertDoesNotThrow(() -> scriptRoleService.addBatch(Collections.emptyList()));
+            scriptRoleService.addBatch(Collections.emptyList());
             verify(scriptRoleMapper, never()).insert(any());
         }
     }
@@ -149,10 +159,15 @@ class ScriptRoleServiceTest {
         @DisplayName("更新角色 - 成功")
         void testUpdate_Success() {
             when(scriptRoleMapper.updateById(any(ScriptRole.class))).thenReturn(1);
+            ArgumentCaptor<ScriptRole> roleCaptor = ArgumentCaptor.forClass(ScriptRole.class);
 
             testRole.setRoleName("更新后的角色名");
-            assertDoesNotThrow(() -> scriptRoleService.update(testRole));
-            verify(scriptRoleMapper, times(1)).updateById(testRole);
+            scriptRoleService.update(testRole);
+            verify(scriptRoleMapper, times(1)).updateById(roleCaptor.capture());
+
+            ScriptRole updated = roleCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals("更新后的角色名", updated.getRoleName());
         }
     }
 
@@ -165,7 +180,7 @@ class ScriptRoleServiceTest {
         void testDelete_Success() {
             when(scriptRoleMapper.deleteById(1L)).thenReturn(1);
 
-            assertDoesNotThrow(() -> scriptRoleService.delete(1L));
+            scriptRoleService.delete(1L);
             verify(scriptRoleMapper, times(1)).deleteById(1L);
         }
 
@@ -174,7 +189,8 @@ class ScriptRoleServiceTest {
         void testDelete_NotFound() {
             when(scriptRoleMapper.deleteById(999L)).thenReturn(0);
 
-            assertDoesNotThrow(() -> scriptRoleService.delete(999L));
+            scriptRoleService.delete(999L);
+            verify(scriptRoleMapper, times(1)).deleteById(999L);
         }
     }
 }

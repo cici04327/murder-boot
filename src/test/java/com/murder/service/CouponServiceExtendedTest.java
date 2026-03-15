@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -234,10 +235,17 @@ class CouponServiceExtendedTest {
         void useCoupon_Success() {
             when(userCouponMapper.selectById(10L)).thenReturn(userCoupon);
             when(userCouponMapper.updateById(any(UserCoupon.class))).thenReturn(1);
+            ArgumentCaptor<UserCoupon> userCouponCaptor = ArgumentCaptor.forClass(UserCoupon.class);
 
-            assertDoesNotThrow(() -> couponService.useCoupon(10L, 100L));
+            couponService.useCoupon(10L, 100L);
 
-            verify(userCouponMapper, times(1)).updateById(any(UserCoupon.class));
+            verify(userCouponMapper, times(1)).updateById(userCouponCaptor.capture());
+
+            UserCoupon updated = userCouponCaptor.getValue();
+            assertEquals(10L, updated.getId());
+            assertEquals(2, updated.getStatus());
+            assertEquals(100L, updated.getOrderId());
+            assertNotNull(updated.getUseTime());
         }
 
         @Test
@@ -282,10 +290,17 @@ class CouponServiceExtendedTest {
 
             when(userCouponMapper.selectList(any())).thenReturn(Collections.singletonList(userCoupon));
             when(userCouponMapper.updateById(any(UserCoupon.class))).thenReturn(1);
+            ArgumentCaptor<UserCoupon> userCouponCaptor = ArgumentCaptor.forClass(UserCoupon.class);
 
-            assertDoesNotThrow(() -> couponService.refundCoupon(100L));
+            couponService.refundCoupon(100L);
 
-            verify(userCouponMapper, times(1)).updateById(any(UserCoupon.class));
+            verify(userCouponMapper, times(1)).updateById(userCouponCaptor.capture());
+
+            UserCoupon updated = userCouponCaptor.getValue();
+            assertEquals(10L, updated.getId());
+            assertEquals(1, updated.getStatus());
+            assertNull(updated.getOrderId());
+            assertNull(updated.getUseTime());
         }
 
         @Test
@@ -297,10 +312,17 @@ class CouponServiceExtendedTest {
 
             when(userCouponMapper.selectList(any())).thenReturn(Collections.singletonList(userCoupon));
             when(userCouponMapper.updateById(any(UserCoupon.class))).thenReturn(1);
+            ArgumentCaptor<UserCoupon> userCouponCaptor = ArgumentCaptor.forClass(UserCoupon.class);
 
-            assertDoesNotThrow(() -> couponService.refundCoupon(100L));
+            couponService.refundCoupon(100L);
 
-            verify(userCouponMapper, times(1)).updateById(any(UserCoupon.class));
+            verify(userCouponMapper, times(1)).updateById(userCouponCaptor.capture());
+
+            UserCoupon updated = userCouponCaptor.getValue();
+            assertEquals(10L, updated.getId());
+            assertEquals(3, updated.getStatus());
+            assertNull(updated.getOrderId());
+            assertNull(updated.getUseTime());
         }
 
         @Test
@@ -308,7 +330,7 @@ class CouponServiceExtendedTest {
         void refundCoupon_NoCoupons() {
             when(userCouponMapper.selectList(any())).thenReturn(Collections.emptyList());
 
-            assertDoesNotThrow(() -> couponService.refundCoupon(999L));
+            couponService.refundCoupon(999L);
 
             verify(userCouponMapper, never()).updateById(any());
         }
@@ -376,10 +398,13 @@ class CouponServiceExtendedTest {
         void updateStatus_Offline_Success() {
             when(couponMapper.selectById(1L)).thenReturn(fullReductionCoupon);
             when(couponMapper.updateById(any(Coupon.class))).thenReturn(1);
+            ArgumentCaptor<Coupon> couponCaptor = ArgumentCaptor.forClass(Coupon.class);
 
-            assertDoesNotThrow(() -> couponService.updateStatus(1L, 0));
+            couponService.updateStatus(1L, 0);
 
-            verify(couponMapper, times(1)).updateById(any(Coupon.class));
+            verify(couponMapper, times(1)).updateById(couponCaptor.capture());
+            assertEquals(1L, couponCaptor.getValue().getId());
+            assertEquals(0, couponCaptor.getValue().getStatus());
         }
 
         @Test
@@ -388,10 +413,13 @@ class CouponServiceExtendedTest {
             fullReductionCoupon.setStatus(0);
             when(couponMapper.selectById(1L)).thenReturn(fullReductionCoupon);
             when(couponMapper.updateById(any(Coupon.class))).thenReturn(1);
+            ArgumentCaptor<Coupon> couponCaptor = ArgumentCaptor.forClass(Coupon.class);
 
-            assertDoesNotThrow(() -> couponService.updateStatus(1L, 1));
+            couponService.updateStatus(1L, 1);
 
-            verify(couponMapper, times(1)).updateById(any(Coupon.class));
+            verify(couponMapper, times(1)).updateById(couponCaptor.capture());
+            assertEquals(1L, couponCaptor.getValue().getId());
+            assertEquals(1, couponCaptor.getValue().getStatus());
         }
 
         @Test
@@ -415,7 +443,7 @@ class CouponServiceExtendedTest {
             when(userCouponMapper.selectCount(any())).thenReturn(0L);
             when(couponMapper.deleteById(1L)).thenReturn(1);
 
-            assertDoesNotThrow(() -> couponService.delete(1L));
+            couponService.delete(1L);
 
             verify(couponMapper, times(1)).deleteById(1L);
         }
@@ -442,7 +470,7 @@ class CouponServiceExtendedTest {
         void expireCoupons_Success() {
             when(userCouponMapper.update(any(), any())).thenReturn(3);
 
-            assertDoesNotThrow(() -> couponService.expireCoupons());
+            couponService.expireCoupons();
 
             verify(userCouponMapper, times(1)).update(any(), any());
         }

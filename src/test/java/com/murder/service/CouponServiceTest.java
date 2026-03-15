@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -106,10 +107,26 @@ class CouponServiceTest {
         when(userCouponMapper.selectCount(any())).thenReturn(0L); // 未领取过
         when(userCouponMapper.insert(any(UserCoupon.class))).thenReturn(1);
         when(couponMapper.updateById(any(Coupon.class))).thenReturn(1);
+        ArgumentCaptor<UserCoupon> userCouponCaptor = ArgumentCaptor.forClass(UserCoupon.class);
+        ArgumentCaptor<Coupon> couponCaptor = ArgumentCaptor.forClass(Coupon.class);
 
-        // When & Then
-        assertDoesNotThrow(() -> couponService.receiveCoupon(1L, 1L));
-        verify(userCouponMapper, times(1)).insert(any(UserCoupon.class));
+        // When
+        couponService.receiveCoupon(1L, 1L);
+
+        // Then
+        verify(userCouponMapper, times(1)).insert(userCouponCaptor.capture());
+        verify(couponMapper, times(1)).updateById(couponCaptor.capture());
+
+        UserCoupon received = userCouponCaptor.getValue();
+        assertEquals(1L, received.getUserId());
+        assertEquals(1L, received.getCouponId());
+        assertEquals(1, received.getStatus());
+        assertNotNull(received.getReceiveTime());
+        assertEquals(testCoupon.getValidEndTime(), received.getExpireTime());
+
+        Coupon updatedCoupon = couponCaptor.getValue();
+        assertEquals(1L, updatedCoupon.getId());
+        assertEquals(899, updatedCoupon.getRemainCount());
     }
 
     @Test

@@ -138,9 +138,18 @@ class UserBrowseHistoryServiceTest {
         void testRecordHistory_NewRecord() {
             when(browseHistoryMapper.selectOne(any())).thenReturn(null);
             when(browseHistoryMapper.insert(any(UserBrowseHistory.class))).thenReturn(1);
+            ArgumentCaptor<UserBrowseHistory> historyCaptor = ArgumentCaptor.forClass(UserBrowseHistory.class);
 
-            assertDoesNotThrow(() -> browseHistoryService.recordHistory(1L, 1, 10L, 120));
-            verify(browseHistoryMapper, times(1)).insert(any(UserBrowseHistory.class));
+            browseHistoryService.recordHistory(1L, 1, 10L, 120);
+
+            verify(browseHistoryMapper, times(1)).insert(historyCaptor.capture());
+
+            UserBrowseHistory created = historyCaptor.getValue();
+            assertEquals(1L, created.getUserId());
+            assertEquals(1, created.getTargetType());
+            assertEquals(10L, created.getTargetId());
+            assertEquals(120, created.getDuration());
+            assertNotNull(created.getBrowseTime());
         }
 
         @Test
@@ -148,10 +157,19 @@ class UserBrowseHistoryServiceTest {
         void testRecordHistory_UpdateExisting() {
             when(browseHistoryMapper.selectOne(any())).thenReturn(testHistory);
             when(browseHistoryMapper.updateById(any(UserBrowseHistory.class))).thenReturn(1);
+            ArgumentCaptor<UserBrowseHistory> historyCaptor = ArgumentCaptor.forClass(UserBrowseHistory.class);
 
-            assertDoesNotThrow(() -> browseHistoryService.recordHistory(1L, 1, 10L, 60));
-            verify(browseHistoryMapper, times(1)).updateById(any(UserBrowseHistory.class));
+            browseHistoryService.recordHistory(1L, 1, 10L, 60);
+
+            verify(browseHistoryMapper, times(1)).updateById(historyCaptor.capture());
             verify(browseHistoryMapper, never()).insert(any());
+
+            UserBrowseHistory updated = historyCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(1L, updated.getUserId());
+            assertEquals(10L, updated.getTargetId());
+            assertEquals(180, updated.getDuration());
+            assertNotNull(updated.getBrowseTime());
         }
     }
 

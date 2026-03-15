@@ -13,6 +13,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 
@@ -152,12 +153,26 @@ public class UserPointsServiceTest {
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(vipService.getPointMultiplier(testUserId)).thenReturn(BigDecimal.ONE);
         when(userPointsRecordMapper.insert(any(UserPointsRecord.class))).thenReturn(1);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<UserPointsRecord> recordCaptor = ArgumentCaptor.forClass(UserPointsRecord.class);
 
-        assertDoesNotThrow(() -> userPointsService.signIn(testUserId));
+        userPointsService.signIn(testUserId);
 
         verify(userPointsRecordMapper, atLeast(1)).selectCount(any());
-        verify(userMapper, atLeast(1)).selectById(testUserId);
-        verify(userPointsRecordMapper, atLeast(1)).insert(any(UserPointsRecord.class));
+        verify(userMapper, times(1)).selectById(testUserId);
+        verify(userMapper, times(1)).updateById(userCaptor.capture());
+        verify(userPointsRecordMapper, times(1)).insert(recordCaptor.capture());
+
+        User updated = userCaptor.getValue();
+        assertEquals(testUserId, updated.getId());
+        assertEquals(110, updated.getPoints());
+
+        UserPointsRecord record = recordCaptor.getValue();
+        assertEquals(testUserId, record.getUserId());
+        assertEquals(10, record.getPoints());
+        assertEquals(1, record.getType());
+        assertEquals(3, record.getSource());
+        assertEquals("每日签到", record.getDescription());
     }
 
     /**
@@ -186,11 +201,25 @@ public class UserPointsServiceTest {
         when(userMapper.updateById(any(User.class))).thenReturn(1);
         when(vipService.getPointMultiplier(testUserId)).thenReturn(BigDecimal.ONE);
         when(userPointsRecordMapper.insert(any(UserPointsRecord.class))).thenReturn(1);
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        ArgumentCaptor<UserPointsRecord> recordCaptor = ArgumentCaptor.forClass(UserPointsRecord.class);
 
-        assertDoesNotThrow(() -> userPointsService.rewardForReservation(testUserId, reservationId));
+        userPointsService.rewardForReservation(testUserId, reservationId);
 
-        verify(userPointsRecordMapper, atLeast(1)).selectList(any());
-        verify(userMapper, atLeast(1)).selectById(testUserId);
-        verify(userPointsRecordMapper, atLeast(1)).insert(any(UserPointsRecord.class));
+        verify(userPointsRecordMapper, times(1)).selectList(any());
+        verify(userMapper, times(1)).selectById(testUserId);
+        verify(userMapper, times(1)).updateById(userCaptor.capture());
+        verify(userPointsRecordMapper, times(1)).insert(recordCaptor.capture());
+
+        User updated = userCaptor.getValue();
+        assertEquals(testUserId, updated.getId());
+        assertEquals(200, updated.getPoints());
+
+        UserPointsRecord record = recordCaptor.getValue();
+        assertEquals(testUserId, record.getUserId());
+        assertEquals(100, record.getPoints());
+        assertEquals(1, record.getType());
+        assertEquals(2, record.getSource());
+        assertEquals("完成预约(预约ID:100)", record.getDescription());
     }
 }

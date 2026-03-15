@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,6 +22,8 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -79,22 +82,62 @@ class NotificationServiceTest {
         @Test
         @DisplayName("发送给指定用户 - 成功")
         void sendToUsers_Success() {
-            when(systemNotificationMapper.insert(any(SystemNotification.class))).thenReturn(1);
-            when(userNotificationMapper.insert(any(UserNotification.class))).thenReturn(1);
+            when(systemNotificationMapper.insert(any(SystemNotification.class))).thenAnswer(invocation -> {
+                SystemNotification notification = invocation.getArgument(0);
+                notification.setId(10L);
+                return 1;
+            });
+            AtomicLong userNotificationId = new AtomicLong(100L);
+            when(userNotificationMapper.insert(any(UserNotification.class))).thenAnswer(invocation -> {
+                UserNotification userNotification = invocation.getArgument(0);
+                userNotification.setId(userNotificationId.getAndIncrement());
+                userNotification.setCreateTime(LocalDateTime.now());
+                return 1;
+            });
             doNothing().when(webSocketHandler).pushNotification(anyLong(), anyMap());
 
-            assertDoesNotThrow(() ->
-                notificationService.sendToUsers("标题", "内容", 1, "test", 1L, 1L, 2L));
+            ArgumentCaptor<SystemNotification> systemCaptor = ArgumentCaptor.forClass(SystemNotification.class);
+            ArgumentCaptor<UserNotification> userCaptor = ArgumentCaptor.forClass(UserNotification.class);
+            ArgumentCaptor<Map<String, Object>> wsCaptor = ArgumentCaptor.forClass(Map.class);
 
-            verify(systemNotificationMapper, times(1)).insert(any(SystemNotification.class));
-            verify(userNotificationMapper, times(2)).insert(any(UserNotification.class));
+            notificationService.sendToUsers("标题", "内容", 1, "test", 1L, 1L, 2L);
+
+            verify(systemNotificationMapper, times(1)).insert(systemCaptor.capture());
+            verify(userNotificationMapper, times(2)).insert(userCaptor.capture());
+            verify(webSocketHandler, times(2)).pushNotification(anyLong(), wsCaptor.capture());
+
+            SystemNotification notification = systemCaptor.getValue();
+            assertEquals("标题", notification.getTitle());
+            assertEquals("内容", notification.getContent());
+            assertEquals(1, notification.getType());
+            assertEquals("test", notification.getBizType());
+            assertEquals(1L, notification.getBizId());
+            assertEquals(2, notification.getTargetType());
+            assertEquals("1,2", notification.getTargetUsers());
+            assertEquals(2, notification.getStatus());
+            assertEquals(0, notification.getIsDeleted());
+            assertNotNull(notification.getSendTime());
+
+            List<UserNotification> userNotifications = userCaptor.getAllValues();
+            assertEquals(Arrays.asList(1L, 2L), userNotifications.stream()
+                    .map(UserNotification::getUserId)
+                    .toList());
+            assertTrue(userNotifications.stream().allMatch(userNotification ->
+                    Long.valueOf(10L).equals(userNotification.getNotificationId())
+                            && Integer.valueOf(0).equals(userNotification.getIsRead())
+                            && Integer.valueOf(0).equals(userNotification.getIsDeleted())));
+
+            assertEquals("标题", wsCaptor.getAllValues().get(0).get("title"));
+            assertEquals("内容", wsCaptor.getAllValues().get(0).get("content"));
+            assertEquals("test", wsCaptor.getAllValues().get(0).get("bizType"));
+            assertEquals(1L, wsCaptor.getAllValues().get(0).get("bizId"));
+            assertEquals(false, wsCaptor.getAllValues().get(0).get("isRead"));
         }
 
         @Test
         @DisplayName("发送给指定用户 - userIds为空时不发送")
         void sendToUsers_EmptyUserIds() {
-            assertDoesNotThrow(() ->
-                notificationService.sendToUsers("标题", "内容", 1, "test", 1L));
+            notificationService.sendToUsers("标题", "内容", 1, "test", 1L);
 
             verify(systemNotificationMapper, never()).insert(any());
         }
@@ -102,27 +145,74 @@ class NotificationServiceTest {
         @Test
         @DisplayName("发送给单个用户")
         void sendToUsers_SingleUser() {
-            when(systemNotificationMapper.insert(any(SystemNotification.class))).thenReturn(1);
-            when(userNotificationMapper.insert(any(UserNotification.class))).thenReturn(1);
+            when(systemNotificationMapper.insert(any(SystemNotification.class))).thenAnswer(invocation -> {
+                SystemNotification notification = invocation.getArgument(0);
+                notification.setId(11L);
+                return 1;
+            });
+            when(userNotificationMapper.insert(any(UserNotification.class))).thenAnswer(invocation -> {
+                UserNotification userNotification = invocation.getArgument(0);
+                userNotification.setId(101L);
+                userNotification.setCreateTime(LocalDateTime.now());
+                return 1;
+            });
             doNothing().when(webSocketHandler).pushNotification(anyLong(), anyMap());
 
-            assertDoesNotThrow(() ->
-                notificationService.sendToUsers("支付成功", "订单已支付", 3, "payment", 1L, 1L));
+            ArgumentCaptor<UserNotification> userCaptor = ArgumentCaptor.forClass(UserNotification.class);
+            ArgumentCaptor<Map<String, Object>> wsCaptor = ArgumentCaptor.forClass(Map.class);
 
-            verify(userNotificationMapper, times(1)).insert(any(UserNotification.class));
+            notificationService.sendToUsers("支付成功", "订单已支付", 3, "payment", 1L, 1L);
+
+            verify(userNotificationMapper, times(1)).insert(userCaptor.capture());
+            verify(webSocketHandler, times(1)).pushNotification(eq(1L), wsCaptor.capture());
+
+            UserNotification userNotification = userCaptor.getValue();
+            assertEquals(1L, userNotification.getUserId());
+            assertEquals(11L, userNotification.getNotificationId());
+            assertEquals(0, userNotification.getIsRead());
+            assertEquals(0, userNotification.getIsDeleted());
+
+            Map<String, Object> wsMessage = wsCaptor.getValue();
+            assertEquals("支付成功", wsMessage.get("title"));
+            assertEquals("订单已支付", wsMessage.get("content"));
+            assertEquals("payment", wsMessage.get("bizType"));
+            assertEquals(1L, wsMessage.get("bizId"));
+            assertEquals(false, wsMessage.get("isRead"));
         }
 
         @Test
         @DisplayName("发送给全体用户")
         void sendToAll_Success() {
-            when(systemNotificationMapper.insert(any(SystemNotification.class))).thenReturn(1);
+            when(systemNotificationMapper.insert(any(SystemNotification.class))).thenAnswer(invocation -> {
+                SystemNotification notification = invocation.getArgument(0);
+                notification.setId(12L);
+                return 1;
+            });
             doNothing().when(webSocketHandler).pushNotificationToAll(anyMap());
 
-            assertDoesNotThrow(() ->
-                notificationService.sendToAll("全体公告", "系统维护通知", 1, "system", null));
+            ArgumentCaptor<SystemNotification> systemCaptor = ArgumentCaptor.forClass(SystemNotification.class);
+            ArgumentCaptor<Map<String, Object>> wsCaptor = ArgumentCaptor.forClass(Map.class);
 
-            verify(systemNotificationMapper, times(1)).insert(any(SystemNotification.class));
-            verify(webSocketHandler, times(1)).pushNotificationToAll(anyMap());
+            notificationService.sendToAll("全体公告", "系统维护通知", 1, "system", null);
+
+            verify(systemNotificationMapper, times(1)).insert(systemCaptor.capture());
+            verify(webSocketHandler, times(1)).pushNotificationToAll(wsCaptor.capture());
+
+            SystemNotification notification = systemCaptor.getValue();
+            assertEquals("全体公告", notification.getTitle());
+            assertEquals("系统维护通知", notification.getContent());
+            assertEquals(1, notification.getTargetType());
+            assertEquals(2, notification.getStatus());
+            assertEquals(0, notification.getIsDeleted());
+            assertNotNull(notification.getSendTime());
+
+            Map<String, Object> wsMessage = wsCaptor.getValue();
+            assertEquals(12L, wsMessage.get("id"));
+            assertEquals("全体公告", wsMessage.get("title"));
+            assertEquals("系统维护通知", wsMessage.get("content"));
+            assertEquals("system", wsMessage.get("bizType"));
+            assertNull(wsMessage.get("bizId"));
+            assertEquals(false, wsMessage.get("isRead"));
         }
     }
 
@@ -136,9 +226,17 @@ class NotificationServiceTest {
             when(userNotificationMapper.selectOne(any())).thenReturn(testUserNotification);
             when(userNotificationMapper.updateById(any(UserNotification.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> notificationService.markAsRead(1L, 1L));
+            ArgumentCaptor<UserNotification> userCaptor = ArgumentCaptor.forClass(UserNotification.class);
 
-            verify(userNotificationMapper, times(1)).updateById(any(UserNotification.class));
+            notificationService.markAsRead(1L, 1L);
+
+            verify(userNotificationMapper, times(1)).updateById(userCaptor.capture());
+
+            UserNotification updated = userCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(1L, updated.getUserId());
+            assertEquals(1, updated.getIsRead());
+            assertNotNull(updated.getReadTime());
         }
 
         @Test
@@ -146,7 +244,7 @@ class NotificationServiceTest {
         void markAsRead_NotFound() {
             when(userNotificationMapper.selectOne(any())).thenReturn(null);
 
-            assertDoesNotThrow(() -> notificationService.markAsRead(1L, 99L));
+            notificationService.markAsRead(1L, 99L);
 
             verify(userNotificationMapper, never()).updateById(any());
         }
@@ -157,7 +255,7 @@ class NotificationServiceTest {
             testUserNotification.setIsRead(1);
             when(userNotificationMapper.selectOne(any())).thenReturn(testUserNotification);
 
-            assertDoesNotThrow(() -> notificationService.markAsRead(1L, 1L));
+            notificationService.markAsRead(1L, 1L);
 
             verify(userNotificationMapper, never()).updateById(any());
         }
@@ -178,9 +276,17 @@ class NotificationServiceTest {
             when(userNotificationMapper.selectList(any())).thenReturn(Arrays.asList(unread1, unread2));
             when(userNotificationMapper.updateById(any(UserNotification.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> notificationService.markAllAsRead(1L));
+            ArgumentCaptor<UserNotification> userCaptor = ArgumentCaptor.forClass(UserNotification.class);
 
-            verify(userNotificationMapper, times(2)).updateById(any(UserNotification.class));
+            notificationService.markAllAsRead(1L);
+
+            verify(userNotificationMapper, times(2)).updateById(userCaptor.capture());
+
+            assertEquals(Arrays.asList(1L, 2L), userCaptor.getAllValues().stream()
+                    .map(UserNotification::getId)
+                    .toList());
+            assertTrue(userCaptor.getAllValues().stream().allMatch(notification ->
+                    Integer.valueOf(1).equals(notification.getIsRead()) && notification.getReadTime() != null));
         }
 
         @Test
@@ -188,7 +294,7 @@ class NotificationServiceTest {
         void markAllAsRead_NoUnread() {
             when(userNotificationMapper.selectList(any())).thenReturn(Collections.emptyList());
 
-            assertDoesNotThrow(() -> notificationService.markAllAsRead(1L));
+            notificationService.markAllAsRead(1L);
 
             verify(userNotificationMapper, never()).updateById(any());
         }
@@ -228,7 +334,7 @@ class NotificationServiceTest {
         void deleteNotification_Success() {
             when(userNotificationMapper.delete(any())).thenReturn(1);
 
-            assertDoesNotThrow(() -> notificationService.deleteNotification(1L, 1L));
+            notificationService.deleteNotification(1L, 1L);
 
             verify(userNotificationMapper, times(1)).delete(any());
         }
@@ -239,7 +345,9 @@ class NotificationServiceTest {
             when(userNotificationMapper.delete(any())).thenReturn(2);
 
             List<Long> ids = Arrays.asList(1L, 2L, 3L);
-            assertDoesNotThrow(() -> notificationService.batchDeleteNotifications(1L, ids));
+            notificationService.batchDeleteNotifications(1L, ids);
+
+            verify(userNotificationMapper, times(1)).delete(any());
         }
     }
 }

@@ -6,6 +6,7 @@ import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.dto.ArticleDTO;
 import com.murder.entity.Article;
+import com.murder.entity.ArticleLike;
 import com.murder.entity.User;
 import com.murder.mapper.*;
 import com.murder.service.impl.ArticleServiceImpl;
@@ -162,6 +163,7 @@ class ArticleServiceTest {
             try (MockedStatic<BaseContext> mocked = mockStatic(BaseContext.class)) {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(articleMapper.insert(any(Article.class))).thenReturn(1);
+                ArgumentCaptor<Article> articleCaptor = ArgumentCaptor.forClass(Article.class);
 
                 ArticleDTO dto = new ArticleDTO();
                 dto.setTitle("新文章");
@@ -169,23 +171,47 @@ class ArticleServiceTest {
                 dto.setCategory(1);
                 dto.setStatus(1);
 
-                assertDoesNotThrow(() -> articleService.add(dto));
-                verify(articleMapper, times(1)).insert(any(Article.class));
+                articleService.add(dto);
+                verify(articleMapper, times(1)).insert(articleCaptor.capture());
+
+                Article created = articleCaptor.getValue();
+                assertEquals("新文章", created.getTitle());
+                assertEquals("内容", created.getContent());
+                assertEquals(1, created.getCategory());
+                assertEquals("新手攻略", created.getCategoryName());
+                assertEquals(0, created.getViewCount());
+                assertEquals(0, created.getLikeCount());
+                assertNotNull(created.getPublishTime());
             }
         }
 
         @Test
         @DisplayName("更新文章 - 成功")
         void testUpdate_Success() {
+            Article oldArticle = new Article();
+            oldArticle.setId(1L);
+            oldArticle.setStatus(0);
+            when(articleMapper.selectById(1L)).thenReturn(oldArticle);
             when(articleMapper.updateById(any(Article.class))).thenReturn(1);
+            ArgumentCaptor<Article> articleCaptor = ArgumentCaptor.forClass(Article.class);
 
             ArticleDTO dto = new ArticleDTO();
             dto.setId(1L);
             dto.setTitle("更新标题");
             dto.setContent("更新内容");
+            dto.setCategory(2);
+            dto.setStatus(1);
 
-            assertDoesNotThrow(() -> articleService.update(dto));
-            verify(articleMapper, times(1)).updateById(any(Article.class));
+            articleService.update(dto);
+            verify(articleMapper, times(1)).updateById(articleCaptor.capture());
+
+            Article updated = articleCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals("更新标题", updated.getTitle());
+            assertEquals("更新内容", updated.getContent());
+            assertEquals(2, updated.getCategory());
+            assertEquals("选本技巧", updated.getCategoryName());
+            assertNotNull(updated.getPublishTime());
         }
 
         @Test
@@ -193,7 +219,7 @@ class ArticleServiceTest {
         void testDelete_Success() {
             when(articleMapper.deleteById(1L)).thenReturn(1);
 
-            assertDoesNotThrow(() -> articleService.delete(1L));
+            articleService.delete(1L);
             verify(articleMapper, times(1)).deleteById(1L);
         }
     }
@@ -233,10 +259,11 @@ class ArticleServiceTest {
         @Test
         @DisplayName("增加浏览次数")
         void testIncreaseViewCount() {
-            when(articleMapper.selectById(1L)).thenReturn(testArticle);
-            when(articleMapper.updateById(any(Article.class))).thenReturn(1);
+            doNothing().when(articleMapper).increaseViewCount(1L);
 
-            assertDoesNotThrow(() -> articleService.increaseViewCount(1L));
+            articleService.increaseViewCount(1L);
+
+            verify(articleMapper, times(1)).increaseViewCount(1L);
         }
 
         @Test
@@ -246,10 +273,17 @@ class ArticleServiceTest {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(articleLikeMapper.selectCount(any())).thenReturn(0L);
                 when(articleLikeMapper.insert(any())).thenReturn(1);
-                when(articleMapper.selectById(1L)).thenReturn(testArticle);
-                when(articleMapper.updateById(any())).thenReturn(1);
+                doNothing().when(articleMapper).increaseLikeCount(1L);
+                ArgumentCaptor<ArticleLike> likeCaptor = ArgumentCaptor.forClass(ArticleLike.class);
 
-                assertDoesNotThrow(() -> articleService.likeArticle(1L));
+                articleService.likeArticle(1L);
+
+                verify(articleLikeMapper, times(1)).insert(likeCaptor.capture());
+                verify(articleMapper, times(1)).increaseLikeCount(1L);
+
+                ArticleLike articleLike = likeCaptor.getValue();
+                assertEquals(1L, articleLike.getArticleId());
+                assertEquals(1L, articleLike.getUserId());
             }
         }
 
@@ -259,10 +293,12 @@ class ArticleServiceTest {
             try (MockedStatic<BaseContext> mocked = mockStatic(BaseContext.class)) {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(articleLikeMapper.delete(any())).thenReturn(1);
-                when(articleMapper.selectById(1L)).thenReturn(testArticle);
-                when(articleMapper.updateById(any())).thenReturn(1);
+                doNothing().when(articleMapper).decreaseLikeCount(1L);
 
-                assertDoesNotThrow(() -> articleService.unlikeArticle(1L));
+                articleService.unlikeArticle(1L);
+
+                verify(articleLikeMapper, times(1)).delete(any());
+                verify(articleMapper, times(1)).decreaseLikeCount(1L);
             }
         }
 

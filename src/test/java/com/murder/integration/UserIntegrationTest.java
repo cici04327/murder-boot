@@ -1,13 +1,19 @@
 package com.murder.integration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.dto.UserLoginDTO;
 import com.murder.dto.UserRegisterDTO;
+import com.murder.entity.User;
+import com.murder.mapper.UserMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.util.DigestUtils;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -16,6 +22,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @DisplayName("用户模块集成测试")
 class UserIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Nested
     @DisplayName("用户注册测试")
@@ -34,7 +43,21 @@ class UserIntegrationTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(registerDTO)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data").value("注册成功"));
+
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getUsername, "newuser");
+            User saved = userMapper.selectOne(wrapper);
+
+            assertNotNull(saved);
+            assertEquals("新用户", saved.getNickname());
+            assertEquals("13900139000", saved.getPhone());
+            assertEquals("USER", saved.getRole());
+            assertEquals(1, saved.getStatus());
+            assertEquals(1, saved.getMemberLevel());
+            assertEquals(0, saved.getPoints());
+            assertEquals(DigestUtils.md5DigestAsHex("123456".getBytes()), saved.getPassword());
         }
 
         @Test
@@ -50,7 +73,8 @@ class UserIntegrationTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(registerDTO)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(not(200)));
+                    .andExpect(jsonPath("$.code").value(not(200)))
+                    .andExpect(jsonPath("$.msg").value("用户已存在"));
         }
 
         @Test
@@ -64,7 +88,13 @@ class UserIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(post("/api/user/register")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(registerDTO)))
-                    .andExpect(status().isOk());
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(not(200)))
+                    .andExpect(jsonPath("$.msg").value("用户名不能为空"));
+
+            LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(User::getUsername, "");
+            assertEquals(0L, userMapper.selectCount(wrapper));
         }
     }
 
@@ -84,7 +114,10 @@ class UserIntegrationTest extends BaseIntegrationTest {
                             .content(toJson(loginDTO)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.id").value(1))
                     .andExpect(jsonPath("$.data.username").value("testuser"))
+                    .andExpect(jsonPath("$.data.nickname").value("测试用户"))
+                    .andExpect(jsonPath("$.data.phone").value("13800138000"))
                     .andExpect(jsonPath("$.data.token").exists());
         }
 
@@ -99,7 +132,8 @@ class UserIntegrationTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(loginDTO)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(not(200)));
+                    .andExpect(jsonPath("$.code").value(not(200)))
+                    .andExpect(jsonPath("$.msg").value("用户不存在"));
         }
 
         @Test
@@ -113,7 +147,8 @@ class UserIntegrationTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(loginDTO)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(not(200)));
+                    .andExpect(jsonPath("$.code").value(not(200)))
+                    .andExpect(jsonPath("$.msg").value("密码错误"));
         }
     }
 
@@ -130,7 +165,8 @@ class UserIntegrationTest extends BaseIntegrationTest {
                             .param("pageSize", "10"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.total").value(greaterThanOrEqualTo(0)));
+                    .andExpect(jsonPath("$.data.total").value(2))
+                    .andExpect(jsonPath("$.data.records", hasSize(2)));
         }
 
         @Test
@@ -141,7 +177,10 @@ class UserIntegrationTest extends BaseIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.id").value(1))
-                    .andExpect(jsonPath("$.data.username").value("testuser"));
+                    .andExpect(jsonPath("$.data.username").value("testuser"))
+                    .andExpect(jsonPath("$.data.nickname").value("测试用户"))
+                    .andExpect(jsonPath("$.data.role").value("USER"))
+                    .andExpect(jsonPath("$.data.status").value(1));
         }
 
         @Test

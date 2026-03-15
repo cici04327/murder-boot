@@ -159,24 +159,36 @@ class StoreEmployeeServiceTest {
         @Test
         @DisplayName("新增员工 - 默认状态为在职")
         void testAdd_DefaultStatusActive() {
-            when(employeeMapper.insert(any(StoreEmployee.class))).thenAnswer(inv -> {
-                StoreEmployee emp = inv.getArgument(0);
-                assertEquals(1, emp.getStatus(), "新增员工默认状态应为1(在职)");
-                return 1;
-            });
+            when(employeeMapper.insert(any(StoreEmployee.class))).thenReturn(1);
+            ArgumentCaptor<StoreEmployee> employeeCaptor = ArgumentCaptor.forClass(StoreEmployee.class);
 
-            assertDoesNotThrow(() -> storeEmployeeService.add(testDTO));
-            verify(employeeMapper, times(1)).insert(any(StoreEmployee.class));
+            storeEmployeeService.add(testDTO);
+            verify(employeeMapper, times(1)).insert(employeeCaptor.capture());
+
+            StoreEmployee employee = employeeCaptor.getValue();
+            assertEquals(1L, employee.getStoreId());
+            assertEquals("张员工", employee.getName());
+            assertEquals("13800138000", employee.getPhone());
+            assertEquals(1, employee.getPosition());
+            assertEquals(1, employee.getStatus(), "新增员工默认状态应为1(在职)");
         }
 
         @Test
         @DisplayName("更新员工 - 成功")
         void testUpdate_Success() {
             when(employeeMapper.updateById(any(StoreEmployee.class))).thenReturn(1);
+            ArgumentCaptor<StoreEmployee> employeeCaptor = ArgumentCaptor.forClass(StoreEmployee.class);
 
             testDTO.setName("更新后的员工名");
-            assertDoesNotThrow(() -> storeEmployeeService.update(testDTO));
-            verify(employeeMapper, times(1)).updateById(any(StoreEmployee.class));
+            storeEmployeeService.update(testDTO);
+            verify(employeeMapper, times(1)).updateById(employeeCaptor.capture());
+
+            StoreEmployee updated = employeeCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(1L, updated.getStoreId());
+            assertEquals("更新后的员工名", updated.getName());
+            assertEquals("13800138000", updated.getPhone());
+            assertEquals(1, updated.getPosition());
         }
 
         @Test
@@ -184,7 +196,7 @@ class StoreEmployeeServiceTest {
         void testDelete_Success() {
             when(employeeMapper.deleteById(1L)).thenReturn(1);
 
-            assertDoesNotThrow(() -> storeEmployeeService.delete(1L));
+            storeEmployeeService.delete(1L);
             verify(employeeMapper, times(1)).deleteById(1L);
         }
 
@@ -194,7 +206,7 @@ class StoreEmployeeServiceTest {
             when(employeeMapper.deleteBatchIds(anyList())).thenReturn(2);
 
             List<Long> ids = Arrays.asList(1L, 2L);
-            assertDoesNotThrow(() -> storeEmployeeService.batchDelete(ids));
+            storeEmployeeService.batchDelete(ids);
             verify(employeeMapper, times(1)).deleteBatchIds(ids);
         }
 
@@ -202,11 +214,14 @@ class StoreEmployeeServiceTest {
         @DisplayName("更新员工状态 - 离职")
         void testUpdateStatus_Resigned() {
             when(employeeMapper.updateById(any(StoreEmployee.class))).thenReturn(1);
+            ArgumentCaptor<StoreEmployee> employeeCaptor = ArgumentCaptor.forClass(StoreEmployee.class);
 
-            assertDoesNotThrow(() -> storeEmployeeService.updateStatus(1L, 0));
-            verify(employeeMapper, times(1)).updateById(argThat(emp ->
-                    emp.getId().equals(1L) && emp.getStatus().equals(0)
-            ));
+            storeEmployeeService.updateStatus(1L, 0);
+            verify(employeeMapper, times(1)).updateById(employeeCaptor.capture());
+
+            StoreEmployee updated = employeeCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(0, updated.getStatus());
         }
     }
 

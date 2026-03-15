@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -18,6 +19,9 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -71,9 +75,20 @@ class FeedbackServiceTest {
         void submit_LoggedUser_Success() {
             when(feedbackMapper.insert(any(Feedback.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> feedbackService.submit(testFeedbackDTO, 1L, "127.0.0.1"));
+            ArgumentCaptor<Feedback> feedbackCaptor = ArgumentCaptor.forClass(Feedback.class);
 
-            verify(feedbackMapper, times(1)).insert(any(Feedback.class));
+            feedbackService.submit(testFeedbackDTO, 1L, "127.0.0.1");
+
+            verify(feedbackMapper, times(1)).insert(feedbackCaptor.capture());
+
+            Feedback saved = feedbackCaptor.getValue();
+            assertEquals(1L, saved.getUserId());
+            assertEquals("张三", saved.getName());
+            assertEquals("13800138000", saved.getContact());
+            assertEquals("platform", saved.getSubject());
+            assertEquals("这是测试留言内容", saved.getMessage());
+            assertEquals("127.0.0.1", saved.getIpAddress());
+            assertEquals(0, saved.getStatus());
         }
 
         @Test
@@ -81,24 +96,46 @@ class FeedbackServiceTest {
         void submit_Guest_Success() {
             when(feedbackMapper.insert(any(Feedback.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> feedbackService.submit(testFeedbackDTO, null, "192.168.1.1"));
+            ArgumentCaptor<Feedback> feedbackCaptor = ArgumentCaptor.forClass(Feedback.class);
 
-            verify(feedbackMapper, times(1)).insert(any(Feedback.class));
+            feedbackService.submit(testFeedbackDTO, null, "192.168.1.1");
+
+            verify(feedbackMapper, times(1)).insert(feedbackCaptor.capture());
+
+            Feedback saved = feedbackCaptor.getValue();
+            assertNull(saved.getUserId());
+            assertEquals("张三", saved.getName());
+            assertEquals("platform", saved.getSubject());
+            assertEquals("13800138000", saved.getContact());
+            assertEquals("这是测试留言内容", saved.getMessage());
+            assertEquals("192.168.1.1", saved.getIpAddress());
+            assertEquals(0, saved.getStatus());
         }
 
         @Test
         @DisplayName("提交留言 - 不同主题类型")
         void submit_DifferentSubjects() {
             when(feedbackMapper.insert(any(Feedback.class))).thenReturn(1);
+            ArgumentCaptor<Feedback> feedbackCaptor = ArgumentCaptor.forClass(Feedback.class);
 
             String[] subjects = {"platform", "booking", "account", "feedback", "business",
                     "game", "store", "script", "suggestion", "bug", "other"};
 
             for (String subject : subjects) {
                 testFeedbackDTO.setSubject(subject);
-                assertDoesNotThrow(() -> feedbackService.submit(testFeedbackDTO, 1L, "127.0.0.1"),
-                        "提交主题 " + subject + " 应该成功");
+                feedbackService.submit(testFeedbackDTO, 1L, "127.0.0.1");
             }
+
+            verify(feedbackMapper, times(subjects.length)).insert(feedbackCaptor.capture());
+
+            List<String> actualSubjects = feedbackCaptor.getAllValues().stream()
+                    .map(Feedback::getSubject)
+                    .toList();
+            assertIterableEquals(Arrays.asList(subjects), actualSubjects);
+            assertTrue(feedbackCaptor.getAllValues().stream().allMatch(feedback ->
+                    Long.valueOf(1L).equals(feedback.getUserId())
+                            && "127.0.0.1".equals(feedback.getIpAddress())
+                            && feedback.getStatus() == 0));
         }
     }
 
@@ -139,10 +176,26 @@ class FeedbackServiceTest {
             when(feedbackMapper.updateById(any(Feedback.class))).thenReturn(1);
             doNothing().when(webSocketHandler).pushNotification(anyLong(), anyMap());
 
-            assertDoesNotThrow(() -> feedbackService.reply(1L, "感谢您的反馈，我们已记录处理", 2L));
+            ArgumentCaptor<Feedback> feedbackCaptor = ArgumentCaptor.forClass(Feedback.class);
+            ArgumentCaptor<Map<String, Object>> notificationCaptor = ArgumentCaptor.forClass(Map.class);
 
-            verify(feedbackMapper, times(1)).updateById(any(Feedback.class));
-            verify(webSocketHandler, times(1)).pushNotification(eq(1L), anyMap());
+            feedbackService.reply(1L, "感谢您的反馈，我们已记录处理", 2L);
+
+            verify(feedbackMapper, times(1)).updateById(feedbackCaptor.capture());
+            verify(webSocketHandler, times(1)).pushNotification(eq(1L), notificationCaptor.capture());
+
+            Feedback updated = feedbackCaptor.getValue();
+            assertEquals("感谢您的反馈，我们已记录处理", updated.getReplyContent());
+            assertEquals(2L, updated.getReplyUserId());
+            assertEquals(2, updated.getStatus());
+            assertNotNull(updated.getReplyTime());
+
+            Map<String, Object> notification = notificationCaptor.getValue();
+            assertEquals("feedback_reply", notification.get("type"));
+            assertEquals("您的留言已收到回复", notification.get("title"));
+            assertEquals("感谢您的反馈，我们已记录处理", notification.get("content"));
+            assertEquals(1L, notification.get("feedbackId"));
+            assertNotNull(notification.get("time"));
         }
 
         @Test
@@ -152,10 +205,18 @@ class FeedbackServiceTest {
             when(feedbackMapper.selectById(1L)).thenReturn(testFeedback);
             when(feedbackMapper.updateById(any(Feedback.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> feedbackService.reply(1L, "感谢反馈", 2L));
+            ArgumentCaptor<Feedback> feedbackCaptor = ArgumentCaptor.forClass(Feedback.class);
 
-            verify(feedbackMapper, times(1)).updateById(any(Feedback.class));
+            feedbackService.reply(1L, "感谢反馈", 2L);
+
+            verify(feedbackMapper, times(1)).updateById(feedbackCaptor.capture());
             verify(webSocketHandler, never()).pushNotification(anyLong(), anyMap());
+
+            Feedback updated = feedbackCaptor.getValue();
+            assertEquals("感谢反馈", updated.getReplyContent());
+            assertEquals(2L, updated.getReplyUserId());
+            assertEquals(2, updated.getStatus());
+            assertNotNull(updated.getReplyTime());
         }
 
         @Test
@@ -174,9 +235,15 @@ class FeedbackServiceTest {
             doNothing().when(webSocketHandler).pushNotification(anyLong(), anyMap());
 
             String longReply = "这是一段超过50个字符的回复内容，用于测试推送通知时是否会正确截断显示，避免通知内容过长影响用户体验";
-            assertDoesNotThrow(() -> feedbackService.reply(1L, longReply, 2L));
+            ArgumentCaptor<Map<String, Object>> notificationCaptor = ArgumentCaptor.forClass(Map.class);
 
-            verify(webSocketHandler, times(1)).pushNotification(eq(1L), anyMap());
+            feedbackService.reply(1L, longReply, 2L);
+
+            verify(webSocketHandler, times(1)).pushNotification(eq(1L), notificationCaptor.capture());
+            String expectedContent = longReply.length() > 50
+                    ? longReply.substring(0, 50) + "..."
+                    : longReply;
+            assertEquals(expectedContent, notificationCaptor.getValue().get("content"));
         }
     }
 
@@ -190,9 +257,12 @@ class FeedbackServiceTest {
             when(feedbackMapper.selectById(1L)).thenReturn(testFeedback);
             when(feedbackMapper.updateById(any(Feedback.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> feedbackService.updateStatus(1L, 1));
+            ArgumentCaptor<Feedback> feedbackCaptor = ArgumentCaptor.forClass(Feedback.class);
 
-            verify(feedbackMapper, times(1)).updateById(any(Feedback.class));
+            feedbackService.updateStatus(1L, 1);
+
+            verify(feedbackMapper, times(1)).updateById(feedbackCaptor.capture());
+            assertEquals(1, feedbackCaptor.getValue().getStatus());
         }
 
         @Test
@@ -201,9 +271,12 @@ class FeedbackServiceTest {
             when(feedbackMapper.selectById(1L)).thenReturn(testFeedback);
             when(feedbackMapper.updateById(any(Feedback.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> feedbackService.updateStatus(1L, 3));
+            ArgumentCaptor<Feedback> feedbackCaptor = ArgumentCaptor.forClass(Feedback.class);
 
-            verify(feedbackMapper, times(1)).updateById(any(Feedback.class));
+            feedbackService.updateStatus(1L, 3);
+
+            verify(feedbackMapper, times(1)).updateById(feedbackCaptor.capture());
+            assertEquals(3, feedbackCaptor.getValue().getStatus());
         }
 
         @Test
@@ -224,7 +297,7 @@ class FeedbackServiceTest {
         void delete_Success() {
             when(feedbackMapper.deleteById(1L)).thenReturn(1);
 
-            assertDoesNotThrow(() -> feedbackService.delete(1L));
+            feedbackService.delete(1L);
 
             verify(feedbackMapper, times(1)).deleteById(1L);
         }

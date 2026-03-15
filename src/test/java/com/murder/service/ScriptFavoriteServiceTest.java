@@ -72,13 +72,21 @@ class ScriptFavoriteServiceTest {
         @Test
         @DisplayName("收藏剧本 - 成功")
         void testFavoriteScript_Success() {
-            when(scriptFavoriteMapper.selectCount(any())).thenReturn(0L);
             when(scriptFavoriteMapper.insert(any(ScriptFavorite.class))).thenReturn(1);
             // 模拟getFavoriteCount: 第一次调用0，insert后第二次调用1
             when(scriptFavoriteMapper.selectCount(any())).thenReturn(0L, 1L);
+            ArgumentCaptor<ScriptFavorite> favoriteCaptor = ArgumentCaptor.forClass(ScriptFavorite.class);
 
-            assertDoesNotThrow(() -> scriptFavoriteService.favoriteScript(1L, 1L));
-            verify(scriptFavoriteMapper, times(1)).insert(any(ScriptFavorite.class));
+            scriptFavoriteService.favoriteScript(1L, 1L);
+
+            verify(scriptFavoriteMapper, times(1)).insert(favoriteCaptor.capture());
+            verify(userPointsService, never()).addPoints(anyLong(), anyInt(), anyString());
+
+            ScriptFavorite created = favoriteCaptor.getValue();
+            assertEquals(1L, created.getUserId());
+            assertEquals(1L, created.getScriptId());
+            assertNotNull(created.getCreateTime());
+            assertNotNull(created.getUpdateTime());
         }
 
         @Test
@@ -97,9 +105,18 @@ class ScriptFavoriteServiceTest {
             when(scriptFavoriteMapper.selectCount(any())).thenReturn(0L, 5L);
             when(scriptFavoriteMapper.insert(any(ScriptFavorite.class))).thenReturn(1);
             doNothing().when(userPointsService).addPoints(anyLong(), anyInt(), anyString());
+            ArgumentCaptor<ScriptFavorite> favoriteCaptor = ArgumentCaptor.forClass(ScriptFavorite.class);
 
-            assertDoesNotThrow(() -> scriptFavoriteService.favoriteScript(1L, 1L));
-            verify(userPointsService, times(1)).addPoints(eq(1L), eq(20), anyString());
+            scriptFavoriteService.favoriteScript(1L, 1L);
+
+            verify(scriptFavoriteMapper, times(1)).insert(favoriteCaptor.capture());
+            verify(userPointsService, times(1)).addPoints(eq(1L), eq(20), eq("收藏剧本达到5个"));
+
+            ScriptFavorite created = favoriteCaptor.getValue();
+            assertEquals(1L, created.getUserId());
+            assertEquals(1L, created.getScriptId());
+            assertNotNull(created.getCreateTime());
+            assertNotNull(created.getUpdateTime());
         }
     }
 
@@ -112,7 +129,8 @@ class ScriptFavoriteServiceTest {
         void testUnfavoriteScript_Success() {
             when(scriptFavoriteMapper.delete(any())).thenReturn(1);
 
-            assertDoesNotThrow(() -> scriptFavoriteService.unfavoriteScript(1L, 1L));
+            scriptFavoriteService.unfavoriteScript(1L, 1L);
+
             verify(scriptFavoriteMapper, times(1)).delete(any());
         }
     }

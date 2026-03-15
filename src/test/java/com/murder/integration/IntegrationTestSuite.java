@@ -13,6 +13,7 @@ import org.junit.platform.suite.api.SuiteDisplayName;
 @SelectClasses({
         CouponIntegrationTest.class,
         FeedbackIntegrationTest.class,
+        FrontendSmokeIntegrationTest.class,
         NotificationIntegrationTest.class,
         PaymentIntegrationTest.class,
         ReservationIntegrationTest.class,

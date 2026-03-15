@@ -80,13 +80,37 @@ class ServiceSessionServiceTest {
             });
             when(messageMapper.insert(any(ServiceMessage.class))).thenReturn(1);
             doNothing().when(webSocketHandler).notifyAdmins(anyMap());
+            ArgumentCaptor<ServiceSession> sessionCaptor = ArgumentCaptor.forClass(ServiceSession.class);
+            ArgumentCaptor<ServiceMessage> messageCaptor = ArgumentCaptor.forClass(ServiceMessage.class);
+            ArgumentCaptor<Map<String, Object>> notifyCaptor = ArgumentCaptor.forClass(Map.class);
 
             Long sessionId = sessionService.createSession(1L, "测试用户", "我需要帮助");
 
             assertNotNull(sessionId);
             assertEquals(1L, sessionId);
-            verify(sessionMapper, times(1)).insert(any(ServiceSession.class));
-            verify(webSocketHandler, times(1)).notifyAdmins(anyMap());
+            verify(sessionMapper, times(1)).insert(sessionCaptor.capture());
+            verify(messageMapper, times(1)).insert(messageCaptor.capture());
+            verify(webSocketHandler, times(1)).notifyAdmins(notifyCaptor.capture());
+
+            ServiceSession created = sessionCaptor.getValue();
+            assertEquals(1L, created.getUserId());
+            assertEquals("测试用户", created.getUserName());
+            assertEquals(0, created.getStatus());
+            assertEquals("我需要帮助", created.getInitialQuestion());
+
+            ServiceMessage message = messageCaptor.getValue();
+            assertEquals(1L, message.getSessionId());
+            assertEquals("system", message.getSenderType());
+            assertEquals("您好！已为您转接人工客服，请稍等...", message.getContent());
+            assertEquals("system", message.getMsgType());
+            assertEquals(1, message.getIsRead());
+
+            Map<String, Object> notify = notifyCaptor.getValue();
+            assertEquals("new_service_session", notify.get("type"));
+            assertEquals(1L, notify.get("sessionId"));
+            assertEquals("测试用户", notify.get("userName"));
+            assertEquals("我需要帮助", notify.get("question"));
+            assertNotNull(notify.get("time"));
         }
 
         @Test
@@ -99,10 +123,16 @@ class ServiceSessionServiceTest {
             });
             when(messageMapper.insert(any(ServiceMessage.class))).thenReturn(1);
             doNothing().when(webSocketHandler).notifyAdmins(anyMap());
+            ArgumentCaptor<ServiceSession> sessionCaptor = ArgumentCaptor.forClass(ServiceSession.class);
+            ArgumentCaptor<Map<String, Object>> notifyCaptor = ArgumentCaptor.forClass(Map.class);
 
             Long sessionId = sessionService.createSession(1L, "用户", null);
 
             assertNotNull(sessionId);
+            verify(sessionMapper, times(1)).insert(sessionCaptor.capture());
+            verify(webSocketHandler, times(1)).notifyAdmins(notifyCaptor.capture());
+            assertNull(sessionCaptor.getValue().getInitialQuestion());
+            assertNull(notifyCaptor.getValue().get("question"));
         }
     }
 
@@ -118,11 +148,29 @@ class ServiceSessionServiceTest {
             when(sessionMapper.updateById(any(ServiceSession.class))).thenReturn(1);
             when(messageMapper.insert(any(ServiceMessage.class))).thenReturn(1);
             doNothing().when(webSocketHandler).sendToUser(anyLong(), anyMap());
+            ArgumentCaptor<ServiceSession> sessionCaptor = ArgumentCaptor.forClass(ServiceSession.class);
+            ArgumentCaptor<ServiceMessage> messageCaptor = ArgumentCaptor.forClass(ServiceMessage.class);
+            ArgumentCaptor<Map<String, Object>> notifyCaptor = ArgumentCaptor.forClass(Map.class);
 
-            assertDoesNotThrow(() -> sessionService.acceptSession(1L, 10L));
-            verify(sessionMapper, times(1)).updateById(argThat(s ->
-                    s.getId().equals(1L) && s.getStatus() == 1 // 1=进行中
-            ));
+            sessionService.acceptSession(1L, 10L);
+            verify(sessionMapper, times(1)).updateById(sessionCaptor.capture());
+            verify(messageMapper, times(1)).insert(messageCaptor.capture());
+            verify(webSocketHandler, times(1)).sendToUser(eq(1L), notifyCaptor.capture());
+
+            ServiceSession updated = sessionCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(10L, updated.getAdminId());
+            assertEquals(1, updated.getStatus());
+
+            ServiceMessage message = messageCaptor.getValue();
+            assertEquals(1L, message.getSessionId());
+            assertEquals("客服已接入，请开始咨询。", message.getContent());
+            assertEquals("system", message.getSenderType());
+
+            Map<String, Object> notify = notifyCaptor.getValue();
+            assertEquals("session_accepted", notify.get("type"));
+            assertEquals(1L, notify.get("sessionId"));
+            assertEquals("客服已接入，请开始咨询。", notify.get("message"));
         }
 
         @Test
@@ -130,8 +178,9 @@ class ServiceSessionServiceTest {
         void testAcceptSession_NotFound() {
             when(sessionMapper.selectById(999L)).thenReturn(null);
 
-            assertDoesNotThrow(() -> sessionService.acceptSession(999L, 10L));
+            sessionService.acceptSession(999L, 10L);
             verify(sessionMapper, never()).updateById(any(ServiceSession.class));
+            verify(messageMapper, never()).insert(any(ServiceMessage.class));
         }
     }
 
@@ -201,11 +250,28 @@ class ServiceSessionServiceTest {
             when(sessionMapper.updateById(any(ServiceSession.class))).thenReturn(1);
             when(messageMapper.insert(any(ServiceMessage.class))).thenReturn(1);
             doNothing().when(webSocketHandler).sendToUser(anyLong(), anyMap());
+            ArgumentCaptor<ServiceSession> sessionCaptor = ArgumentCaptor.forClass(ServiceSession.class);
+            ArgumentCaptor<ServiceMessage> messageCaptor = ArgumentCaptor.forClass(ServiceMessage.class);
+            ArgumentCaptor<Map<String, Object>> notifyCaptor = ArgumentCaptor.forClass(Map.class);
 
-            assertDoesNotThrow(() -> sessionService.closeSession(1L, "user"));
-            verify(sessionMapper, times(1)).updateById(argThat(s ->
-                    s.getId().equals(1L) && s.getStatus() == 2 // 2=已关闭
-            ));
+            sessionService.closeSession(1L, "user");
+            verify(sessionMapper, times(1)).updateById(sessionCaptor.capture());
+            verify(messageMapper, times(1)).insert(messageCaptor.capture());
+            verify(webSocketHandler, times(1)).sendToUser(eq(1L), notifyCaptor.capture());
+
+            ServiceSession updated = sessionCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(2, updated.getStatus());
+            assertNotNull(updated.getEndTime());
+
+            ServiceMessage message = messageCaptor.getValue();
+            assertEquals("用户已结束本次会话。", message.getContent());
+            assertEquals("system", message.getSenderType());
+
+            Map<String, Object> notify = notifyCaptor.getValue();
+            assertEquals("session_closed", notify.get("type"));
+            assertEquals(1L, notify.get("sessionId"));
+            assertEquals("用户已结束本次会话。", notify.get("message"));
         }
 
         @Test
@@ -218,8 +284,15 @@ class ServiceSessionServiceTest {
             when(messageMapper.insert(any(ServiceMessage.class))).thenReturn(1);
             doNothing().when(webSocketHandler).sendToUser(anyLong(), anyMap());
             doNothing().when(webSocketHandler).sendToAdmin(anyLong(), anyMap());
+            ArgumentCaptor<Map<String, Object>> notifyCaptor = ArgumentCaptor.forClass(Map.class);
 
-            assertDoesNotThrow(() -> sessionService.closeSession(1L, "admin"));
+            sessionService.closeSession(1L, "admin");
+
+            verify(webSocketHandler, times(1)).sendToUser(eq(1L), notifyCaptor.capture());
+            verify(webSocketHandler, times(1)).sendToAdmin(eq(10L), notifyCaptor.capture());
+            assertTrue(notifyCaptor.getAllValues().stream().allMatch(notify ->
+                    "session_closed".equals(notify.get("type"))
+                            && "客服已结束本次会话。".equals(notify.get("message"))));
         }
     }
 
@@ -233,9 +306,15 @@ class ServiceSessionServiceTest {
             testSession.setStatus(2); // 已关闭
             when(sessionMapper.selectById(1L)).thenReturn(testSession);
             when(sessionMapper.updateById(any(ServiceSession.class))).thenReturn(1);
+            ArgumentCaptor<ServiceSession> sessionCaptor = ArgumentCaptor.forClass(ServiceSession.class);
 
-            assertDoesNotThrow(() -> sessionService.rateSession(1L, 5, "服务很好"));
-            verify(sessionMapper, times(1)).updateById(any(ServiceSession.class));
+            sessionService.rateSession(1L, 5, "服务很好");
+            verify(sessionMapper, times(1)).updateById(sessionCaptor.capture());
+
+            ServiceSession updated = sessionCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(5, updated.getRating());
+            assertEquals("服务很好", updated.getRatingComment());
         }
     }
 

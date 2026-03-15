@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -189,9 +190,26 @@ class PaymentServiceTest {
             when(reservationMapper.selectById(1L)).thenReturn(testReservation);
             when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> paymentService.applyRefund(1L, "临时有事"));
+            ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
 
-            verify(reservationMapper, times(1)).updateById(any(Reservation.class));
+            paymentService.applyRefund(1L, "临时有事");
+
+            verify(reservationMapper, times(1)).updateById(reservationCaptor.capture());
+            verify(adminNotificationService, times(1)).sendNotification(
+                    eq("退款申请提醒"),
+                    contains("TEST202601010001"),
+                    eq(2),
+                    eq("refund"),
+                    eq(1L),
+                    eq(1L),
+                    eq(3)
+            );
+
+            Reservation updated = reservationCaptor.getValue();
+            assertEquals("临时有事", updated.getRefundReason());
+            assertEquals(1, updated.getRefundStatus());
+            assertEquals(2, updated.getPayStatus());
+            assertNotNull(updated.getRefundApplyTime());
         }
 
         @Test
@@ -257,9 +275,28 @@ class PaymentServiceTest {
             when(reservationMapper.selectById(1L)).thenReturn(testReservation);
             when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> paymentService.processRefund(1L, 1, "同意退款"));
+            ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
 
-            verify(reservationMapper, atLeastOnce()).updateById(any(Reservation.class));
+            paymentService.processRefund(1L, 1, "同意退款");
+
+            verify(reservationMapper, times(1)).updateById(reservationCaptor.capture());
+            verify(couponService, times(1)).refundCoupon(1L);
+            verify(userPointsService, times(1)).deductPoints(1L, 100, "退款扣减积分");
+            verify(notificationService, times(1)).sendToUsers(
+                    eq("退款成功通知"),
+                    contains("TEST202601010001"),
+                    eq(5),
+                    eq("refund"),
+                    eq(1L),
+                    eq(1L)
+            );
+
+            Reservation updated = reservationCaptor.getValue();
+            assertEquals(2, updated.getRefundStatus());
+            assertEquals(3, updated.getPayStatus());
+            assertEquals(4, updated.getStatus());
+            assertEquals("同意退款", updated.getAdminRemark());
+            assertNotNull(updated.getRefundProcessTime());
         }
 
         @Test
@@ -270,9 +307,27 @@ class PaymentServiceTest {
             when(reservationMapper.selectById(1L)).thenReturn(testReservation);
             when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> paymentService.processRefund(1L, 0, "不符合退款条件"));
+            ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
 
-            verify(reservationMapper, times(1)).updateById(any(Reservation.class));
+            paymentService.processRefund(1L, 0, "不符合退款条件");
+
+            verify(reservationMapper, times(1)).updateById(reservationCaptor.capture());
+            verify(couponService, never()).refundCoupon(anyLong());
+            verify(userPointsService, never()).deductPoints(anyLong(), anyInt(), anyString());
+            verify(notificationService, times(1)).sendToUsers(
+                    eq("退款拒绝通知"),
+                    contains("不符合退款条件"),
+                    eq(6),
+                    eq("refund"),
+                    eq(1L),
+                    eq(1L)
+            );
+
+            Reservation updated = reservationCaptor.getValue();
+            assertEquals(3, updated.getRefundStatus());
+            assertEquals(1, updated.getPayStatus());
+            assertEquals("不符合退款条件", updated.getAdminRemark());
+            assertNotNull(updated.getRefundProcessTime());
         }
 
         @Test
@@ -304,9 +359,30 @@ class PaymentServiceTest {
             when(reservationMapper.selectById(1L)).thenReturn(testReservation);
             when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> paymentService.autoRefund(1L, "拼单未成团"));
+            ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
 
-            verify(reservationMapper, atLeastOnce()).updateById(any(Reservation.class));
+            paymentService.autoRefund(1L, "拼单未成团");
+
+            verify(reservationMapper, times(1)).updateById(reservationCaptor.capture());
+            verify(couponService, times(1)).refundCoupon(1L);
+            verify(userPointsService, times(1)).deductPoints(1L, 100, "退款扣减积分");
+            verify(notificationService, times(1)).sendToUsers(
+                    eq("拼单未成团自动退款通知"),
+                    contains("拼单未成团"),
+                    eq(5),
+                    eq("group"),
+                    eq(1L),
+                    eq(1L)
+            );
+
+            Reservation updated = reservationCaptor.getValue();
+            assertEquals("拼单未成团", updated.getRefundReason());
+            assertEquals(2, updated.getRefundStatus());
+            assertEquals(3, updated.getPayStatus());
+            assertEquals(4, updated.getStatus());
+            assertEquals("系统自动退款", updated.getAdminRemark());
+            assertNotNull(updated.getRefundApplyTime());
+            assertNotNull(updated.getRefundProcessTime());
         }
 
         @Test

@@ -93,9 +93,22 @@ class ScriptReviewServiceTest {
                 when(reviewMapper.insert(any(ScriptReview.class))).thenReturn(1);
                 when(reviewMapper.calculateAverageRating(1L)).thenReturn(new BigDecimal("4.5"));
                 when(scriptMapper.updateById(any(Script.class))).thenReturn(1);
+                ArgumentCaptor<ScriptReview> reviewCaptor = ArgumentCaptor.forClass(ScriptReview.class);
+                ArgumentCaptor<Script> scriptCaptor = ArgumentCaptor.forClass(Script.class);
 
-                assertDoesNotThrow(() -> scriptReviewService.add(testDTO));
-                verify(reviewMapper, times(1)).insert(any(ScriptReview.class));
+                scriptReviewService.add(testDTO);
+                verify(reviewMapper, times(1)).insert(reviewCaptor.capture());
+                verify(scriptMapper, times(1)).updateById(scriptCaptor.capture());
+
+                ScriptReview created = reviewCaptor.getValue();
+                assertEquals(1L, created.getScriptId());
+                assertEquals(1L, created.getUserId());
+                assertEquals(5, created.getRating());
+                assertEquals("剧本非常精彩！", created.getContent());
+
+                Script updatedScript = scriptCaptor.getValue();
+                assertEquals(1L, updatedScript.getId());
+                assertEquals(new BigDecimal("4.50"), updatedScript.getRating());
             }
         }
 
@@ -107,9 +120,11 @@ class ScriptReviewServiceTest {
                 when(reviewMapper.insert(any(ScriptReview.class))).thenReturn(1);
                 when(reviewMapper.calculateAverageRating(1L)).thenReturn(new BigDecimal("4.5"));
                 when(scriptMapper.updateById(any(Script.class))).thenReturn(1);
+                ArgumentCaptor<ScriptReview> reviewCaptor = ArgumentCaptor.forClass(ScriptReview.class);
 
-                assertDoesNotThrow(() -> scriptReviewService.add(testDTO));
-                verify(reviewMapper, times(1)).insert(any(ScriptReview.class));
+                scriptReviewService.add(testDTO);
+                verify(reviewMapper, times(1)).insert(reviewCaptor.capture());
+                assertNull(reviewCaptor.getValue().getUserId());
             }
         }
     }
@@ -197,10 +212,15 @@ class ScriptReviewServiceTest {
             when(reviewMapper.deleteById(1L)).thenReturn(1);
             when(reviewMapper.calculateAverageRating(1L)).thenReturn(new BigDecimal("4.0"));
             when(scriptMapper.updateById(any(Script.class))).thenReturn(1);
+            ArgumentCaptor<Script> scriptCaptor = ArgumentCaptor.forClass(Script.class);
 
-            assertDoesNotThrow(() -> scriptReviewService.delete(1L));
+            scriptReviewService.delete(1L);
             verify(reviewMapper, times(1)).deleteById(1L);
-            verify(scriptMapper, times(1)).updateById(any(Script.class));
+            verify(scriptMapper, times(1)).updateById(scriptCaptor.capture());
+
+            Script updatedScript = scriptCaptor.getValue();
+            assertEquals(1L, updatedScript.getId());
+            assertEquals(new BigDecimal("4.00"), updatedScript.getRating());
         }
 
         @Test
@@ -208,8 +228,9 @@ class ScriptReviewServiceTest {
         void testDelete_NotFound() {
             when(reviewMapper.selectById(999L)).thenReturn(null);
 
-            assertDoesNotThrow(() -> scriptReviewService.delete(999L));
+            scriptReviewService.delete(999L);
             verify(reviewMapper, never()).deleteById(anyLong());
+            verify(scriptMapper, never()).updateById(any(Script.class));
         }
     }
 

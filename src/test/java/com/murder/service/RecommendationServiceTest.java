@@ -76,6 +76,8 @@ class RecommendationServiceTest {
                 .id(1L)
                 .name("热门剧本")
                 .categoryId(1L)
+                .type(1)
+                .difficulty(2)
                 .rating(new BigDecimal("4.8"))
                 .price(new BigDecimal("198.00"))
                 .playerCount(6)
@@ -259,11 +261,28 @@ class RecommendationServiceTest {
         void testRecordBrowseHistory() {
             when(browseHistoryMapper.selectOne(any())).thenReturn(null);
             when(browseHistoryMapper.insert(any(UserBrowseHistory.class))).thenReturn(1);
-            when(userPreferenceMapper.selectOne(any())).thenReturn(null);
-            when(userPreferenceMapper.insert(any(UserPreference.class))).thenReturn(1);
+            when(scriptMapper.selectById(1L)).thenReturn(testScript);
+            ArgumentCaptor<UserBrowseHistory> historyCaptor = ArgumentCaptor.forClass(UserBrowseHistory.class);
 
-            assertDoesNotThrow(() ->
-                    recommendationService.recordBrowseHistory(1L, 1, 1L, 120));
+            recommendationService.recordBrowseHistory(1L, 1, 1L, 120);
+
+            verify(browseHistoryMapper, times(1)).insert(historyCaptor.capture());
+            verify(browseHistoryMapper, never()).updateById(any(UserBrowseHistory.class));
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "category_1", "1", 1.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "type_1", "1", 1.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "difficulty_2", "2", 1.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "tag_烧脑", "烧脑", 1.0);
+
+            UserBrowseHistory history = historyCaptor.getValue();
+            assertEquals(1L, history.getUserId());
+            assertEquals(1, history.getTargetType());
+            assertEquals(1L, history.getTargetId());
+            assertEquals(120, history.getDuration());
+            assertNotNull(history.getBrowseTime());
         }
 
         @Test
@@ -271,8 +290,9 @@ class RecommendationServiceTest {
         void testRecordRecommendationClick() {
             when(recommendationLogMapper.updateClickStatus(1L, 1L)).thenReturn(1);
 
-            assertDoesNotThrow(() ->
-                    recommendationService.recordRecommendationClick(1L, 1L));
+            recommendationService.recordRecommendationClick(1L, 1L);
+
+            verify(recommendationLogMapper, times(1)).updateClickStatus(1L, 1L);
         }
 
         @Test
@@ -280,26 +300,45 @@ class RecommendationServiceTest {
         void testRecordRecommendationReserve() {
             when(recommendationLogMapper.updateReserveStatus(1L, 1L)).thenReturn(1);
 
-            assertDoesNotThrow(() ->
-                    recommendationService.recordRecommendationReserve(1L, 1L));
+            recommendationService.recordRecommendationReserve(1L, 1L);
+
+            verify(recommendationLogMapper, times(1)).updateReserveStatus(1L, 1L);
         }
 
         @Test
         @DisplayName("更新用户偏好 - 预约行为")
         void testUpdateUserPreference_Reservation() {
             doNothing().when(userPreferenceMapper).incrementPreference(anyLong(), anyString(), anyString(), anyDouble());
+            when(scriptMapper.selectById(1L)).thenReturn(testScript);
 
-            assertDoesNotThrow(() ->
-                    recommendationService.updateUserPreference(1L, 1L, 3));
+            recommendationService.updateUserPreference(1L, 1L, 3);
+
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "category_1", "1", 5.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "type_1", "1", 5.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "difficulty_2", "2", 5.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "tag_烧脑", "烧脑", 5.0);
         }
 
         @Test
         @DisplayName("更新用户偏好 - 新记录")
         void testUpdateUserPreference_NewRecord() {
             doNothing().when(userPreferenceMapper).incrementPreference(anyLong(), anyString(), anyString(), anyDouble());
+            when(scriptMapper.selectById(1L)).thenReturn(testScript);
 
-            assertDoesNotThrow(() ->
-                    recommendationService.updateUserPreference(1L, 1L, 2));
+            recommendationService.updateUserPreference(1L, 1L, 2);
+
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "category_1", "1", 3.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "type_1", "1", 3.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "difficulty_2", "2", 3.0);
+            verify(userPreferenceMapper, times(1))
+                    .incrementPreference(1L, "tag_烧脑", "烧脑", 3.0);
         }
     }
 

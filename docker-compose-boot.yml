@@ -7,7 +7,7 @@ services:
     container_name: murder-boot-redis
     restart: always
     ports:
-      - "6380:6379"  # 使用不同的宿主机端口避免冲突
+      - "6379:6379"  # 使用不同的宿主机端口避免冲突
     volumes:
       - redis-boot-data:/data
       - ./redis-boot.conf:/usr/local/etc/redis/redis.conf

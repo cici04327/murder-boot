@@ -57,9 +57,17 @@ class ArticleFavoriteServiceTest {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(articleFavoriteMapper.selectCount(any())).thenReturn(0L);
                 when(articleFavoriteMapper.insert(any(ArticleFavorite.class))).thenReturn(1);
+                doNothing().when(articleMapper).increaseFavoriteCount(1L);
+                ArgumentCaptor<ArticleFavorite> favoriteCaptor = ArgumentCaptor.forClass(ArticleFavorite.class);
 
-                assertDoesNotThrow(() -> articleFavoriteService.favoriteArticle(1L));
-                verify(articleFavoriteMapper, times(1)).insert(any(ArticleFavorite.class));
+                articleFavoriteService.favoriteArticle(1L);
+
+                verify(articleFavoriteMapper, times(1)).insert(favoriteCaptor.capture());
+                verify(articleMapper, times(1)).increaseFavoriteCount(1L);
+
+                ArticleFavorite created = favoriteCaptor.getValue();
+                assertEquals(1L, created.getArticleId());
+                assertEquals(1L, created.getUserId());
             }
         }
 
@@ -86,9 +94,12 @@ class ArticleFavoriteServiceTest {
             try (MockedStatic<BaseContext> mocked = mockStatic(BaseContext.class)) {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(articleFavoriteMapper.delete(any())).thenReturn(1);
+                doNothing().when(articleMapper).decreaseFavoriteCount(1L);
 
-                assertDoesNotThrow(() -> articleFavoriteService.unfavoriteArticle(1L));
+                articleFavoriteService.unfavoriteArticle(1L);
+
                 verify(articleFavoriteMapper, times(1)).delete(any());
+                verify(articleMapper, times(1)).decreaseFavoriteCount(1L);
             }
         }
     }

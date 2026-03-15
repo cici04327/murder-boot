@@ -1,14 +1,18 @@
 package com.murder.integration;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.entity.Script;
+import com.murder.mapper.ScriptMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
 import java.math.BigDecimal;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -17,6 +21,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @DisplayName("剧本模块集成测试")
 class ScriptIntegrationTest extends BaseIntegrationTest {
+
+    @Autowired
+    private ScriptMapper scriptMapper;
 
     @Nested
     @DisplayName("剧本查询测试")
@@ -31,7 +38,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .param("pageSize", "10"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data.total").value(greaterThanOrEqualTo(0)))
+                    .andExpect(jsonPath("$.data.total").value(3))
+                    .andExpect(jsonPath("$.data.records", hasSize(3)))
                     .andExpect(jsonPath("$.data.records").isArray());
         }
 
@@ -45,6 +53,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .param("categoryId", "1"))  // 恐怖类
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.total").value(1))
+                    .andExpect(jsonPath("$.data.records[0].name").value("午夜惊魂"))
                     .andExpect(jsonPath("$.data.records").isArray());
         }
 
@@ -57,7 +67,9 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .param("pageSize", "10")
                             .param("difficulty", "2"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.total").value(1))
+                    .andExpect(jsonPath("$.data.records[0].name").value("谜案追踪"));
         }
 
         @Test
@@ -69,7 +81,9 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .param("pageSize", "10")
                             .param("playerCount", "6"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.total").value(1))
+                    .andExpect(jsonPath("$.data.records[0].name").value("午夜惊魂"));
         }
 
         @Test
@@ -80,7 +94,10 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data.id").value(1))
-                    .andExpect(jsonPath("$.data.name").value("午夜惊魂"));
+                    .andExpect(jsonPath("$.data.name").value("午夜惊魂"))
+                    .andExpect(jsonPath("$.data.categoryId").value(1))
+                    .andExpect(jsonPath("$.data.price").value(198.00))
+                    .andExpect(jsonPath("$.data.rating").value(4.5));
         }
 
         @Test
@@ -99,7 +116,9 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").isArray());
+                    .andExpect(jsonPath("$.data", hasSize(3)))
+                    .andExpect(jsonPath("$.data[0].name").value("谜案追踪"))
+                    .andExpect(jsonPath("$.data[0].rating").value(4.8));
         }
 
         @Test
@@ -109,7 +128,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").isArray());
+                    .andExpect(jsonPath("$.data", hasSize(3)))
+                    .andExpect(jsonPath("$.data[0].name").value("谜案追踪"));
         }
     }
 
@@ -124,8 +144,8 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .header("token", testUserToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").isArray())
-                    .andExpect(jsonPath("$.data[0].name").exists());
+                    .andExpect(jsonPath("$.data", hasSize(4)))
+                    .andExpect(jsonPath("$.data[0].name").value("恐怖"));
         }
     }
 
@@ -137,7 +157,7 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
         @DisplayName("新增剧本")
         void addScript_Success() throws Exception {
             Script script = Script.builder()
-                    .name("新测试剧本")
+                    .name("新测试剧本-集成")
                     .categoryId(2L)
                     .description("这是一个新的测试剧本")
                     .type(1)
@@ -153,7 +173,18 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(script)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data").value("新增成功"));
+
+            LambdaQueryWrapper<Script> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Script::getName, "新测试剧本-集成");
+            Script saved = scriptMapper.selectOne(wrapper);
+
+            assertNotNull(saved);
+            assertEquals(2L, saved.getCategoryId());
+            assertEquals(5, saved.getPlayerCount());
+            assertEquals(new BigDecimal("158.00"), saved.getPrice());
+            assertEquals(1, saved.getStatus());
         }
 
         @Test
@@ -177,7 +208,15 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(toJson(script)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data").value("更新成功"));
+
+            Script updated = scriptMapper.selectById(1L);
+            assertNotNull(updated);
+            assertEquals("更新后的剧本名称", updated.getName());
+            assertEquals("更新后的描述", updated.getDescription());
+            assertEquals(3, updated.getDifficulty());
+            assertEquals(new BigDecimal("218.00"), updated.getPrice());
         }
 
         @Test
@@ -187,7 +226,38 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(delete("/api/script/4")
                             .header("token", adminToken))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data").value("删除成功"));
+
+            assertNull(scriptMapper.selectById(4L));
+        }
+
+        @Test
+        @DisplayName("普通用户无权新增剧本")
+        void addScript_RequiresSuperAdmin() throws Exception {
+            Script script = Script.builder()
+                    .name("普通用户尝试新增")
+                    .categoryId(1L)
+                    .description("无权限测试")
+                    .type(1)
+                    .difficulty(1)
+                    .playerCount(6)
+                    .duration(new BigDecimal("4.0"))
+                    .price(new BigDecimal("100.00"))
+                    .status(1)
+                    .build();
+
+            mockMvc.perform(post("/api/script")
+                            .header("token", testUserToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(toJson(script)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(not(200)))
+                    .andExpect(jsonPath("$.msg").value("无权限，仅超级管理员可执行此操作"));
+
+            LambdaQueryWrapper<Script> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(Script::getName, "普通用户尝试新增");
+            assertEquals(0L, scriptMapper.selectCount(wrapper));
         }
     }
 
@@ -204,7 +274,9 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .param("pageSize", "10")
                             .param("keyword", "惊魂"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.total").value(1))
+                    .andExpect(jsonPath("$.data.records[0].name").value("午夜惊魂"));
         }
 
         @Test
@@ -218,7 +290,9 @@ class ScriptIntegrationTest extends BaseIntegrationTest {
                             .param("difficulty", "3")
                             .param("playerCount", "6"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200));
+                    .andExpect(jsonPath("$.code").value(200))
+                    .andExpect(jsonPath("$.data.total").value(1))
+                    .andExpect(jsonPath("$.data.records[0].name").value("午夜惊魂"));
         }
     }
 }

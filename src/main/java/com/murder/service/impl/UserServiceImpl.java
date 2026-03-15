@@ -26,6 +26,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,6 +56,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
      */
     @Override
     public void register(UserRegisterDTO userRegisterDTO) {
+        if (!StringUtils.hasText(userRegisterDTO.getUsername())) {
+            throw new RuntimeException("用户名不能为空");
+        }
+        if (!StringUtils.hasText(userRegisterDTO.getPassword())) {
+            throw new RuntimeException("密码不能为空");
+        }
+
         // 检查用户名是否已存?
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, userRegisterDTO.getUsername());

@@ -67,25 +67,66 @@ class AdminNotificationServiceTest {
         @Test
         @DisplayName("发送管理端通知 - 成功")
         void testSendNotification_Success() {
-            when(adminNotificationMapper.insert(any(AdminNotification.class))).thenReturn(1);
+            when(adminNotificationMapper.insert(any(AdminNotification.class))).thenAnswer(invocation -> {
+                AdminNotification notification = invocation.getArgument(0);
+                notification.setId(10L);
+                return 1;
+            });
             doNothing().when(webSocketHandler).pushNotificationToAll(anyMap());
 
-            assertDoesNotThrow(() -> adminNotificationService.sendNotification(
-                    "新预约", "用户提交预约", 1, "reservation", 100L, 1L, 2));
+            ArgumentCaptor<AdminNotification> notificationCaptor = ArgumentCaptor.forClass(AdminNotification.class);
+            ArgumentCaptor<Map<String, Object>> wsCaptor = ArgumentCaptor.forClass(Map.class);
 
-            verify(adminNotificationMapper, times(1)).insert(any(AdminNotification.class));
+            adminNotificationService.sendNotification("新预约", "用户提交预约", 1, "reservation", 100L, 1L, 2);
+
+            verify(adminNotificationMapper, times(1)).insert(notificationCaptor.capture());
+            verify(webSocketHandler, times(1)).pushNotificationToAll(wsCaptor.capture());
+
+            AdminNotification saved = notificationCaptor.getValue();
+            assertEquals("新预约", saved.getTitle());
+            assertEquals("用户提交预约", saved.getContent());
+            assertEquals(1, saved.getType());
+            assertEquals("reservation", saved.getBizType());
+            assertEquals(100L, saved.getBizId());
+            assertEquals(1L, saved.getStoreId());
+            assertEquals(2, saved.getPriority());
+            assertEquals(0, saved.getIsRead());
+            assertEquals(1, saved.getTargetType());
+            assertEquals(2, saved.getStatus());
+            assertEquals(0, saved.getIsDeleted());
+            assertNotNull(saved.getSendTime());
+
+            Map<String, Object> wsMessage = wsCaptor.getValue();
+            assertEquals(10L, wsMessage.get("id"));
+            assertEquals("新预约", wsMessage.get("title"));
+            assertEquals("用户提交预约", wsMessage.get("content"));
+            assertEquals("reservation", wsMessage.get("bizType"));
+            assertEquals(100L, wsMessage.get("bizId"));
+            assertEquals(false, wsMessage.get("isRead"));
         }
 
         @Test
         @DisplayName("发送通知 - storeId为null时全平台通知")
         void testSendNotification_NullStoreId() {
-            when(adminNotificationMapper.insert(any(AdminNotification.class))).thenReturn(1);
+            when(adminNotificationMapper.insert(any(AdminNotification.class))).thenAnswer(invocation -> {
+                AdminNotification notification = invocation.getArgument(0);
+                notification.setId(11L);
+                return 1;
+            });
             doNothing().when(webSocketHandler).pushNotificationToAll(anyMap());
 
-            assertDoesNotThrow(() -> adminNotificationService.sendNotification(
-                    "系统通知", "系统升级", 4, "system", null, null, 1));
+            ArgumentCaptor<AdminNotification> notificationCaptor = ArgumentCaptor.forClass(AdminNotification.class);
 
-            verify(adminNotificationMapper, times(1)).insert(any(AdminNotification.class));
+            adminNotificationService.sendNotification("系统通知", "系统升级", 4, "system", null, null, 1);
+
+            verify(adminNotificationMapper, times(1)).insert(notificationCaptor.capture());
+
+            AdminNotification saved = notificationCaptor.getValue();
+            assertNull(saved.getStoreId());
+            assertNull(saved.getBizId());
+            assertEquals("系统通知", saved.getTitle());
+            assertEquals("system", saved.getBizType());
+            assertEquals(1, saved.getPriority());
         }
     }
 
@@ -162,8 +203,16 @@ class AdminNotificationServiceTest {
             when(adminNotificationMapper.selectById(1L)).thenReturn(testNotification);
             when(adminNotificationMapper.updateById(any(AdminNotification.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> adminNotificationService.markAsRead(1L));
-            verify(adminNotificationMapper, times(1)).updateById(any(AdminNotification.class));
+            ArgumentCaptor<AdminNotification> notificationCaptor = ArgumentCaptor.forClass(AdminNotification.class);
+
+            adminNotificationService.markAsRead(1L);
+
+            verify(adminNotificationMapper, times(1)).updateById(notificationCaptor.capture());
+
+            AdminNotification updated = notificationCaptor.getValue();
+            assertEquals(1L, updated.getId());
+            assertEquals(1, updated.getIsRead());
+            assertNotNull(updated.getReadTime());
         }
 
         @Test
@@ -176,8 +225,16 @@ class AdminNotificationServiceTest {
                     .thenReturn(Arrays.asList(testNotification, anotherNotification));
             when(adminNotificationMapper.updateById(any(AdminNotification.class))).thenReturn(1);
 
-            assertDoesNotThrow(() -> adminNotificationService.markAllAsRead(1L));
-            verify(adminNotificationMapper, times(2)).updateById(any(AdminNotification.class));
+            ArgumentCaptor<AdminNotification> notificationCaptor = ArgumentCaptor.forClass(AdminNotification.class);
+
+            adminNotificationService.markAllAsRead(1L);
+
+            verify(adminNotificationMapper, times(2)).updateById(notificationCaptor.capture());
+            assertEquals(Arrays.asList(1L, 2L), notificationCaptor.getAllValues().stream()
+                    .map(AdminNotification::getId)
+                    .toList());
+            assertTrue(notificationCaptor.getAllValues().stream().allMatch(notification ->
+                    Integer.valueOf(1).equals(notification.getIsRead()) && notification.getReadTime() != null));
         }
     }
 
@@ -215,7 +272,7 @@ class AdminNotificationServiceTest {
         void testDeleteNotification_Success() {
             when(adminNotificationMapper.deleteById(1L)).thenReturn(1);
 
-            assertDoesNotThrow(() -> adminNotificationService.deleteNotification(1L));
+            adminNotificationService.deleteNotification(1L);
             verify(adminNotificationMapper, times(1)).deleteById(1L);
         }
 
@@ -225,7 +282,7 @@ class AdminNotificationServiceTest {
             when(adminNotificationMapper.deleteBatchIds(anyList())).thenReturn(3);
 
             List<Long> ids = Arrays.asList(1L, 2L, 3L);
-            assertDoesNotThrow(() -> adminNotificationService.batchDeleteNotifications(ids));
+            adminNotificationService.batchDeleteNotifications(ids);
             verify(adminNotificationMapper, times(1)).deleteBatchIds(ids);
         }
     }

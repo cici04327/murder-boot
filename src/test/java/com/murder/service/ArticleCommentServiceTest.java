@@ -129,15 +129,27 @@ class ArticleCommentServiceTest {
             try (MockedStatic<BaseContext> mocked = mockStatic(BaseContext.class)) {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(commentMapper.insert(any(ArticleComment.class))).thenReturn(1);
-                when(articleMapper.selectById(1L)).thenReturn(testArticle);
-                when(articleMapper.updateById(any(Article.class))).thenReturn(1);
+                when(userMapper.selectById(1L)).thenReturn(testUser);
+                doNothing().when(articleMapper).increaseCommentCount(1L);
+                ArgumentCaptor<ArticleComment> commentCaptor = ArgumentCaptor.forClass(ArticleComment.class);
 
                 ArticleCommentDTO dto = new ArticleCommentDTO();
                 dto.setArticleId(1L);
                 dto.setContent("这是一条新评论");
 
-                assertDoesNotThrow(() -> commentService.addComment(dto));
-                verify(commentMapper, times(1)).insert(any(ArticleComment.class));
+                commentService.addComment(dto);
+                verify(commentMapper, times(1)).insert(commentCaptor.capture());
+                verify(articleMapper, times(1)).increaseCommentCount(1L);
+
+                ArticleComment created = commentCaptor.getValue();
+                assertEquals(1L, created.getArticleId());
+                assertEquals(1L, created.getUserId());
+                assertEquals("测试用户", created.getUserName());
+                assertEquals("http://example.com/avatar.jpg", created.getUserAvatar());
+                assertEquals("这是一条新评论", created.getContent());
+                assertNull(created.getParentId());
+                assertEquals(0, created.getLikeCount());
+                assertEquals(1, created.getStatus());
             }
         }
 
@@ -147,17 +159,34 @@ class ArticleCommentServiceTest {
             try (MockedStatic<BaseContext> mocked = mockStatic(BaseContext.class)) {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(commentMapper.insert(any(ArticleComment.class))).thenReturn(1);
-                when(commentMapper.selectById(1L)).thenReturn(testComment);
-                when(articleMapper.selectById(1L)).thenReturn(testArticle);
-                when(articleMapper.updateById(any(Article.class))).thenReturn(1);
+                when(userMapper.selectById(1L)).thenReturn(testUser);
+                User replyToUser = new User();
+                replyToUser.setId(2L);
+                replyToUser.setNickname("被回复用户");
+                when(userMapper.selectById(2L)).thenReturn(replyToUser);
+                doNothing().when(articleMapper).increaseCommentCount(1L);
+                ArgumentCaptor<ArticleComment> commentCaptor = ArgumentCaptor.forClass(ArticleComment.class);
 
                 ArticleCommentDTO dto = new ArticleCommentDTO();
                 dto.setArticleId(1L);
                 dto.setContent("这是一条回复");
                 dto.setParentId(1L);
+                dto.setReplyToUserId(2L);
 
-                assertDoesNotThrow(() -> commentService.addComment(dto));
-                verify(commentMapper, times(1)).insert(any(ArticleComment.class));
+                commentService.addComment(dto);
+                verify(commentMapper, times(1)).insert(commentCaptor.capture());
+                verify(articleMapper, times(1)).increaseCommentCount(1L);
+
+                ArticleComment created = commentCaptor.getValue();
+                assertEquals(1L, created.getArticleId());
+                assertEquals(1L, created.getUserId());
+                assertEquals("测试用户", created.getUserName());
+                assertEquals(1L, created.getParentId());
+                assertEquals(2L, created.getReplyToUserId());
+                assertEquals("被回复用户", created.getReplyToUserName());
+                assertEquals("这是一条回复", created.getContent());
+                assertEquals(0, created.getLikeCount());
+                assertEquals(1, created.getStatus());
             }
         }
     }
@@ -172,12 +201,18 @@ class ArticleCommentServiceTest {
             when(commentMapper.selectById(1L)).thenReturn(testComment);
             when(commentMapper.updateById(any(ArticleComment.class))).thenReturn(1);
             doNothing().when(articleMapper).decreaseCommentCount(1L);
+            ArgumentCaptor<ArticleComment> commentCaptor = ArgumentCaptor.forClass(ArticleComment.class);
 
-            assertDoesNotThrow(() -> commentService.deleteComment(1L));
-            verify(commentMapper, times(1)).updateById(argThat(comment ->
-                    comment.getId().equals(1L) && comment.getStatus() == 0
-            ));
+            commentService.deleteComment(1L);
+
+            verify(commentMapper, times(1)).updateById(commentCaptor.capture());
             verify(articleMapper, times(1)).decreaseCommentCount(1L);
+
+            ArticleComment deleted = commentCaptor.getValue();
+            assertEquals(1L, deleted.getId());
+            assertEquals(1L, deleted.getArticleId());
+            assertEquals(0, deleted.getStatus());
+            assertEquals("这是一条测试评论", deleted.getContent());
         }
 
         @Test
@@ -198,12 +233,20 @@ class ArticleCommentServiceTest {
         void testLikeComment_Success() {
             try (MockedStatic<BaseContext> mocked = mockStatic(BaseContext.class)) {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
-                when(commentLikeMapper.selectCount(any())).thenReturn(0L);
+                when(commentLikeMapper.selectOne(any())).thenReturn(null);
                 when(commentLikeMapper.insert(any())).thenReturn(1);
-                when(commentMapper.selectById(1L)).thenReturn(testComment);
-                when(commentMapper.updateById(any())).thenReturn(1);
+                doNothing().when(commentMapper).increaseLikeCount(1L);
+                ArgumentCaptor<com.murder.entity.ArticleCommentLike> likeCaptor =
+                        ArgumentCaptor.forClass(com.murder.entity.ArticleCommentLike.class);
 
-                assertDoesNotThrow(() -> commentService.likeComment(1L));
+                commentService.likeComment(1L);
+
+                verify(commentLikeMapper, times(1)).insert(likeCaptor.capture());
+                verify(commentMapper, times(1)).increaseLikeCount(1L);
+
+                com.murder.entity.ArticleCommentLike like = likeCaptor.getValue();
+                assertEquals(1L, like.getCommentId());
+                assertEquals(1L, like.getUserId());
             }
         }
 
@@ -213,10 +256,12 @@ class ArticleCommentServiceTest {
             try (MockedStatic<BaseContext> mocked = mockStatic(BaseContext.class)) {
                 mocked.when(BaseContext::getCurrentId).thenReturn(1L);
                 when(commentLikeMapper.delete(any())).thenReturn(1);
-                when(commentMapper.selectById(1L)).thenReturn(testComment);
-                when(commentMapper.updateById(any())).thenReturn(1);
+                doNothing().when(commentMapper).decreaseLikeCount(1L);
 
-                assertDoesNotThrow(() -> commentService.unlikeComment(1L));
+                commentService.unlikeComment(1L);
+
+                verify(commentLikeMapper, times(1)).delete(any());
+                verify(commentMapper, times(1)).decreaseLikeCount(1L);
             }
         }
     }
