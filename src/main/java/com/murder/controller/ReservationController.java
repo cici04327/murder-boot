@@ -13,8 +13,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.Objects;
 
 import java.util.List;
@@ -49,6 +51,7 @@ public class ReservationController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Long storeId,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate reservationDate,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer payStatus,
             @RequestParam(required = false) Integer checkInStatus,
@@ -66,10 +69,10 @@ public class ReservationController {
             storeId = BaseContext.getStoreId();
         }
 
-        log.info("分页查询预约列表: page={}, pageSize={}, userId={}, storeId={}, status={}, payStatus={}, checkInStatus={}, refundStatus={}, hasRefund={}, clientType={}",
-                page, pageSize, userId, storeId, status, payStatus, checkInStatus, refundStatus, hasRefund, clientType);
+        log.info("分页查询预约列表: page={}, pageSize={}, userId={}, storeId={}, reservationDate={}, status={}, payStatus={}, checkInStatus={}, refundStatus={}, hasRefund={}, clientType={}",
+                page, pageSize, userId, storeId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund, clientType);
         return Result.success(
-                reservationService.pageQueryWithDetails(page, pageSize, userId, storeId, status, payStatus, checkInStatus, refundStatus, hasRefund)
+                reservationService.pageQueryWithDetails(page, pageSize, userId, storeId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund)
         );
     }
 
@@ -178,5 +181,13 @@ public class ReservationController {
         log.info("改期预约: id={}, newReservationTime={}", id, dto.getNewReservationTime());
         reservationService.reschedule(id, dto.getNewReservationTime());
         return Result.success("改期成功");
+    }
+
+    @PutMapping("/{id}/assign-dm")
+    @Operation(summary = "分配预约主持 DM")
+    public Result<String> assignDm(@PathVariable Long id, @RequestParam Long dmId) {
+        log.info("分配预约主持 DM: reservationId={}, dmId={}", id, dmId);
+        reservationService.assignDm(id, dmId);
+        return Result.success("分配成功");
     }
 }

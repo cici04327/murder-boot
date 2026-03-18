@@ -3,7 +3,7 @@
     <el-result
       :icon="isSuccess ? 'success' : 'error'"
       :title="isSuccess ? '支付成功' : '支付失败'"
-      :sub-title="isSuccess ? '您的订单已支付成功，请按时前往门店体验' : '支付遇到问题，请重试或联系客服'"
+      :sub-title="resultMessage"
     >
       <template #extra>
         <el-space direction="vertical" :size="20">
@@ -34,6 +34,13 @@ const router = useRouter()
 
 const isSuccess = computed(() => route.query.success === 'true')
 const reservationId = computed(() => route.query.reservationId)
+const resultMessage = computed(() => {
+  const rawMessage = route.query.message ? decodeURIComponent(route.query.message) : ''
+  if (rawMessage) return rawMessage
+  return isSuccess.value
+    ? '您的订单已支付成功，请按时前往门店体验'
+    : '支付遇到问题，请重试或联系客服'
+})
 
 const goToDetail = () => {
   if (reservationId.value) {

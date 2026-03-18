@@ -40,6 +40,13 @@
                   <span class="info-value highlight">{{ formatPlayTime(group.playTime) }}</span>
                 </div>
               </div>
+              <div class="info-row" v-if="group.expireTime">
+                <div class="info-icon">⌛</div>
+                <div class="info-content">
+                  <span class="info-label">最晚成团</span>
+                  <span class="info-value" :class="{ highlight: isDeadlinePassed }">{{ formatPlayTime(group.expireTime) }}</span>
+                </div>
+              </div>
               <div class="info-row">
                 <div class="info-icon">💰</div>
                 <div class="info-content">
@@ -175,9 +182,15 @@ const loading = ref(false)
 const group = ref(null)
 const members = ref([])
 
+const isDeadlinePassed = computed(() => {
+  if (!group.value?.expireTime) return false
+  return new Date(group.value.expireTime).getTime() <= Date.now()
+})
+
 const canJoin = computed(() => {
   if (!group.value) return false
   if (group.value.status !== 1) return false
+  if (isDeadlinePassed.value) return false
   if (group.value.currentCount >= group.value.needCount) return false
   // 匿名模式下无法判断是否已加入，依靠后端校验
   return true
@@ -191,9 +204,11 @@ const emptySeats = computed(() => {
 
 const joinBtnText = computed(() => {
   if (!group.value) return '加载中...'
+  if (group.value.status === 0 && isDeadlinePassed.value) return '已截止'
   if (group.value.status === 2) return '已成团'
   if (group.value.status === 0) return '已取消'
   if (group.value.status === 3) return '已结束'
+  if (isDeadlinePassed.value) return '已截止'
   if (group.value.currentCount >= group.value.needCount) return '已满员'
   return '立即上车'
 })
@@ -261,7 +276,10 @@ const formatPlayTime = (time) => {
   return `${d.getMonth()+1}月${d.getDate()}日 ${weekDays[d.getDay()]} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`
 }
 
-const getStatusText = (s) => ({ 0:'已取消', 1:'召集中', 2:'已成团', 3:'已结束' }[s] || '未知')
+const getStatusText = (s) => {
+  if (s === 0 && isDeadlinePassed.value) return '已截止'
+  return ({ 0:'已取消', 1:'召集中', 2:'已成团', 3:'已结束' }[s] || '未知')
+}
 const getStatusClass = (s) => ({ 0:'cancelled', 1:'active', 2:'success', 3:'ended' }[s] || '')
 const getStatusIcon = (s) => ({ 0:'❌', 1:'🔥', 2:'✅', 3:'🏁' }[s] || '❓')
 const getDifficultyText = (d) => ({ 1:'🌱 新手', 2:'⭐ 进阶', 3:'🔥 烧脑', 4:'💀 硬核' }[d] || '⭐ 进阶')

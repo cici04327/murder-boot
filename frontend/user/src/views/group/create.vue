@@ -25,6 +25,7 @@
 
         <el-form-item label="开车时间" prop="playTime">
           <el-date-picker v-model="form.playTime" type="datetime" placeholder="选择开车时间" :disabled-date="disabledDate" />
+          <span class="form-tip">成团截止时间为发起后24小时或开场前2小时，以较早者为准</span>
         </el-form-item>
 
         <el-form-item label="需要人数" prop="needCount">
@@ -80,6 +81,7 @@ const formRef = ref(null)
 const submitting = ref(false)
 const scripts = ref([])
 const stores = ref([])
+const GROUP_FORMATION_LEAD_HOURS = 2
 
 const form = reactive({
   scriptId: null,
@@ -102,6 +104,12 @@ const rules = {
 }
 
 const disabledDate = (time) => time.getTime() < Date.now() - 8.64e7
+
+const isTooCloseToPlayTime = (playTime) => {
+  if (!playTime) return false
+  const playTimestamp = new Date(playTime).getTime()
+  return playTimestamp <= Date.now() + GROUP_FORMATION_LEAD_HOURS * 60 * 60 * 1000
+}
 
 const handleScriptChange = (scriptId) => {
   const script = scripts.value.find(s => s.id === scriptId)
@@ -133,6 +141,10 @@ const handleSubmit = async () => {
   }
   await formRef.value.validate(async (valid) => {
     if (!valid) return
+    if (isTooCloseToPlayTime(form.playTime)) {
+      ElMessage.warning(`开车时间至少需要晚于当前${GROUP_FORMATION_LEAD_HOURS}小时`)
+      return
+    }
     submitting.value = true
     try {
       // 获取选中的剧本信息
@@ -166,7 +178,9 @@ const handleSubmit = async () => {
       }
     } catch (error) {
       console.error('发起拼单失败:', error)
-      ElMessage.error('发起失败，请重试')
+      if (!error?.message) {
+        ElMessage.error('发起失败，请重试')
+      }
     } finally {
       submitting.value = false
     }

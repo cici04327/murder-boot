@@ -62,4 +62,7 @@ public class ReservationDTO implements Serializable {
 
     @Schema(description = "排期ID（用于同步 ScriptSchedule.currentPlayers）")
     private Long scheduleId;
+
+    @Schema(description = "主持 DM ID")
+    private Long dmId;
 }

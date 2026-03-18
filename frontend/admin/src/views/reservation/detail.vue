@@ -15,6 +15,30 @@
         <el-descriptions-item label="门店">{{ reservation.storeName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="房间">{{ reservation.roomName || '-' }}</el-descriptions-item>
         <el-descriptions-item label="剧本">{{ reservation.scriptName || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="主持 DM" :span="2">
+          <div v-if="reservation.dmId" class="dm-info-row">
+            <el-avatar :size="36" :src="reservation.dmAvatar" style="margin-right:10px;flex-shrink:0">🎭</el-avatar>
+            <div class="dm-info-content">
+              <div class="dm-info-name">{{ reservation.dmName || '未命名 DM' }}</div>
+              <div class="dm-info-meta" v-if="reservation.dmStyleTags">
+                <el-tag
+                  v-for="tag in reservation.dmStyleTags.split(',')"
+                  :key="tag"
+                  size="small"
+                  style="margin-right:6px;margin-top:6px"
+                >
+                  {{ tag }}
+                </el-tag>
+              </div>
+            </div>
+          </div>
+          <span v-else style="color:#909399">暂未分配主持 DM</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="分配规则" :span="2">
+          <span :class="reservation.dmAssignable ? 'dm-tip-ok' : 'dm-tip-warn'">
+            {{ reservation.dmAssignHint || '当前场次支持在管理端分配 DM' }}
+          </span>
+        </el-descriptions-item>
         <el-descriptions-item label="预约时间">{{ reservation.reservationTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="参与人数">{{ reservation.playerCount || 0 }} 人</el-descriptions-item>
         <el-descriptions-item label="时长">{{ reservation.duration || 3 }} 小时</el-descriptions-item>
@@ -39,12 +63,65 @@
       </el-descriptions>
 
       <div class="actions">
+        <el-button
+          v-if="showDmAction"
+          type="primary"
+          :disabled="!reservation.dmAssignable"
+          @click="openDmDialog"
+        >
+          {{ reservation.dmId ? '改派 DM' : '分配 DM' }}
+        </el-button>
         <el-button v-if="canCheckIn" type="success" @click="handleCheckIn">到店核销</el-button>
         <el-button v-if="canComplete" type="warning" @click="handleComplete">完成预约</el-button>
         <el-button v-if="canCancel" type="danger" @click="handleCancel">取消预约</el-button>
         <el-button @click="goBack">返回列表</el-button>
       </div>
     </el-card>
+
+    <el-dialog
+      v-model="showDmDialog"
+      :title="reservation.dmId ? '改派主持 DM' : '分配主持 DM'"
+      width="420px"
+    >
+      <el-form label-width="90px">
+        <el-form-item label="当前场次">
+          <div>{{ reservation.scriptName || '-' }} / {{ reservation.reservationTime || '-' }}</div>
+        </el-form-item>
+        <el-form-item label="分配说明">
+          <div :class="reservation.dmAssignable ? 'dm-tip-ok' : 'dm-tip-warn'">
+            {{ reservation.dmAssignHint || '-' }}
+          </div>
+        </el-form-item>
+        <el-form-item label="选择 DM">
+          <el-select
+            v-model="selectedDmId"
+            placeholder="请选择主持 DM"
+            style="width:100%"
+            :loading="dmLoading"
+            filterable
+          >
+            <el-option
+              v-for="dm in dmOptions"
+              :key="dm.id"
+              :label="dm.name"
+              :value="dm.id"
+            >
+              <div style="display:flex;align-items:center;gap:8px">
+                <el-avatar :size="24" :src="dm.avatar">🎭</el-avatar>
+                <span>{{ dm.name }}</span>
+                <span style="margin-left:auto;color:#909399;font-size:12px">
+                  {{ (dm.styleTagList || []).slice(0, 2).join(' / ') || '暂无风格标签' }}
+                </span>
+              </div>
+            </el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showDmDialog = false">取消</el-button>
+        <el-button type="primary" :loading="assigningDm" @click="handleAssignDm">确认分配</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -59,6 +136,11 @@ const router = useRouter()
 
 const loading = ref(false)
 const reservation = ref({})
+const showDmDialog = ref(false)
+const dmOptions = ref([])
+const dmLoading = ref(false)
+const assigningDm = ref(false)
+const selectedDmId = ref(null)
 
 const reservationId = computed(() => route.params.id)
 
@@ -90,6 +172,8 @@ const canComplete = computed(() => reservation.value.status === 2 && reservation
 
 const canCancel = computed(() => [1, 2].includes(reservation.value.status) && reservation.value.checkInStatus !== 1)
 
+const showDmAction = computed(() => [1, 2].includes(reservation.value.status))
+
 const normalizeCheckInCode = (value) => String(value || '').replace(/\s+/g, '').replace(/[^\d]/g, '')
 
 const loadDetail = async () => {
@@ -101,6 +185,61 @@ const loadDetail = async () => {
     ElMessage.error(error.message || '加载预约详情失败')
   } finally {
     loading.value = false
+  }
+}
+
+const loadDmOptions = async () => {
+  if (!reservation.value.storeId) {
+    dmOptions.value = []
+    return
+  }
+  dmLoading.value = true
+  try {
+    const res = await request.get('/dm/list', {
+      params: { storeId: reservation.value.storeId }
+    })
+    dmOptions.value = res.data || []
+  } catch (error) {
+    ElMessage.error(error.message || '加载 DM 列表失败')
+    dmOptions.value = []
+  } finally {
+    dmLoading.value = false
+  }
+}
+
+const openDmDialog = async () => {
+  if (!reservation.value.dmAssignable) {
+    ElMessage.warning(reservation.value.dmAssignHint || '当前暂不能分配 DM')
+    return
+  }
+  selectedDmId.value = reservation.value.dmId || null
+  await loadDmOptions()
+  if (dmOptions.value.length === 0) {
+    ElMessage.warning('当前门店暂无可用 DM')
+    return
+  }
+  showDmDialog.value = true
+}
+
+const handleAssignDm = async () => {
+  if (!selectedDmId.value) {
+    ElMessage.warning('请选择要分配的 DM')
+    return
+  }
+  assigningDm.value = true
+  try {
+    await request({
+      url: `/reservation/${reservationId.value}/assign-dm`,
+      method: 'put',
+      params: { dmId: selectedDmId.value }
+    })
+    ElMessage.success('DM 分配成功')
+    showDmDialog.value = false
+    await loadDetail()
+  } catch (error) {
+    ElMessage.error(error.message || 'DM 分配失败')
+  } finally {
+    assigningDm.value = false
   }
 }
 
@@ -182,5 +321,35 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   margin-top: 20px;
+}
+
+.dm-info-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.dm-info-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.dm-info-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.dm-info-meta {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.dm-tip-ok {
+  color: #67c23a;
+}
+
+.dm-tip-warn {
+  color: #e6a23c;
 }
 </style>

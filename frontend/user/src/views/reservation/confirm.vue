@@ -3,7 +3,7 @@
     <el-result
       icon="success"
       title="预约提交成功"
-      sub-title="请尽快完成支付，到店时向门店出示核销码"
+      :sub-title="reservation?.groupId ? '人数不足已自动发起拼团，请尽快支付并分享拼团给朋友' : '请尽快完成支付，到店时向门店出示核销码'"
     >
       <template #extra>
         <el-card class="reservation-info">
@@ -37,6 +37,14 @@
             <div class="check-in-desc">
               {{ reservation?.payStatus === 1 ? '支付成功后可直接向门店出示此核销码' : '该核销码已生成，支付成功后即可使用' }}
             </div>
+          </div>
+
+          <div class="group-panel" v-if="reservation?.groupId">
+            <div class="group-panel-title">拼团已自动发起</div>
+            <div class="group-panel-desc">
+              当前预约人数不足完整开团，系统已经为该场次生成拼团。你可以前往拼团页查看进度，并把链接分享给好友一起上车。
+            </div>
+            <el-button type="warning" plain @click="handleViewGroup">查看拼团</el-button>
           </div>
 
           <div class="actions">
@@ -83,6 +91,11 @@ const loadReservation = async () => {
 
 const handlePay = () => {
   router.push(`/payment/${route.params.id}`)
+}
+
+const handleViewGroup = () => {
+  if (!reservation.value?.groupId) return
+  router.push(`/group/${reservation.value.groupId}`)
 }
 
 onMounted(() => {
@@ -133,6 +146,28 @@ onMounted(() => {
   margin-top: 12px;
   color: #8c6a2a;
   font-size: 13px;
+}
+
+.group-panel {
+  margin-top: 20px;
+  padding: 20px 24px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff8e8 0%, #fff3d6 100%);
+  border: 1px solid #f1cf85;
+  text-align: left;
+}
+
+.group-panel-title {
+  color: #8c6a2a;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.group-panel-desc {
+  margin: 10px 0 16px;
+  color: #8c6a2a;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .actions {

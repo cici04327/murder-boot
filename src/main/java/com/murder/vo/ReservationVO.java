@@ -45,6 +45,9 @@ public class ReservationVO implements Serializable {
     @Schema(description = "房间ID")
     private Long roomId;
 
+    @Schema(description = "排期ID")
+    private Long scheduleId;
+
     @Schema(description = "房间名称")
     private String roomName;
 
@@ -53,6 +56,9 @@ public class ReservationVO implements Serializable {
 
     @Schema(description = "剧本ID")
     private Long scriptId;
+
+    @Schema(description = "拼团ID")
+    private Long groupId;
 
     @Schema(description = "剧本名称")
     private String scriptName;
@@ -162,4 +168,13 @@ public class ReservationVO implements Serializable {
 
     @Schema(description = "主持 DM 综合评分")
     private java.math.BigDecimal dmRating;
+
+    @Schema(description = "当前是否可在管理端分配/改派 DM")
+    private Boolean dmAssignable;
+
+    @Schema(description = "DM 分配提示文案")
+    private String dmAssignHint;
+
+    @Schema(description = "拼团状态")
+    private Integer groupStatus;
 }

@@ -35,10 +35,8 @@ public interface ReservationMapper extends BaseMapper<Reservation> {
     @Select("SELECT COUNT(*) FROM reservation_order WHERE room_id = #{roomId} " +
             "AND status IN (1, 2) " +
             "AND is_deleted = 0 " +
-            "AND ((reservation_time >= #{startTime} AND reservation_time < #{endTime}) " +
-            "OR (DATEADD('HOUR', CAST(duration AS INT), reservation_time) > #{startTime} " +
-            "AND DATEADD('HOUR', CAST(duration AS INT), reservation_time) <= #{endTime}) " +
-            "OR (reservation_time <= #{startTime} AND DATEADD('HOUR', CAST(duration AS INT), reservation_time) >= #{endTime}))")
+            "AND reservation_time < #{endTime} " +
+            "AND TIMESTAMPADD(MINUTE, CAST(CEILING(COALESCE(duration, 3.0) * 60) AS SIGNED), reservation_time) > #{startTime}")
     int countConflictingReservations(@Param("roomId") Long roomId,
                                       @Param("startTime") LocalDateTime startTime,
                                       @Param("endTime") LocalDateTime endTime);

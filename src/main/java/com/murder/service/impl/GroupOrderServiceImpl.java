@@ -19,6 +19,7 @@ import com.murder.service.CouponService;
 import com.murder.service.GroupOrderService;
 import com.murder.service.NotificationService;
 import com.murder.service.PaymentService;
+import com.murder.service.ScriptScheduleService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOrder> implements GroupOrderService {
 
     private static final int GROUP_TIMEOUT_HOURS = 24;
+    private static final int GROUP_FORMATION_LEAD_HOURS = 2;
 
     private final GroupMemberMapper groupMemberMapper;
     private final UserMapper userMapper;
@@ -50,11 +52,13 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     private final PaymentService paymentService;
     private final NotificationService notificationService;
     private final CouponService couponService;
+    private final ScriptScheduleService scriptScheduleService;
 
     @Override
     public Page<Map<String, Object>> pageQuery(Integer page, Integer pageSize, Long scriptId, Long categoryId, Integer playerCount, Integer status) {
         Page<GroupOrder> pageParam = new Page<>(page, pageSize);
         LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
+        LocalDateTime now = LocalDateTime.now();
 
         if (scriptId != null) {
             wrapper.eq(GroupOrder::getScriptId, scriptId);
@@ -76,9 +80,21 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             wrapper.eq(GroupOrder::getPlayerCount, playerCount);
         }
         if (status != null) {
-            wrapper.eq(GroupOrder::getStatus, status);
+            if (status == 1) {
+                applyActiveStatusFilter(wrapper, now);
+            } else {
+                wrapper.eq(GroupOrder::getStatus, status);
+            }
         } else {
-            wrapper.in(GroupOrder::getStatus, Arrays.asList(1, 2));
+            wrapper.and(query -> query
+                    .eq(GroupOrder::getStatus, 2)
+                    .or(active -> active
+                            .eq(GroupOrder::getStatus, 1)
+                            .gt(GroupOrder::getCreateTime, now.minusHours(GROUP_TIMEOUT_HOURS))
+                            .and(play -> play
+                                    .isNull(GroupOrder::getPlayTime)
+                                    .or()
+                                    .gt(GroupOrder::getPlayTime, now.plusHours(GROUP_FORMATION_LEAD_HOURS)))));
         }
 
         wrapper.orderByDesc(GroupOrder::getCreateTime);
@@ -98,8 +114,8 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         try {
             int safeLimit = (limit == null || limit <= 0) ? 10 : Math.min(limit, 50);
             LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
-            wrapper.eq(GroupOrder::getStatus, 1)
-                    .orderByDesc(GroupOrder::getCreateTime)
+            applyActiveStatusFilter(wrapper, LocalDateTime.now());
+            wrapper.orderByDesc(GroupOrder::getCreateTime)
                     .last("LIMIT " + safeLimit);
 
             List<GroupOrder> groups = this.list(wrapper);
@@ -229,14 +245,16 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             throw new RuntimeException("用户不存在");
         }
 
+        LocalDateTime now = LocalDateTime.now();
+        validateGroupTimeline(groupOrder, now);
         populateScriptSnapshot(groupOrder);
 
         groupOrder.setCreatorId(userId);
         groupOrder.setCreatorName(StringUtils.hasText(user.getNickname()) ? user.getNickname() : user.getUsername());
         groupOrder.setCreatorAvatar(user.getAvatar());
         groupOrder.setStatus(1);
-        groupOrder.setCreateTime(LocalDateTime.now());
-        groupOrder.setUpdateTime(LocalDateTime.now());
+        groupOrder.setCreateTime(now);
+        groupOrder.setUpdateTime(now);
         if (groupOrder.getCurrentCount() == null || groupOrder.getCurrentCount() < 1) {
             groupOrder.setCurrentCount(1);
         }
@@ -268,6 +286,9 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         }
         if (group.getStatus() != 1) {
             throw new RuntimeException("该拼单已结束或已取消");
+        }
+        if (expireGroupIfNeeded(group, LocalDateTime.now())) {
+            throw new RuntimeException(buildExpiredActionMessage(group));
         }
 
         LambdaQueryWrapper<GroupMember> checkWrapper = new LambdaQueryWrapper<>();
@@ -407,18 +428,21 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void processExpiredGroups() {
-        LocalDateTime expireTime = LocalDateTime.now().minusHours(GROUP_TIMEOUT_HOURS);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime timeoutTime = now.minusHours(GROUP_TIMEOUT_HOURS);
+        LocalDateTime playTimeDeadline = now.plusHours(GROUP_FORMATION_LEAD_HOURS);
         LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(GroupOrder::getStatus, 1)
-                .le(GroupOrder::getCreateTime, expireTime);
+                .and(query -> query
+                        .le(GroupOrder::getCreateTime, timeoutTime)
+                        .or(play -> play
+                                .isNotNull(GroupOrder::getPlayTime)
+                                .le(GroupOrder::getPlayTime, playTimeDeadline)));
 
         List<GroupOrder> expiredGroups = this.list(wrapper);
         for (GroupOrder group : expiredGroups) {
             try {
-                group.setStatus(0);
-                group.setUpdateTime(LocalDateTime.now());
-                this.updateById(group);
-                handleGroupFailed(group, "拼单24小时内未成团，系统自动关闭");
+                expireGroupIfNeeded(group, now);
             } catch (Exception e) {
                 log.error("处理超时拼单失败: groupId={}", group.getId(), e);
             }
@@ -469,7 +493,9 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             reservation.setStoreId(creatorReservation.getStoreId());
             reservation.setRoomId(creatorReservation.getRoomId());
             reservation.setScriptId(creatorReservation.getScriptId());
+            reservation.setScheduleId(creatorReservation.getScheduleId());
             reservation.setGroupId(group.getId());
+            reservation.setDmId(creatorReservation.getDmId());
             reservation.setPlayerCount(member.getJoinCount());
             reservation.setReservationTime(creatorReservation.getReservationTime());
             reservation.setDuration(creatorReservation.getDuration());
@@ -486,6 +512,15 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             reservation.setCheckInStatus(0);
             reservation.setCheckInCode(generateCheckInCode());
             reservationMapper.insert(reservation);
+
+            if (creatorReservation.getScheduleId() != null) {
+                try {
+                    scriptScheduleService.incrementCurrentPlayers(creatorReservation.getScheduleId(), member.getJoinCount());
+                } catch (Exception e) {
+                    log.warn("拼团成员正式预约同步排期人数失败: scheduleId={}, reservationId={}",
+                            creatorReservation.getScheduleId(), reservation.getId(), e);
+                }
+            }
         }
     }
 
@@ -582,7 +617,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
         notificationService.sendToUsers(
                 "拼单未成团通知",
-                String.format("拼单《%s》未能在24小时内成团，系统已自动关闭。%s", group.getScriptName(), reason),
+                String.format("拼单《%s》未能在截止时间前成团，系统已自动关闭。%s", group.getScriptName(), reason),
                 2,
                 "group",
                 group.getId(),
@@ -682,6 +717,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     private Map<String, Object> convertToMap(GroupOrder group) {
         Script script = resolveScript(group);
         ScriptCategory category = resolveCategory(script);
+        LocalDateTime expireTime = resolveGroupExpireTime(group);
         Map<String, Object> map = new HashMap<>();
         map.put("id", group.getId());
         map.put("creatorName", "神秘车主");
@@ -700,7 +736,8 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         map.put("genderRequirement", group.getGenderRequirement());
         map.put("newbieWelcome", group.getNewbieWelcome());
         map.put("description", group.getDescription());
-        map.put("status", group.getStatus());
+        map.put("status", resolveDisplayStatus(group));
+        map.put("expireTime", expireTime);
         map.put("createTime", group.getCreateTime());
         return map;
     }
@@ -708,6 +745,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     private Map<String, Object> convertToMapAnonymous(GroupOrder group) {
         Script script = resolveScript(group);
         ScriptCategory category = resolveCategory(script);
+        LocalDateTime expireTime = resolveGroupExpireTime(group);
         Map<String, Object> map = new HashMap<>();
         map.put("id", group.getId());
         map.put("creatorName", "神秘车主");
@@ -727,7 +765,8 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         map.put("newbieWelcome", group.getNewbieWelcome());
         map.put("description", group.getDescription());
         map.put("difficulty", 2);
-        map.put("status", group.getStatus());
+        map.put("status", resolveDisplayStatus(group));
+        map.put("expireTime", expireTime);
         map.put("createTime", group.getCreateTime());
         return map;
     }
@@ -755,5 +794,104 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             return null;
         }
         return scriptCategoryMapper.selectById(script.getCategoryId());
+    }
+
+    private void applyActiveStatusFilter(LambdaQueryWrapper<GroupOrder> wrapper, LocalDateTime now) {
+        wrapper.eq(GroupOrder::getStatus, 1)
+                .gt(GroupOrder::getCreateTime, now.minusHours(GROUP_TIMEOUT_HOURS))
+                .and(query -> query
+                        .isNull(GroupOrder::getPlayTime)
+                        .or()
+                        .gt(GroupOrder::getPlayTime, now.plusHours(GROUP_FORMATION_LEAD_HOURS)));
+    }
+
+    private void validateGroupTimeline(GroupOrder groupOrder, LocalDateTime now) {
+        if (groupOrder.getPlayTime() == null) {
+            throw new RuntimeException("请选择开车时间");
+        }
+        if (!groupOrder.getPlayTime().isAfter(now)) {
+            throw new RuntimeException("开车时间必须晚于当前时间");
+        }
+
+        LocalDateTime expireTime = resolveGroupExpireTime(now, groupOrder.getPlayTime());
+        if (expireTime == null || !expireTime.isAfter(now)) {
+            throw new RuntimeException(String.format("该场次距离开场不足%d小时，暂时不能发起拼团", GROUP_FORMATION_LEAD_HOURS));
+        }
+    }
+
+    private boolean expireGroupIfNeeded(GroupOrder group, LocalDateTime now) {
+        if (group == null || group.getStatus() == null || group.getStatus() != 1) {
+            return false;
+        }
+        if (!isGroupExpired(group, now)) {
+            return false;
+        }
+
+        group.setStatus(0);
+        group.setUpdateTime(now);
+        this.updateById(group);
+        handleGroupFailed(group, buildExpiredReason(group));
+        return true;
+    }
+
+    private boolean isGroupExpired(GroupOrder group, LocalDateTime now) {
+        LocalDateTime expireTime = resolveGroupExpireTime(group);
+        return expireTime != null && !expireTime.isAfter(now);
+    }
+
+    private int resolveDisplayStatus(GroupOrder group) {
+        if (group == null || group.getStatus() == null) {
+            return 0;
+        }
+        if (group.getStatus() == 1 && isGroupExpired(group, LocalDateTime.now())) {
+            return 0;
+        }
+        return group.getStatus();
+    }
+
+    private LocalDateTime resolveGroupExpireTime(GroupOrder group) {
+        if (group == null) {
+            return null;
+        }
+        return resolveGroupExpireTime(group.getCreateTime(), group.getPlayTime());
+    }
+
+    private LocalDateTime resolveGroupExpireTime(LocalDateTime createTime, LocalDateTime playTime) {
+        if (createTime == null) {
+            return null;
+        }
+
+        LocalDateTime timeoutExpireTime = createTime.plusHours(GROUP_TIMEOUT_HOURS);
+        if (playTime == null) {
+            return timeoutExpireTime;
+        }
+
+        LocalDateTime playTimeDeadline = playTime.minusHours(GROUP_FORMATION_LEAD_HOURS);
+        return playTimeDeadline.isBefore(timeoutExpireTime) ? playTimeDeadline : timeoutExpireTime;
+    }
+
+    private String buildExpiredReason(GroupOrder group) {
+        LocalDateTime createTime = group != null ? group.getCreateTime() : null;
+        LocalDateTime playTime = group != null ? group.getPlayTime() : null;
+        if (createTime == null) {
+            return "拼单已超过成团时限，系统自动关闭";
+        }
+
+        LocalDateTime timeoutExpireTime = createTime.plusHours(GROUP_TIMEOUT_HOURS);
+        if (playTime != null) {
+            LocalDateTime playTimeDeadline = playTime.minusHours(GROUP_FORMATION_LEAD_HOURS);
+            if (!playTimeDeadline.isAfter(timeoutExpireTime)) {
+                return String.format("距离开场不足%d小时仍未成团，系统自动关闭", GROUP_FORMATION_LEAD_HOURS);
+            }
+        }
+        return String.format("拼单%d小时内未成团，系统自动关闭", GROUP_TIMEOUT_HOURS);
+    }
+
+    private String buildExpiredActionMessage(GroupOrder group) {
+        LocalDateTime playTime = group != null ? group.getPlayTime() : null;
+        if (playTime != null && !playTime.minusHours(GROUP_FORMATION_LEAD_HOURS).isAfter(LocalDateTime.now())) {
+            return String.format("该拼单距离开场不足%d小时，已自动关闭", GROUP_FORMATION_LEAD_HOURS);
+        }
+        return "该拼单已超过成团时限，已自动关闭";
     }
 }

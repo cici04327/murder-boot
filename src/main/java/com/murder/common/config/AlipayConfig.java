@@ -25,10 +25,13 @@ public class AlipayConfig {
     private String publicKey = "your-alipay-public-key";
     
     // 服务器异步通知页面路径
-    private String notifyUrl = "http://localhost:8085/reservation/payment/notify";
+    private String notifyUrl = "http://localhost:8080/api/reservation/payment/notify";
     
-    // 页面跳转同步通知页面路径
-    private String returnUrl = "http://localhost:3001/payment/result";
+    // 支付完成后支付宝同步回跳的后端地址
+    private String returnUrl = "http://localhost:8080/api/reservation/payment/return";
+
+    // 后端处理完成后重定向到前端结果页
+    private String resultUrl = "http://localhost:3001/payment/result";
     
     // 请求网关地址（沙箱环境）
     private String gatewayUrl = "https://openapi.alipaydev.com/gateway.do";

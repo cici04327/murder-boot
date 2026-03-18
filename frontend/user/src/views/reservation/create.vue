@@ -588,7 +588,7 @@ import { ElMessage } from 'element-plus'
 import { getScriptList, getAvailableSchedules } from '@/api/script'
 import { getStoreList, getStoreRooms } from '@/api/store'
 import { createReservation, checkRoomAvailability } from '@/api/reservation'
-import { createGroup, getGroupList } from '@/api/group'
+import { getGroupList } from '@/api/group'
 import { getMyCoupons } from '@/api/coupon'
 import { getUserVipInfo } from '@/api/vip'
 import { useUserStore } from '@/store/user'
@@ -1112,59 +1112,25 @@ const handleSubmit = async () => {
         }
         console.log('预约提交数据:', reservationData)
         
-        // 如果人数不足，需要发起拼单
-        if (needGroup.value) {
-          // 先创建预约
-          const resReservation = await createReservation(reservationData)
-          if (resReservation.code === 1 || resReservation.code === 200) {
-            // 自动发起拼单
-            const selectedStore = stores.value.find(s => s.id === form.storeId)
-            const groupData = {
-              scriptId: form.scriptId,
-              scriptName: selectedScript.value.name,
-              storeId: form.storeId,
-              storeName: selectedStore?.name || '',
-              playTime: `${form.reservationDate} ${form.reservationTime}`,
-              currentCount: form.playerCount,
-              needCount: selectedScript.value.playerCount,
-              playerCount: selectedScript.value.playerCount,
-              price: selectedScript.value.price,
-              genderRequirement: '男女不限',
-              newbieWelcome: true,
-              description: form.remark || '欢迎小伙伴一起来玩！',
-              reservationId: resReservation.data.id || resReservation.data
-            }
-            
-            try {
-              const resGroup = await createGroup(groupData)
-              if (resGroup.code === 1 || resGroup.code === 200) {
-                ElMessage.success({
-                  message: `预约成功！已自动发起拼单，还差${selectedScript.value.playerCount - form.playerCount}人`,
-                  duration: 4000
-                })
-                router.push(`/group/${resGroup.data.id || resGroup.data}`)
-              } else {
-                // 拼单创建失败，但预约成功
-                ElMessage.warning('预约成功，但拼单发起失败，您可以手动发起拼单')
-                router.push(`/reservation/confirm/${resReservation.data.id || resReservation.data}`)
-              }
-            } catch (groupError) {
-              console.error('发起拼单失败:', groupError)
-              ElMessage.warning('预约成功，但拼单发起失败，您可以手动发起拼单')
-              router.push(`/reservation/confirm/${resReservation.data.id || resReservation.data}`)
-            }
-          }
-        } else {
-          // 人数足够，直接预约
-          const res = await createReservation(reservationData)
-          if (res.code === 1 || res.code === 200) {
+        const res = await createReservation(reservationData)
+        if (res.code === 1 || res.code === 200) {
+          const reservationId = res.data?.id || res.data
+          const autoGroupId = res.data?.groupId
+          if (needGroup.value && autoGroupId) {
+            ElMessage.success({
+              message: `预约成功！已自动发起拼单，还差${selectedScript.value.playerCount - form.playerCount}人`,
+              duration: 4000
+            })
+          } else {
             ElMessage.success('预约成功！')
-            router.push(`/reservation/confirm/${res.data.id || res.data}`)
           }
+          router.push(`/reservation/confirm/${reservationId}`)
         }
       } catch (error) {
         console.error('创建预约失败:', error)
-        ElMessage.error(error.response?.data?.msg || '创建预约失败，请重试')
+        if (!error?.message) {
+          ElMessage.error('创建预约失败，请重试')
+        }
       } finally {
         submitting.value = false
       }

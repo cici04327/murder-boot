@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -112,25 +113,11 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     public String handleAlipayNotify(Map<String, String> params) {
         try {
-            boolean signVerified = com.alipay.api.internal.util.AlipaySignature.rsaCheckV1(
-                    params,
-                    alipayConfig.getPublicKey(),
-                    alipayConfig.getCharset(),
-                    alipayConfig.getSignType()
-            );
-            if (!signVerified) {
-                return "failure";
-            }
-
-            String tradeStatus = params.get("trade_status");
-            String outTradeNo = params.get("out_trade_no");
-            if (!"TRADE_SUCCESS".equals(tradeStatus) && !"TRADE_FINISHED".equals(tradeStatus)) {
+            Reservation reservation = verifyAndLoadAlipayReservation(params);
+            if (!isAlipayTradeSuccess(params.get("trade_status"))) {
                 return "success";
             }
 
-            Reservation reservation = reservationMapper.selectOne(
-                    new LambdaQueryWrapper<Reservation>().eq(Reservation::getOrderNo, outTradeNo)
-            );
             if (reservation != null && Integer.valueOf(0).equals(reservation.getPayStatus())) {
                 markPaid(reservation);
                 rewardPointsForPayment(reservation.getUserId(), reservation.getId());
@@ -141,6 +128,92 @@ public class PaymentServiceImpl implements PaymentService {
             log.error("处理支付宝回调失败", e);
             return "fail";
         }
+    }
+
+    @Override
+    public String handleAlipayReturn(Map<String, String> params) {
+        try {
+            Reservation reservation = verifyAndLoadAlipayReservation(params);
+            if (reservation == null) {
+                return buildResultRedirect(null, false, "未找到对应预约订单");
+            }
+            if (!isAlipayTradeSuccess(params.get("trade_status"))) {
+                return buildResultRedirect(reservation, false, "支付宝返回的交易状态未成功");
+            }
+
+            if (Integer.valueOf(0).equals(reservation.getPayStatus())) {
+                markPaid(reservation);
+                rewardPointsForPayment(reservation.getUserId(), reservation.getId());
+                sendPaymentSuccessNotification(reservation);
+            }
+            return buildResultRedirect(reservation, true, null);
+        } catch (Exception e) {
+            log.error("处理支付宝同步回跳失败", e);
+            return buildResultRedirect(null, false, e.getMessage());
+        }
+    }
+
+    private Reservation verifyAndLoadAlipayReservation(Map<String, String> params) {
+        try {
+            boolean signVerified = com.alipay.api.internal.util.AlipaySignature.rsaCheckV1(
+                    params,
+                    alipayConfig.getPublicKey(),
+                    alipayConfig.getCharset(),
+                    alipayConfig.getSignType()
+            );
+            if (!signVerified) {
+                throw new RuntimeException("支付宝验签失败");
+            }
+            String outTradeNo = params.get("out_trade_no");
+            if (!StringUtils.hasText(outTradeNo)) {
+                throw new RuntimeException("支付宝回调缺少商户订单号");
+            }
+
+            Reservation reservation = reservationMapper.selectOne(
+                    new LambdaQueryWrapper<Reservation>().eq(Reservation::getOrderNo, outTradeNo)
+            );
+            if (reservation == null) {
+                throw new RuntimeException("未找到对应预约订单");
+            }
+
+            String callbackAppId = params.get("app_id");
+            if (StringUtils.hasText(callbackAppId) && StringUtils.hasText(alipayConfig.getAppId())
+                    && !callbackAppId.equals(alipayConfig.getAppId())) {
+                throw new RuntimeException("支付宝回调应用ID不匹配");
+            }
+
+            String totalAmount = params.get("total_amount");
+            if (StringUtils.hasText(totalAmount)) {
+                BigDecimal callbackAmount = new BigDecimal(totalAmount);
+                BigDecimal orderAmount = defaultAmount(reservation.getActualAmount());
+                if (callbackAmount.compareTo(orderAmount) != 0) {
+                    throw new RuntimeException("支付宝回调金额与订单金额不一致");
+                }
+            }
+
+            return reservation;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("支付宝验签失败", e);
+        }
+    }
+
+    private boolean isAlipayTradeSuccess(String tradeStatus) {
+        return "TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus);
+    }
+
+    private String buildResultRedirect(Reservation reservation, boolean success, String message) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(alipayConfig.getResultUrl())
+                .queryParam("success", success);
+        if (reservation != null) {
+            builder.queryParam("reservationId", reservation.getId());
+            builder.queryParam("orderNo", reservation.getOrderNo());
+        }
+        if (StringUtils.hasText(message)) {
+            builder.queryParam("message", message);
+        }
+        return builder.build().toUriString();
     }
 
     @Override

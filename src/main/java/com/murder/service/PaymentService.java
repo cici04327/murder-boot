@@ -19,6 +19,13 @@ public interface PaymentService {
      * @return 处理结果
      */
     String handleAlipayNotify(java.util.Map<String, String> params);
+
+    /**
+     * 支付宝同步回跳处理
+     * @param params 支付宝回跳参数
+     * @return 前端结果页地址
+     */
+    String handleAlipayReturn(java.util.Map<String, String> params);
     
     /**
      * 查询支付状态

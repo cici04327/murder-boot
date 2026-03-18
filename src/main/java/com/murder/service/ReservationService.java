@@ -5,6 +5,7 @@ import com.murder.dto.ReservationDTO;
 import com.murder.entity.Reservation;
 import com.murder.vo.ReservationVO;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public interface ReservationService {
             Integer pageSize,
             Long userId,
             Long storeId,
+            LocalDate reservationDate,
             Integer status,
             Integer payStatus,
             Integer checkInStatus,
@@ -51,4 +53,6 @@ public interface ReservationService {
     boolean checkRoomAvailability(Long roomId, String reservationTime, Double duration);
 
     void reschedule(Long id, String newReservationTime);
+
+    void assignDm(Long id, Long dmId);
 }

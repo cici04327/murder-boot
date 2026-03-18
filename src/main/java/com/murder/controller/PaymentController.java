@@ -7,10 +7,12 @@ import com.murder.service.ReservationService;
 import com.murder.vo.ReservationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 
@@ -57,6 +59,16 @@ public class PaymentController {
     public String alipayNotify(@RequestParam Map<String, String> params) {
         log.info("收到支付宝异步通知: {}", params);
         return paymentService.handleAlipayNotify(params);
+    }
+
+    /**
+     * 支付宝同步回跳
+     */
+    @GetMapping("/return")
+    @Operation(summary = "支付宝同步回跳")
+    public void alipayReturn(@RequestParam Map<String, String> params, HttpServletResponse response) throws IOException {
+        log.info("收到支付宝同步回跳: {}", params);
+        response.sendRedirect(paymentService.handleAlipayReturn(params));
     }
 
     /**

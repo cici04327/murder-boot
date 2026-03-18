@@ -29,3 +29,13 @@ logging:
   level:
     com.murder: debug
     com.murder.mapper: debug
+
+alipay:
+  app-id: ${ALIPAY_APP_ID:}
+  private-key: ${ALIPAY_PRIVATE_KEY:}
+  public-key: ${ALIPAY_PUBLIC_KEY:}
+  gateway-url: ${ALIPAY_GATEWAY_URL:https://openapi.alipaydev.com/gateway.do}
+  notify-url: ${ALIPAY_NOTIFY_URL:http://localhost:8080/api/reservation/payment/notify}
+  return-url: ${ALIPAY_RETURN_URL:http://localhost:8080/api/reservation/payment/return}
+  result-url: ${ALIPAY_RESULT_URL:http://localhost:3001/payment/result}
+  mock-payment: ${ALIPAY_MOCK_PAYMENT:true}

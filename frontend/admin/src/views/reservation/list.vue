@@ -18,6 +18,16 @@
             <el-option label="已核销" :value="1" />
           </el-select>
         </el-form-item>
+        <el-form-item label="预约日期">
+          <el-date-picker
+            v-model="queryForm.reservationDate"
+            type="date"
+            value-format="YYYY-MM-DD"
+            placeholder="选择日期"
+            clearable
+            style="width: 160px"
+          />
+        </el-form-item>
         <el-form-item label="退款申请">
           <el-select v-model="queryForm.hasRefund" clearable placeholder="全部" style="width: 140px">
             <el-option label="有退款申请" :value="true" />
@@ -39,6 +49,13 @@
         <el-table-column prop="storeName" label="门店" min-width="140" />
         <el-table-column prop="roomName" label="房间" width="110" />
         <el-table-column prop="scriptName" label="剧本" min-width="140" />
+        <el-table-column label="主持DM" width="130">
+          <template #default="{ row }">
+            <el-tag :type="row.dmName ? 'success' : 'info'" size="small">
+              {{ row.dmName || '待分配' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="reservationTime" label="预约时间" width="170" />
         <el-table-column label="实付金额" width="100">
           <template #default="{ row }">
@@ -143,6 +160,7 @@ const statusOptions = [
 ]
 
 const queryForm = reactive({
+  reservationDate: null,
   status: null,
   checkInStatus: null,
   hasRefund: null,
@@ -186,6 +204,7 @@ const fetchData = async () => {
     const params = {
       page: queryForm.page,
       pageSize: queryForm.pageSize,
+      reservationDate: queryForm.reservationDate,
       status: queryForm.status,
       checkInStatus: queryForm.checkInStatus,
       hasRefund: queryForm.hasRefund
@@ -206,6 +225,7 @@ const handleQuery = () => {
 }
 
 const handleReset = () => {
+  queryForm.reservationDate = null
   queryForm.status = null
   queryForm.checkInStatus = null
   queryForm.hasRefund = null
@@ -305,6 +325,7 @@ const handleExport = async () => {
       params: {
         page: 1,
         pageSize: 10000,
+        reservationDate: queryForm.reservationDate,
         status: queryForm.status,
         checkInStatus: queryForm.checkInStatus,
         hasRefund: queryForm.hasRefund
