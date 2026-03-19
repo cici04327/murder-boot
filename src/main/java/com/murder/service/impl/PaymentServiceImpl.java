@@ -3,13 +3,18 @@ package com.murder.service.impl;
 import com.alipay.api.AlipayApiException;
 import com.alipay.api.AlipayClient;
 import com.alipay.api.domain.AlipayTradePagePayModel;
+import com.alipay.api.domain.AlipayTradeRefundModel;
 import com.alipay.api.request.AlipayTradePagePayRequest;
+import com.alipay.api.request.AlipayTradeRefundRequest;
+import com.alipay.api.response.AlipayTradeRefundResponse;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.common.config.AlipayConfig;
+import com.murder.common.context.BaseContext;
 import com.murder.entity.Reservation;
 import com.murder.mapper.ReservationMapper;
 import com.murder.service.CouponService;
 import com.murder.service.PaymentService;
+import com.murder.service.ScriptScheduleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,43 +55,50 @@ public class PaymentServiceImpl implements PaymentService {
     @Autowired(required = false)
     private CouponService couponService;
 
+    @Autowired(required = false)
+    private ScriptScheduleService scriptScheduleService;
+
     @Override
     public String createPayment(Long reservationId, String paymentMethod) {
         Reservation reservation = reservationMapper.selectById(reservationId);
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
         }
+        assertPayableReservation(reservation);
+
+        String normalizedMethod = StringUtils.hasText(paymentMethod)
+                ? paymentMethod.trim().toLowerCase()
+                : "alipay";
+        if (!"alipay".equals(normalizedMethod)) {
+            throw new RuntimeException("当前仅支持支付宝支付");
+        }
+        return createAlipayPayment(reservation);
+    }
+
+    private void assertPayableReservation(Reservation reservation) {
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
         if (Integer.valueOf(1).equals(reservation.getPayStatus())) {
             throw new RuntimeException("订单已支付");
         }
-
-        if ("mock".equals(paymentMethod)) {
-            return handleMockPayment(reservation);
+        if (Integer.valueOf(4).equals(reservation.getStatus())) {
+            throw new RuntimeException("已取消订单不能支付");
         }
-        if ("alipay".equals(paymentMethod)) {
-            return alipayConfig.getMockPayment()
-                    ? handleMockAlipayPayment(reservation)
-                    : createAlipayPayment(reservation);
+        if (Integer.valueOf(3).equals(reservation.getStatus())) {
+            throw new RuntimeException("已完成订单不能支付");
         }
-        if ("wechat".equals(paymentMethod)) {
-            return handleMockPayment(reservation);
+        if (Integer.valueOf(1).equals(reservation.getRefundStatus()) || Integer.valueOf(2).equals(reservation.getPayStatus())) {
+            throw new RuntimeException("退款处理中订单不能支付");
         }
-
-        throw new RuntimeException("不支持的支付方式");
-    }
-
-    private String handleMockPayment(Reservation reservation) {
-        markPaid(reservation);
-        rewardPointsForPayment(reservation.getUserId(), reservation.getId());
-        sendPaymentSuccessNotification(reservation);
-        return "MOCK_PAY_SUCCESS";
-    }
-
-    private String handleMockAlipayPayment(Reservation reservation) {
-        markPaid(reservation);
-        rewardPointsForPayment(reservation.getUserId(), reservation.getId());
-        sendPaymentSuccessNotification(reservation);
-        return "ALIPAY_MOCK_SUCCESS";
+        if (Integer.valueOf(2).equals(reservation.getRefundStatus()) || Integer.valueOf(3).equals(reservation.getPayStatus())) {
+            throw new RuntimeException("已退款订单不能支付");
+        }
+        Integer payStatus = reservation.getPayStatus();
+        if (payStatus != null && !Integer.valueOf(0).equals(payStatus)) {
+            throw new RuntimeException("当前订单状态不支持支付");
+        }
     }
 
     private String createAlipayPayment(Reservation reservation) {
@@ -137,8 +149,8 @@ public class PaymentServiceImpl implements PaymentService {
             if (reservation == null) {
                 return buildResultRedirect(null, false, "未找到对应预约订单");
             }
-            if (!isAlipayTradeSuccess(params.get("trade_status"))) {
-                return buildResultRedirect(reservation, false, "支付宝返回的交易状态未成功");
+            if (!isAlipayReturnSuccess(params, reservation)) {
+                return buildResultRedirect(reservation, false, "支付宝支付结果确认中，请稍后查看订单状态");
             }
 
             if (Integer.valueOf(0).equals(reservation.getPayStatus())) {
@@ -203,6 +215,16 @@ public class PaymentServiceImpl implements PaymentService {
         return "TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus);
     }
 
+    private boolean isAlipayReturnSuccess(Map<String, String> params, Reservation reservation) {
+        if (isAlipayTradeSuccess(params.get("trade_status"))) {
+            return true;
+        }
+        if (reservation != null && Integer.valueOf(1).equals(reservation.getPayStatus())) {
+            return true;
+        }
+        return StringUtils.hasText(params.get("trade_no"));
+    }
+
     private String buildResultRedirect(Reservation reservation, boolean success, String message) {
         UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(alipayConfig.getResultUrl())
                 .queryParam("success", success);
@@ -213,7 +235,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (StringUtils.hasText(message)) {
             builder.queryParam("message", message);
         }
-        return builder.build().toUriString();
+        return builder.build().encode().toUriString();
     }
 
     @Override
@@ -261,6 +283,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
         }
+        assertAdminRefundScope(reservation);
         if (!Integer.valueOf(1).equals(reservation.getRefundStatus())) {
             throw new RuntimeException("该订单未申请退款或已处理");
         }
@@ -269,14 +292,40 @@ public class PaymentServiceImpl implements PaymentService {
         reservation.setAdminRemark(adminRemark);
 
         if (Integer.valueOf(1).equals(approved)) {
-            markRefundSuccess(reservation, adminRemark);
+            executeRefund(reservation, reservation.getRefundReason(), adminRemark);
         } else {
             reservation.setRefundStatus(3);
             reservation.setPayStatus(1);
             reservationMapper.updateById(reservation);
         }
 
-        sendRefundResultNotificationToUser(reservation, approved);
+        try {
+            sendRefundResultNotificationToUser(reservation, approved);
+        } catch (Exception e) {
+            log.warn("发送退款结果通知失败: reservationId={}, approved={}", reservationId, approved, e);
+        }
+    }
+
+    private void assertAdminRefundScope(Reservation reservation) {
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        String role = BaseContext.getRole();
+        if ("SUPER_ADMIN".equals(role)) {
+            return;
+        }
+        if (!"STORE_ADMIN".equals(role)) {
+            throw new SecurityException("没有权限处理该退款申请");
+        }
+
+        Long currentStoreId = BaseContext.getStoreId();
+        if (currentStoreId == null) {
+            throw new SecurityException("门店管理员未绑定门店");
+        }
+        if (reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
+            throw new SecurityException("没有权限处理该门店的退款申请");
+        }
     }
 
     @Override
@@ -292,8 +341,12 @@ public class PaymentServiceImpl implements PaymentService {
         reservation.setRefundReason(reason);
         reservation.setRefundApplyTime(LocalDateTime.now());
         reservation.setRefundProcessTime(LocalDateTime.now());
-        markRefundSuccess(reservation, "系统自动退款");
-        sendAutoRefundNotificationToUser(reservation, reason);
+        executeRefund(reservation, reason, "系统自动退款");
+        try {
+            sendAutoRefundNotificationToUser(reservation, reason);
+        } catch (Exception e) {
+            log.warn("发送自动退款通知失败: reservationId={}", reservationId, e);
+        }
     }
 
     private void rewardPointsForPayment(Long userId, Long reservationId) {
@@ -355,14 +408,14 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         String content = String.format(
-                "您的拼单预约已自动退款，订单号：%s，原因：%s，退款金额：%.2f。",
+                "您的预约订单已自动退款，订单号：%s，原因：%s，退款金额：%.2f。",
                 reservation.getOrderNo(),
                 reason,
                 defaultAmount(reservation.getActualAmount())
         );
 
         notificationService.sendToUsers(
-                "拼单未成团自动退款通知",
+                "预约自动退款通知",
                 content,
                 5,
                 "group",
@@ -411,12 +464,65 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
+    private void executeRefund(Reservation reservation, String refundReason, String adminRemark) {
+        if (reservation != null && !StringUtils.hasText(reservation.getRemark()) && StringUtils.hasText(refundReason)) {
+            reservation.setRemark(refundReason);
+        }
+        callAlipayRefundIfNecessary(reservation, refundReason);
+        markRefundSuccess(reservation, adminRemark);
+    }
+
+    private void callAlipayRefundIfNecessary(Reservation reservation, String refundReason) {
+        if (reservation == null || Boolean.TRUE.equals(alipayConfig.getMockPayment())) {
+            return;
+        }
+
+        BigDecimal refundAmount = defaultAmount(reservation.getActualAmount());
+        if (refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            log.info("退款金额为0，跳过支付宝退款调用: reservationId={}, orderNo={}",
+                    reservation.getId(), reservation.getOrderNo());
+            return;
+        }
+        if (!StringUtils.hasText(reservation.getOrderNo())) {
+            throw new RuntimeException("缺少商户订单号，无法调用支付宝退款");
+        }
+
+        try {
+            AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
+            AlipayTradeRefundModel model = new AlipayTradeRefundModel();
+            model.setOutTradeNo(reservation.getOrderNo());
+            model.setRefundAmount(refundAmount.toString());
+            model.setRefundReason(StringUtils.hasText(refundReason) ? refundReason : "预约退款");
+            request.setBizModel(model);
+
+            AlipayTradeRefundResponse response = alipayClient.execute(request);
+            if (!response.isSuccess()) {
+                String errorMessage = firstNonBlank(response.getSubMsg(), response.getMsg(), "支付宝退款失败");
+                log.error("支付宝退款失败: reservationId={}, orderNo={}, code={}, subCode={}, message={}",
+                        reservation.getId(), reservation.getOrderNo(),
+                        response.getCode(), response.getSubCode(), errorMessage);
+                throw new RuntimeException(errorMessage);
+            }
+
+            log.info("支付宝退款成功: reservationId={}, orderNo={}, refundAmount={}, fundChange={}",
+                    reservation.getId(), reservation.getOrderNo(), refundAmount, response.getFundChange());
+        } catch (AlipayApiException e) {
+            log.error("调用支付宝退款接口失败: reservationId={}, orderNo={}",
+                    reservation.getId(), reservation.getOrderNo(), e);
+            throw new RuntimeException("调用支付宝退款接口失败: " + e.getMessage(), e);
+        }
+    }
+
     private void markRefundSuccess(Reservation reservation, String adminRemark) {
         reservation.setRefundStatus(2);
         reservation.setPayStatus(3);
         reservation.setStatus(4);
         reservation.setAdminRemark(adminRemark);
+        if (reservation.getRefundProcessTime() == null) {
+            reservation.setRefundProcessTime(LocalDateTime.now());
+        }
         reservationMapper.updateById(reservation);
+        rollbackSchedulePlayersQuietly(reservation);
         refundCouponQuietly(reservation.getId());
         deductPointsForRefund(reservation.getUserId(), reservation.getId());
     }
@@ -451,5 +557,37 @@ public class PaymentServiceImpl implements PaymentService {
 
     private BigDecimal defaultAmount(BigDecimal amount) {
         return amount == null ? BigDecimal.ZERO : amount;
+    }
+
+    private void rollbackSchedulePlayersQuietly(Reservation reservation) {
+        if (reservation == null || reservation.getScheduleId() == null || scriptScheduleService == null) {
+            return;
+        }
+        try {
+            scriptScheduleService.decrementCurrentPlayers(
+                    reservation.getScheduleId(),
+                    resolvePlayerCount(reservation));
+        } catch (Exception e) {
+            log.warn("退款成功后回退排期人数失败: reservationId={}, scheduleId={}",
+                    reservation.getId(), reservation.getScheduleId(), e);
+        }
+    }
+
+    private int resolvePlayerCount(Reservation reservation) {
+        return reservation != null && reservation.getPlayerCount() != null && reservation.getPlayerCount() > 0
+                ? reservation.getPlayerCount()
+                : 1;
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return "";
+        }
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return "";
     }
 }

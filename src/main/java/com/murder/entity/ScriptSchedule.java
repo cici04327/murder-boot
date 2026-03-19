@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -112,6 +113,30 @@ public class ScriptSchedule implements Serializable {
 
     @TableField(exist = false)
     private String roomName;
+
+    @TableField(exist = false)
+    private String storeName;
+
+    @TableField(exist = false)
+    private String storeAddress;
+
+    @TableField(exist = false)
+    private String cover;
+
+    @TableField(exist = false)
+    private BigDecimal price;
+
+    @TableField(exist = false)
+    private BigDecimal rating;
+
+    @TableField(exist = false)
+    private BigDecimal duration;
+
+    @TableField(exist = false)
+    private Integer difficulty;
+
+    @TableField(exist = false)
+    private Integer playerCount;
 
     /** DM 姓名（非数据库字段，查询时填充） */
     @TableField(exist = false)

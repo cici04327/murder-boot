@@ -8,6 +8,7 @@ import com.murder.entity.GroupOrder;
 import com.murder.entity.Reservation;
 import com.murder.entity.Script;
 import com.murder.entity.ScriptCategory;
+import com.murder.entity.ScriptSchedule;
 import com.murder.entity.User;
 import com.murder.mapper.GroupMemberMapper;
 import com.murder.mapper.GroupOrderMapper;
@@ -279,6 +280,27 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public GroupOrder createOrAttachAutoGroup(GroupOrder groupOrder, Reservation reservation, Long userId) {
+        if (groupOrder == null || reservation == null) {
+            return null;
+        }
+
+        GroupOrder reusableGroup = findReusableAutoGroup(groupOrder);
+        if (reusableGroup == null) {
+            int currentCount = resolveJoinCount(reservation.getPlayerCount());
+            int needCount = resolveAutoGroupNeedCount(null, groupOrder, reservation, currentCount);
+            groupOrder.setCurrentCount(currentCount);
+            groupOrder.setNeedCount(needCount);
+            groupOrder.setDescription(buildAutoGroupDescription(currentCount, needCount));
+            return createGroup(groupOrder, userId);
+        }
+
+        attachReservationToExistingGroup(reusableGroup, reservation, userId, groupOrder);
+        return this.getById(reusableGroup.getId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean joinGroup(Long groupId, Long userId, Integer joinCount) {
         GroupOrder group = this.getById(groupId);
         if (group == null) {
@@ -510,7 +532,6 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             reservation.setPayStatus(0);
             reservation.setRefundStatus(0);
             reservation.setCheckInStatus(0);
-            reservation.setCheckInCode(generateCheckInCode());
             reservationMapper.insert(reservation);
 
             if (creatorReservation.getScheduleId() != null) {
@@ -521,6 +542,21 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
                             creatorReservation.getScheduleId(), reservation.getId(), e);
                 }
             }
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void refreshGroupStatus(Long groupId) {
+        if (groupId == null) {
+            return;
+        }
+        GroupOrder group = this.getById(groupId);
+        if (group == null || !Integer.valueOf(1).equals(group.getStatus())) {
+            return;
+        }
+        if (!expireGroupIfNeeded(group, LocalDateTime.now())) {
+            checkAndUpdateGroupStatus(group);
         }
     }
 
@@ -557,6 +593,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             }
         }
 
+        syncFailedGroupScheduleState(group, creatorReservation, linkedReservations, reason);
         sendGroupFailedNotifications(group, reason);
     }
 
@@ -686,10 +723,6 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         return "R" + datePart + random;
     }
 
-    private String generateCheckInCode() {
-        return String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
-    }
-
     private BigDecimal defaultAmount(BigDecimal amount) {
         return amount == null ? BigDecimal.ZERO : amount;
     }
@@ -700,6 +733,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         update.setStatus(4);
         update.setRemark(reason);
         reservationMapper.updateById(update);
+        rollbackSchedulePlayersQuietly(reservation);
         refundCouponQuietly(reservation.getId(), reservation.getCouponId());
     }
 
@@ -712,6 +746,280 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         } catch (Exception e) {
             log.warn("拼单失败返还优惠券失败: reservationId={}", reservationId, e);
         }
+    }
+
+    private void rollbackSchedulePlayersQuietly(Reservation reservation) {
+        if (reservation == null || reservation.getScheduleId() == null) {
+            return;
+        }
+        try {
+            scriptScheduleService.decrementCurrentPlayers(
+                    reservation.getScheduleId(),
+                    reservation.getPlayerCount() == null || reservation.getPlayerCount() <= 0
+                            ? 1
+                            : reservation.getPlayerCount());
+        } catch (Exception e) {
+            log.warn("拼团失败回退排期人数失败: reservationId={}, scheduleId={}",
+                    reservation.getId(), reservation.getScheduleId(), e);
+        }
+    }
+
+    private void syncFailedGroupScheduleState(GroupOrder group,
+                                              Reservation creatorReservation,
+                                              List<Reservation> linkedReservations,
+                                              String reason) {
+        if (group == null || scriptScheduleService == null) {
+            return;
+        }
+
+        Long scheduleId = resolveGroupScheduleId(creatorReservation, linkedReservations);
+        if (scheduleId == null) {
+            return;
+        }
+
+        try {
+            ScriptSchedule schedule = scriptScheduleService.getById(scheduleId);
+            if (schedule == null) {
+                return;
+            }
+
+            int activePlayers = countActivePlayersForSchedule(scheduleId);
+            boolean hasActiveGroup = hasOtherActiveGroupForSameSession(group);
+            int requiredPlayers = resolveRequiredPlayers(group, schedule);
+            int maxPlayers = schedule.getMaxPlayers() != null && schedule.getMaxPlayers() > 0
+                    ? schedule.getMaxPlayers()
+                    : requiredPlayers;
+
+            ScriptSchedule update = new ScriptSchedule();
+            update.setId(scheduleId);
+            update.setCurrentPlayers(activePlayers);
+
+            if (maxPlayers > 0 && activePlayers >= maxPlayers) {
+                update.setStatus(0);
+            } else if (!hasActiveGroup && activePlayers < requiredPlayers) {
+                update.setStatus(2);
+                update.setRemark(reason);
+            } else {
+                update.setStatus(1);
+            }
+
+            scriptScheduleService.update(update);
+            log.info("拼团失败后已同步排期状态: groupId={}, scheduleId={}, activePlayers={}, requiredPlayers={}, hasActiveGroup={}",
+                    group.getId(), scheduleId, activePlayers, requiredPlayers, hasActiveGroup);
+        } catch (Exception e) {
+            log.warn("拼团失败后同步排期状态失败: groupId={}, scheduleId={}", group.getId(), scheduleId, e);
+        }
+    }
+
+    private Long resolveGroupScheduleId(Reservation creatorReservation, List<Reservation> linkedReservations) {
+        if (creatorReservation != null && creatorReservation.getScheduleId() != null) {
+            return creatorReservation.getScheduleId();
+        }
+        if (linkedReservations == null || linkedReservations.isEmpty()) {
+            return null;
+        }
+        return linkedReservations.stream()
+                .map(Reservation::getScheduleId)
+                .filter(id -> id != null)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private int countActivePlayersForSchedule(Long scheduleId) {
+        LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Reservation::getScheduleId, scheduleId)
+                .eq(Reservation::getIsDeleted, 0)
+                .ne(Reservation::getStatus, 4);
+        List<Reservation> reservations = reservationMapper.selectList(wrapper);
+        return reservations.stream()
+                .mapToInt(reservation -> reservation.getPlayerCount() != null && reservation.getPlayerCount() > 0
+                        ? reservation.getPlayerCount()
+                        : 1)
+                .sum();
+    }
+
+    private boolean hasOtherActiveGroupForSameSession(GroupOrder group) {
+        if (group == null || group.getScriptId() == null || group.getStoreId() == null || group.getPlayTime() == null) {
+            return false;
+        }
+
+        LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(GroupOrder::getStatus, 1)
+                .eq(GroupOrder::getScriptId, group.getScriptId())
+                .eq(GroupOrder::getStoreId, group.getStoreId())
+                .eq(GroupOrder::getPlayTime, group.getPlayTime());
+        if (group.getId() != null) {
+            wrapper.ne(GroupOrder::getId, group.getId());
+        }
+
+        List<GroupOrder> groups = this.list(wrapper);
+        LocalDateTime now = LocalDateTime.now();
+        return groups.stream().anyMatch(candidate -> !isGroupExpired(candidate, now));
+    }
+
+    private GroupOrder findReusableAutoGroup(GroupOrder groupOrder) {
+        if (groupOrder == null || groupOrder.getScriptId() == null
+                || groupOrder.getStoreId() == null || groupOrder.getPlayTime() == null) {
+            return null;
+        }
+
+        LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(GroupOrder::getStatus, 1)
+                .eq(GroupOrder::getScriptId, groupOrder.getScriptId())
+                .eq(GroupOrder::getStoreId, groupOrder.getStoreId())
+                .eq(GroupOrder::getPlayTime, groupOrder.getPlayTime())
+                .orderByAsc(GroupOrder::getCreateTime);
+
+        LocalDateTime now = LocalDateTime.now();
+        List<GroupOrder> groups = this.list(wrapper);
+        for (GroupOrder candidate : groups) {
+            if (!isGroupExpired(candidate, now)) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private void attachReservationToExistingGroup(GroupOrder group,
+                                                  Reservation reservation,
+                                                  Long userId,
+                                                  GroupOrder groupDraft) {
+        LocalDateTime now = LocalDateTime.now();
+        int reservationCount = resolveJoinCount(reservation.getPlayerCount());
+
+        upsertAutoGroupMember(group, reservation, userId, reservationCount, now);
+        bindReservationToGroup(group.getId(), reservation);
+
+        int currentCount = resolveJoinCount(group.getCurrentCount()) + reservationCount;
+        int needCount = resolveAutoGroupNeedCount(group, groupDraft, reservation, currentCount);
+
+        GroupOrder update = new GroupOrder();
+        update.setId(group.getId());
+        update.setCurrentCount(currentCount);
+        update.setNeedCount(needCount);
+        update.setDescription(buildAutoGroupDescription(currentCount, needCount));
+        update.setUpdateTime(now);
+        this.updateById(update);
+
+        group.setCurrentCount(currentCount);
+        group.setNeedCount(needCount);
+        group.setDescription(update.getDescription());
+        group.setUpdateTime(now);
+        checkAndUpdateGroupStatus(group);
+    }
+
+    private void upsertAutoGroupMember(GroupOrder group,
+                                       Reservation reservation,
+                                       Long userId,
+                                       int reservationCount,
+                                       LocalDateTime now) {
+        LambdaQueryWrapper<GroupMember> memberWrapper = new LambdaQueryWrapper<>();
+        memberWrapper.eq(GroupMember::getGroupId, group.getId())
+                .eq(GroupMember::getUserId, userId)
+                .eq(GroupMember::getStatus, 1);
+        GroupMember existingMember = groupMemberMapper.selectOne(memberWrapper);
+        if (existingMember != null) {
+            existingMember.setJoinCount(resolveJoinCount(existingMember.getJoinCount()) + reservationCount);
+            groupMemberMapper.updateById(existingMember);
+            return;
+        }
+
+        User user = userMapper.selectById(userId);
+        GroupMember member = new GroupMember();
+        member.setGroupId(group.getId());
+        member.setUserId(userId);
+        member.setNickname(user != null
+                ? (StringUtils.hasText(user.getNickname()) ? user.getNickname() : user.getUsername())
+                : "用户" + userId);
+        member.setAvatar(user != null ? user.getAvatar() : null);
+        member.setIsCreator(0);
+        member.setJoinCount(reservationCount);
+        member.setStatus(1);
+        member.setCreateTime(now);
+        groupMemberMapper.insert(member);
+    }
+
+    private void bindReservationToGroup(Long groupId, Reservation reservation) {
+        if (groupId == null || reservation == null || reservation.getId() == null) {
+            return;
+        }
+        Reservation update = new Reservation();
+        update.setId(reservation.getId());
+        update.setGroupId(groupId);
+        reservationMapper.updateById(update);
+        reservation.setGroupId(groupId);
+    }
+
+    private int resolveAutoGroupNeedCount(GroupOrder existingGroup,
+                                          GroupOrder groupDraft,
+                                          Reservation reservation,
+                                          int currentCount) {
+        int requiredPlayers = 0;
+        if (groupDraft != null && groupDraft.getPlayerCount() != null && groupDraft.getPlayerCount() > 0) {
+            requiredPlayers = groupDraft.getPlayerCount();
+        } else if (existingGroup != null && existingGroup.getPlayerCount() != null && existingGroup.getPlayerCount() > 0) {
+            requiredPlayers = existingGroup.getPlayerCount();
+        }
+
+        if (requiredPlayers <= 0) {
+            int fallbackNeedCount = existingGroup != null && existingGroup.getNeedCount() != null && existingGroup.getNeedCount() > 0
+                    ? existingGroup.getNeedCount()
+                    : currentCount;
+            return Math.max(currentCount, fallbackNeedCount);
+        }
+
+        if (reservation != null && reservation.getScheduleId() != null) {
+            Long groupId = existingGroup != null ? existingGroup.getId() : reservation.getGroupId();
+            int outsidePlayers = countActivePlayersOutsideGroup(reservation.getScheduleId(), groupId);
+            return Math.max(currentCount, requiredPlayers - outsidePlayers);
+        }
+
+        return Math.max(currentCount, requiredPlayers);
+    }
+
+    private int countActivePlayersOutsideGroup(Long scheduleId, Long groupId) {
+        if (scheduleId == null) {
+            return 0;
+        }
+
+        LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Reservation::getScheduleId, scheduleId)
+                .eq(Reservation::getIsDeleted, 0)
+                .ne(Reservation::getStatus, 4);
+
+        List<Reservation> reservations = reservationMapper.selectList(wrapper);
+        int count = 0;
+        for (Reservation item : reservations) {
+            if (groupId != null && groupId.equals(item.getGroupId())) {
+                continue;
+            }
+            count += resolveJoinCount(item.getPlayerCount());
+        }
+        return count;
+    }
+
+    private String buildAutoGroupDescription(int currentCount, int needCount) {
+        int remaining = Math.max(0, needCount - currentCount);
+        return remaining > 0
+                ? "预约自动发起的拼团，还差" + remaining + "位玩家"
+                : "预约自动发起的拼团，已满足成团人数";
+    }
+
+    private int resolveJoinCount(Integer count) {
+        return count != null && count > 0 ? count : 1;
+    }
+
+    private int resolveRequiredPlayers(GroupOrder group, ScriptSchedule schedule) {
+        if (group != null && group.getPlayerCount() != null && group.getPlayerCount() > 0) {
+            return group.getPlayerCount();
+        }
+        if (schedule != null && schedule.getPlayerCount() != null && schedule.getPlayerCount() > 0) {
+            return schedule.getPlayerCount();
+        }
+        if (schedule != null && schedule.getMaxPlayers() != null && schedule.getMaxPlayers() > 0) {
+            return schedule.getMaxPlayers();
+        }
+        return 1;
     }
 
     private Map<String, Object> convertToMap(GroupOrder group) {

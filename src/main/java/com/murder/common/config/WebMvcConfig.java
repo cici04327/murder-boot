@@ -28,6 +28,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/api/store/login",
                     "/api/auth/**",
                     
+                    // ========== 第三方支付回调（公开） ==========
+                    "/api/reservation/payment/notify",
+                    "/api/reservation/payment/return",
+                    
                     // ========== 剧本相关（公开） ==========
                     "/api/script/page",
                     "/api/script/list/**",

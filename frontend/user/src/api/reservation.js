@@ -60,7 +60,7 @@ export const payReservation = (id) => {
 }
 
 // 创建支付订单
-export const createPayment = (reservationId, paymentMethod) => {
+export const createPayment = (reservationId, paymentMethod = 'alipay') => {
   return request({
     url: '/reservation/payment/create',
     method: 'post',

@@ -2,6 +2,34 @@
  * 地理位置相关工具函数
  */
 
+const LOCATION_STORAGE_KEY = 'user_location'
+const ACTIVE_LOCATION_CACHE_MS = 5 * 60 * 1000
+const PASSIVE_LOCATION_CACHE_MS = 2 * 60 * 60 * 1000
+
+function readCachedLocation(maxAgeMs = ACTIVE_LOCATION_CACHE_MS) {
+  const cached = localStorage.getItem(LOCATION_STORAGE_KEY)
+  if (!cached) {
+    return null
+  }
+
+  try {
+    const { location, timestamp } = JSON.parse(cached)
+    if (!location || typeof timestamp !== 'number') {
+      return null
+    }
+
+    const age = Date.now() - timestamp
+    if (age > maxAgeMs) {
+      return null
+    }
+
+    return location
+  } catch (error) {
+    console.error('解析缓存位置信息失败:', error)
+    return null
+  }
+}
+
 /**
  * 获取用户当前位置
  * @returns {Promise<{latitude: number, longitude: number}>}
@@ -15,16 +43,11 @@ export function getUserLocation(forceRequest = false) {
 
     // 如果强制请求，跳过缓存检查
     if (!forceRequest) {
-      // 先尝试从缓存获取（5分钟内有效）
-      const cached = localStorage.getItem('user_location')
-      if (cached) {
-        const { location, timestamp } = JSON.parse(cached)
-        const age = Date.now() - timestamp
-        if (age < 5 * 60 * 1000) { // 5分钟内有效
-          console.log('使用缓存的位置信息')
-          resolve(location)
-          return
-        }
+      const cachedLocation = readCachedLocation()
+      if (cachedLocation) {
+        console.log('使用缓存的位置信息')
+        resolve(cachedLocation)
+        return
       }
     }
 
@@ -37,7 +60,7 @@ export function getUserLocation(forceRequest = false) {
         }
         
         // 缓存位置信息
-        localStorage.setItem('user_location', JSON.stringify({
+        localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify({
           location,
           timestamp: Date.now()
         }))
@@ -56,6 +79,14 @@ export function getUserLocation(forceRequest = false) {
       }
     )
   })
+}
+
+/**
+ * 读取最近缓存的位置，不主动触发浏览器定位。
+ * 适合首页、列表页这类只想稳定显示距离的场景。
+ */
+export function getCachedUserLocation(maxAgeMs = PASSIVE_LOCATION_CACHE_MS) {
+  return readCachedLocation(maxAgeMs)
 }
 
 /**

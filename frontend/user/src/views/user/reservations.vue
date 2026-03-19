@@ -101,7 +101,7 @@
                 <span class="label">👥 人数：</span>
                 <span class="value">{{ item.playerCount }}位侦探</span>
               </div>
-              <div class="info-row" v-if="item.payStatus === 1 || item.checkInCode">
+              <div class="info-row" v-if="item.payStatus === 1">
                 <span class="label">🔐 核销码：</span>
                 <span class="value">{{ item.checkInCode || '-' }}</span>
               </div>

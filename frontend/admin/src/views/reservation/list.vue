@@ -83,7 +83,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="checkInCode" label="核销码" width="100" />
+        <el-table-column label="核销码" width="120">
+          <template #default="{ row }">
+            {{ row.payStatus === 1 ? (row.checkInCode || '-') : '-' }}
+          </template>
+        </el-table-column>
         <el-table-column prop="checkInTime" label="核销时间" width="170">
           <template #default="{ row }">
             {{ row.checkInTime || '-' }}
@@ -350,7 +354,7 @@ const handleExport = async () => {
       支付状态: getPayStatusText(item.payStatus),
       预约状态: getStatusText(item.status),
       核销状态: Number(item.checkInStatus || 0) === 1 ? '已核销' : '未核销',
-      核销码: item.checkInCode || '',
+      核销码: item.payStatus === 1 ? (item.checkInCode || '') : '',
       核销时间: item.checkInTime || ''
     }))
 

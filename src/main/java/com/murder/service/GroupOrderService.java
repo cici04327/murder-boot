@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.murder.entity.GroupOrder;
 import com.murder.entity.GroupMember;
+import com.murder.entity.Reservation;
 
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,11 @@ public interface GroupOrderService extends IService<GroupOrder> {
      * 创建拼单
      */
     GroupOrder createGroup(GroupOrder groupOrder, Long userId);
+
+    /**
+     * 自动拼团时优先复用同场次的活动拼团，避免重复开团
+     */
+    GroupOrder createOrAttachAutoGroup(GroupOrder groupOrder, Reservation reservation, Long userId);
     
     /**
      * 加入拼单
@@ -59,4 +65,9 @@ public interface GroupOrderService extends IService<GroupOrder> {
      * 处理超时未成团的拼单
      */
     void processExpiredGroups();
+
+    /**
+     * 重新校验拼团状态，必要时触发成团
+     */
+    void refreshGroupStatus(Long groupId);
 }

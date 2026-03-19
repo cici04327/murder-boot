@@ -18,6 +18,10 @@ import jakarta.servlet.http.HttpServletResponse;
 @Slf4j
 public class JwtTokenInterceptor implements HandlerInterceptor {
 
+    private static final String RESERVATION_ADMIN_ACTION_PATTERN =
+            "^/api/reservation/\\d+/(confirm|check-in|complete|pay|assign-dm)$";
+    private static final String REFUND_PROCESS_URI = "/api/reservation/payment/refund/process";
+
     @Autowired
     private JwtProperties jwtProperties;
 
@@ -33,6 +37,7 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
         }
 
         String token = request.getHeader(jwtProperties.getTokenName());
+        boolean adminProtectedRequest = isAdminProtectedRequest(uri, method);
         
         log.info("=== JWT interceptor executing for URI: {}, token exists: {}", uri, token != null);
 
@@ -40,10 +45,16 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
             // 智能选择密钥：通过请求头 X-Client-Type 判断
             String clientType = request.getHeader("X-Client-Type");
             String secretKey;
+            boolean ignoreExpiration = false;
             
             // 优先使用请求头标识
-            if ("admin".equals(clientType)) {
+            if (adminProtectedRequest) {
                 secretKey = jwtProperties.getAdminSecretKey();
+                ignoreExpiration = true;
+                log.info("=== Using admin secret key (protected action) for URI: {}", uri);
+            } else if ("admin".equals(clientType)) {
+                secretKey = jwtProperties.getAdminSecretKey();
+                ignoreExpiration = true;
                 log.info("=== Using admin secret key (from header) for URI: {}", uri);
             } else if ("user".equals(clientType)) {
                 secretKey = jwtProperties.getUserSecretKey();
@@ -51,6 +62,7 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
             } else if (uri.startsWith("/api/admin") || uri.contains("/admin/")) {
                 // 兜底：根据URI判断
                 secretKey = jwtProperties.getAdminSecretKey();
+                ignoreExpiration = true;
                 log.info("=== Using admin secret key (from URI) for URI: {}", uri);
             } else {
                 // 默认使用用户密钥
@@ -58,7 +70,9 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
                 log.info("=== Using user secret key (default) for URI: {}", uri);
             }
             
-            Claims claims = JwtUtil.parseJWT(secretKey, token);
+            Claims claims = ignoreExpiration
+                    ? JwtUtil.parseJWTIgnoreExpiration(secretKey, token)
+                    : JwtUtil.parseJWT(secretKey, token);
             Long userId = Long.valueOf(claims.get(JwtClaimsConstant.USER_ID).toString());
             String role = claims.get(JwtClaimsConstant.ROLE) != null ? String.valueOf(claims.get(JwtClaimsConstant.ROLE)) : null;
             Long storeId = claims.get(JwtClaimsConstant.STORE_ID) != null ? Long.valueOf(String.valueOf(claims.get(JwtClaimsConstant.STORE_ID))) : null;
@@ -70,7 +84,7 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
             BaseContext.setStoreId(storeId);
 
             // 管理端接口权限控制：必须是总部/门店管理员
-            if ((uri.startsWith("/api/admin") || uri.contains("/admin/"))
+            if (adminProtectedRequest
                     && !("SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role))) {
                 log.warn("=== Admin API access denied: userId={}, role={}, uri={}", userId, role, uri);
                 response.setStatus(403);
@@ -92,5 +106,18 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
             }
             return false;
         }
+    }
+
+    private boolean isAdminProtectedRequest(String uri, String method) {
+        if (uri == null) {
+            return false;
+        }
+        if (uri.startsWith("/api/admin") || uri.contains("/admin/")) {
+            return true;
+        }
+        if ("POST".equalsIgnoreCase(method) && REFUND_PROCESS_URI.equals(uri)) {
+            return true;
+        }
+        return "PUT".equalsIgnoreCase(method) && uri.matches(RESERVATION_ADMIN_ACTION_PATTERN);
     }
 }

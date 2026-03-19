@@ -2,6 +2,7 @@ package com.murder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.dto.ReservationDTO;
 import com.murder.entity.GroupOrder;
@@ -11,6 +12,7 @@ import com.murder.mapper.ReservationMapper;
 import com.murder.service.AdminNotificationService;
 import com.murder.service.CouponService;
 import com.murder.service.NotificationService;
+import com.murder.service.PaymentService;
 import com.murder.service.ReservationService;
 import com.murder.service.ScriptScheduleService;
 import com.murder.service.StoreRoomService;
@@ -22,9 +24,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
-import org.springframework.web.context.request.RequestAttributes;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -79,9 +78,17 @@ public class ReservationServiceImpl implements ReservationService {
     @Autowired(required = false)
     private com.murder.mapper.DmMapper dmMapper;
 
+    @Autowired(required = false)
+    private com.murder.mapper.GroupMemberMapper groupMemberMapper;
+
+    @Autowired(required = false)
+    private PaymentService paymentService;
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Reservation create(ReservationDTO reservationDTO) {
+        validateScheduleBeforeCreate(reservationDTO);
+
         if (reservationDTO.getRoomId() != null && reservationDTO.getReservationTime() != null) {
             String reservationTimeStr = reservationDTO.getReservationTime()
                     .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
@@ -100,9 +107,8 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setStatus(1);
         reservation.setPayStatus(0);
         reservation.setCheckInStatus(0);
-        reservation.setCheckInCode(generateCheckInCode());
 
-        BigDecimal totalPrice = defaultAmount(reservation.getTotalPrice());
+        BigDecimal totalPrice = calculateReservationTotalPrice(reservation, reservationDTO.getTotalPrice());
         BigDecimal vipDiscountAmount = BigDecimal.ZERO;
         BigDecimal vipDiscountRate = null;
         BigDecimal basePrice = totalPrice;
@@ -183,7 +189,7 @@ public class ReservationServiceImpl implements ReservationService {
             couponService.useCoupon(reservationDTO.getUserCouponId(), reservation.getId());
         }
 
-        GroupOrder autoCreatedGroup = createGroupOrderIfNeeded(reservation, reservationDTO);
+        GroupOrder autoCreatedGroup = createGroupOrderIfNeeded(reservation);
         if (autoCreatedGroup != null) {
             reservation.setGroupId(autoCreatedGroup.getId());
         }
@@ -197,7 +203,39 @@ public class ReservationServiceImpl implements ReservationService {
         return reservation;
     }
 
-    private GroupOrder createGroupOrderIfNeeded(Reservation reservation, ReservationDTO reservationDTO) {
+    private void validateScheduleBeforeCreate(ReservationDTO reservationDTO) {
+        if (reservationDTO == null || reservationDTO.getScheduleId() == null || scriptScheduleService == null) {
+            return;
+        }
+
+        ScriptSchedule schedule = scriptScheduleService.getById(reservationDTO.getScheduleId());
+        if (schedule == null || Integer.valueOf(1).equals(schedule.getIsDeleted())) {
+            throw new RuntimeException("所选场次不存在，请重新选择");
+        }
+
+        if (hasScheduleStarted(schedule)) {
+            closeExpiredSchedule(schedule);
+            throw new RuntimeException("该场次已开始，请选择其他场次");
+        }
+
+        if (Integer.valueOf(2).equals(schedule.getStatus())) {
+            throw new RuntimeException("该场次已关闭，请选择其他场次");
+        }
+
+        int maxPlayers = schedule.getMaxPlayers() == null ? 0 : schedule.getMaxPlayers();
+        int currentPlayers = schedule.getCurrentPlayers() == null ? 0 : schedule.getCurrentPlayers();
+        int requestedPlayers = reservationDTO.getPlayerCount() == null ? 1 : reservationDTO.getPlayerCount();
+
+        if (Integer.valueOf(0).equals(schedule.getStatus()) || (maxPlayers > 0 && currentPlayers >= maxPlayers)) {
+            throw new RuntimeException("该场次已满，请选择其他场次");
+        }
+
+        if (maxPlayers > 0 && currentPlayers + requestedPlayers > maxPlayers) {
+            throw new RuntimeException("该场次余位不足，请选择其他场次");
+        }
+    }
+
+    private GroupOrder createGroupOrderIfNeeded(Reservation reservation) {
         if (groupOrderService == null || scriptService == null) {
             return null;
         }
@@ -209,6 +247,16 @@ public class ReservationServiceImpl implements ReservationService {
 
         if (reservation.getPlayerCount() >= script.getPlayerCount()) {
             return null;
+        }
+
+        if (reservation.getScheduleId() != null && scriptScheduleService != null) {
+            ScriptSchedule schedule = scriptScheduleService.getById(reservation.getScheduleId());
+            if (schedule != null) {
+                int currentPlayers = schedule.getCurrentPlayers() == null ? 0 : schedule.getCurrentPlayers();
+                if (currentPlayers >= script.getPlayerCount()) {
+                    return null;
+                }
+            }
         }
 
         String storeName = "";
@@ -236,7 +284,7 @@ public class ReservationServiceImpl implements ReservationService {
         groupOrder.setNewbieWelcome(1);
         groupOrder.setDescription("预约自动发起的拼团，还差" + (script.getPlayerCount() - reservation.getPlayerCount()) + "位玩家");
         groupOrder.setReservationId(reservation.getId());
-        return groupOrderService.createGroup(groupOrder, reservation.getUserId());
+        return groupOrderService.createOrAttachAutoGroup(groupOrder, reservation, reservation.getUserId());
     }
 
     @Override
@@ -346,7 +394,7 @@ public class ReservationServiceImpl implements ReservationService {
             return null;
         }
 
-        assertAdminStoreScope(reservation);
+        assertOwnerOrAdminScope(reservation);
         ensureCheckInFields(reservation);
 
         ReservationVO vo = new ReservationVO();
@@ -397,7 +445,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
         }
-        assertAdminStoreScope(reservation);
+        assertOwnerOrAdminScope(reservation);
         ensureCheckInFields(reservation);
 
         if (Integer.valueOf(3).equals(reservation.getStatus())) {
@@ -408,6 +456,23 @@ public class ReservationServiceImpl implements ReservationService {
         }
         if (Integer.valueOf(1).equals(reservation.getCheckInStatus())) {
             throw new RuntimeException("预约已核销，不能取消");
+        }
+        if (Integer.valueOf(1).equals(reservation.getRefundStatus())) {
+            throw new RuntimeException("订单退款处理中，请勿重复取消");
+        }
+        if (Integer.valueOf(2).equals(reservation.getRefundStatus())
+                || Integer.valueOf(3).equals(reservation.getPayStatus())) {
+            throw new RuntimeException("订单已退款，无需重复取消");
+        }
+
+        String cancelReason = StringUtils.hasText(reason) ? reason : "取消预约";
+
+        if (Integer.valueOf(1).equals(reservation.getPayStatus())) {
+            if (paymentService == null) {
+                throw new RuntimeException("支付服务未启用，暂无法取消已支付预约");
+            }
+            paymentService.autoRefund(id, cancelReason);
+            return;
         }
 
         if (reservation.getCouponId() != null) {
@@ -432,7 +497,7 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation update = new Reservation();
         update.setId(id);
         update.setStatus(4);
-        update.setRemark(reason);
+        update.setRemark(cancelReason);
         reservationMapper.updateById(update);
     }
 
@@ -532,13 +597,17 @@ public class ReservationServiceImpl implements ReservationService {
         assertAdminStoreScope(existing);
         ensureCheckInFields(existing);
 
+        String checkInCode = StringUtils.hasText(existing.getCheckInCode())
+                ? existing.getCheckInCode()
+                : generateCheckInCode();
+
         Reservation update = new Reservation();
         update.setId(id);
         update.setPayStatus(1);
         update.setPayTime(LocalDateTime.now());
         update.setStatus(2);
         update.setCheckInStatus(existing.getCheckInStatus());
-        update.setCheckInCode(existing.getCheckInCode());
+        update.setCheckInCode(checkInCode);
         reservationMapper.updateById(update);
     }
 
@@ -658,10 +727,6 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         boolean needUpdate = false;
-        if (!StringUtils.hasText(reservation.getCheckInCode())) {
-            reservation.setCheckInCode(generateCheckInCode());
-            needUpdate = true;
-        }
         if (reservation.getCheckInStatus() == null) {
             reservation.setCheckInStatus(0);
             needUpdate = true;
@@ -670,7 +735,6 @@ public class ReservationServiceImpl implements ReservationService {
         if (needUpdate) {
             Reservation update = new Reservation();
             update.setId(reservation.getId());
-            update.setCheckInCode(reservation.getCheckInCode());
             update.setCheckInStatus(reservation.getCheckInStatus());
             reservationMapper.updateById(update);
         }
@@ -688,6 +752,43 @@ public class ReservationServiceImpl implements ReservationService {
 
     private BigDecimal defaultAmount(BigDecimal amount) {
         return amount == null ? BigDecimal.ZERO : amount;
+    }
+
+    private BigDecimal calculateReservationTotalPrice(Reservation reservation, BigDecimal clientTotalPrice) {
+        if (reservation == null || reservation.getScriptId() == null) {
+            throw new RuntimeException("剧本信息缺失，无法计算订单金额");
+        }
+        if (scriptService == null) {
+            throw new RuntimeException("剧本服务未启用，无法计算订单金额");
+        }
+
+        com.murder.entity.Script script = scriptService.getById(reservation.getScriptId());
+        if (script == null || Integer.valueOf(1).equals(script.getIsDeleted())) {
+            throw new RuntimeException("剧本不存在，无法创建预约");
+        }
+        if (script.getPrice() == null || script.getPrice().compareTo(BigDecimal.ZERO) < 0) {
+            throw new RuntimeException("剧本价格异常，无法创建预约");
+        }
+
+        int playerCount = reservation.getPlayerCount() != null && reservation.getPlayerCount() > 0
+                ? reservation.getPlayerCount()
+                : 1;
+        reservation.setPlayerCount(playerCount);
+
+        if (reservation.getDuration() == null && script.getDuration() != null) {
+            reservation.setDuration(script.getDuration());
+        }
+
+        BigDecimal totalPrice = script.getPrice()
+                .multiply(BigDecimal.valueOf(playerCount))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        if (clientTotalPrice != null && clientTotalPrice.compareTo(totalPrice) != 0) {
+            log.warn("预约金额以服务端重算为准: scriptId={}, playerCount={}, clientTotalPrice={}, serverTotalPrice={}",
+                    reservation.getScriptId(), playerCount, clientTotalPrice, totalPrice);
+        }
+
+        return totalPrice;
     }
 
     private long calculateDurationMinutes(BigDecimal duration) {
@@ -723,31 +824,38 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     private void assertAdminStoreScope(Reservation reservation) {
-        try {
-            RequestAttributes attributes = RequestContextHolder.getRequestAttributes();
-            if (!(attributes instanceof ServletRequestAttributes servletRequestAttributes)) {
-                return;
-            }
-            String clientType = servletRequestAttributes.getRequest().getHeader("X-Client-Type");
-            if (!"admin".equals(clientType)) {
-                return;
-            }
-            String role = com.murder.common.context.BaseContext.getRole();
-            if (!"STORE_ADMIN".equals(role)) {
-                return;
-            }
-            Long currentStoreId = com.murder.common.context.BaseContext.getStoreId();
-            if (currentStoreId == null) {
-                throw new RuntimeException("门店管理员未绑定门店");
-            }
-            if (reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
-                throw new RuntimeException("没有权限操作该门店的预约");
-            }
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new RuntimeException("权限校验失败", e);
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
         }
+
+        String role = BaseContext.getRole();
+        if ("SUPER_ADMIN".equals(role)) {
+            return;
+        }
+        if (!"STORE_ADMIN".equals(role)) {
+            throw new SecurityException("没有权限操作该预约");
+        }
+
+        Long currentStoreId = BaseContext.getStoreId();
+        if (currentStoreId == null) {
+            throw new SecurityException("门店管理员未绑定门店");
+        }
+        if (reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
+            throw new SecurityException("没有权限操作该门店的预约");
+        }
+    }
+
+    private void assertOwnerOrAdminScope(Reservation reservation) {
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId != null && currentUserId.equals(reservation.getUserId())) {
+            return;
+        }
+
+        assertAdminStoreScope(reservation);
     }
 
     private void sendAdminNotification(Reservation reservation) {
@@ -776,7 +884,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
         }
-        assertAdminStoreScope(reservation);
+        assertOwnerOrAdminScope(reservation);
         ensureCheckInFields(reservation);
 
         // 只允许待确认/已确认且未核销状态改期
@@ -790,10 +898,65 @@ public class ReservationServiceImpl implements ReservationService {
             throw new RuntimeException("改期时间不能小于当前时间");
         }
 
+        ScriptSchedule targetSchedule = resolveRescheduleTargetSchedule(reservation, newTime);
+        if (reservation.getScheduleId() != null && targetSchedule == null) {
+            throw new RuntimeException("未找到对应排期，请重新选择可用场次");
+        }
+
+        if (targetSchedule != null) {
+            validateRescheduleTargetSchedule(reservation, targetSchedule);
+        } else {
+            validateLegacyRescheduleAvailability(reservation, newTime);
+        }
+
+        GroupOrder linkedGroup = reservation.getGroupId() != null && groupOrderService != null
+                ? groupOrderService.getById(reservation.getGroupId())
+                : null;
+        boolean moveCreatorGroup = linkedGroup != null
+                && Integer.valueOf(1).equals(linkedGroup.getStatus())
+                && reservation.getId().equals(linkedGroup.getReservationId());
+
+        if (linkedGroup != null && !moveCreatorGroup) {
+            detachReservationFromGroupForReschedule(reservation, linkedGroup);
+        }
+
+        syncSchedulePlayersOnReschedule(reservation, targetSchedule);
+
         Reservation update = new Reservation();
         update.setId(id);
         update.setReservationTime(newTime);
+        if (targetSchedule != null) {
+            update.setScheduleId(targetSchedule.getId());
+            update.setRoomId(targetSchedule.getRoomId());
+            update.setDmId(targetSchedule.getDmId());
+        }
+        if (linkedGroup != null && !moveCreatorGroup) {
+            update.setGroupId(null);
+        }
         reservationMapper.updateById(update);
+
+        reservation.setReservationTime(newTime);
+        if (targetSchedule != null) {
+            reservation.setScheduleId(targetSchedule.getId());
+            reservation.setRoomId(targetSchedule.getRoomId());
+            reservation.setDmId(targetSchedule.getDmId());
+        }
+        if (linkedGroup != null && !moveCreatorGroup) {
+            reservation.setGroupId(null);
+        }
+
+        if (moveCreatorGroup) {
+            syncCreatorGroupAfterReschedule(linkedGroup, reservation);
+        } else {
+            GroupOrder autoCreatedGroup = createGroupOrderIfNeeded(reservation);
+            if (autoCreatedGroup != null && !autoCreatedGroup.getId().equals(reservation.getGroupId())) {
+                Reservation groupUpdate = new Reservation();
+                groupUpdate.setId(reservation.getId());
+                groupUpdate.setGroupId(autoCreatedGroup.getId());
+                reservationMapper.updateById(groupUpdate);
+                reservation.setGroupId(autoCreatedGroup.getId());
+            }
+        }
 
         // 发送改期通知
         try {
@@ -811,6 +974,214 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         log.info("预约已改期: id={}, orderNo={}, newReservationTime={}", id, reservation.getOrderNo(), newReservationTime);
+    }
+
+    private ScriptSchedule resolveRescheduleTargetSchedule(Reservation reservation, LocalDateTime newTime) {
+        if (reservation == null || scriptScheduleService == null
+                || reservation.getStoreId() == null || reservation.getScriptId() == null || newTime == null) {
+            return null;
+        }
+
+        List<ScriptSchedule> schedules = scriptScheduleService.listByStoreAndDate(
+                reservation.getStoreId(),
+                newTime.toLocalDate()
+        );
+        if (schedules == null || schedules.isEmpty()) {
+            return null;
+        }
+
+        ScriptSchedule preferred = null;
+        for (ScriptSchedule schedule : schedules) {
+            if (schedule == null
+                    || Integer.valueOf(1).equals(schedule.getIsDeleted())
+                    || !reservation.getScriptId().equals(schedule.getScriptId())
+                    || schedule.getStartTime() == null
+                    || !schedule.getStartTime().equals(newTime.toLocalTime())) {
+                continue;
+            }
+            if (reservation.getScheduleId() != null && reservation.getScheduleId().equals(schedule.getId())) {
+                return schedule;
+            }
+            if (preferred == null) {
+                preferred = schedule;
+            }
+            if (reservation.getRoomId() != null && reservation.getRoomId().equals(schedule.getRoomId())) {
+                preferred = schedule;
+            }
+        }
+        return preferred;
+    }
+
+    private void validateRescheduleTargetSchedule(Reservation reservation, ScriptSchedule targetSchedule) {
+        if (targetSchedule == null) {
+            throw new RuntimeException("所选场次不存在，请重新选择");
+        }
+        if (Integer.valueOf(1).equals(targetSchedule.getIsDeleted())) {
+            throw new RuntimeException("所选场次已失效，请重新选择");
+        }
+        if (hasScheduleStarted(targetSchedule)) {
+            closeExpiredSchedule(targetSchedule);
+            throw new RuntimeException("该场次已开始，请选择其他场次");
+        }
+
+        boolean sameSchedule = reservation.getScheduleId() != null && reservation.getScheduleId().equals(targetSchedule.getId());
+        if (Integer.valueOf(2).equals(targetSchedule.getStatus())) {
+            throw new RuntimeException("该场次已关闭，请选择其他场次");
+        }
+        if (Integer.valueOf(0).equals(targetSchedule.getStatus()) && !sameSchedule) {
+            throw new RuntimeException("该场次已满，请选择其他场次");
+        }
+
+        int currentPlayers = targetSchedule.getCurrentPlayers() == null ? 0 : targetSchedule.getCurrentPlayers();
+        if (sameSchedule) {
+            currentPlayers = Math.max(0, currentPlayers - resolveReservationPlayerCount(reservation));
+        }
+
+        int maxPlayers = targetSchedule.getMaxPlayers() == null ? 0 : targetSchedule.getMaxPlayers();
+        if (maxPlayers > 0 && currentPlayers + resolveReservationPlayerCount(reservation) > maxPlayers) {
+            throw new RuntimeException("该场次余位不足，请选择其他场次");
+        }
+    }
+
+    private void validateLegacyRescheduleAvailability(Reservation reservation, LocalDateTime newTime) {
+        if (reservation == null || reservation.getRoomId() == null || newTime == null) {
+            return;
+        }
+        LocalDateTime endTime = newTime.plusMinutes(calculateDurationMinutes(reservation.getDuration()));
+        int conflictCount = reservationMapper.countConflictingReservationsExcludeSelf(
+                reservation.getId(),
+                reservation.getRoomId(),
+                newTime,
+                endTime
+        );
+        if (conflictCount > 0) {
+            throw new RuntimeException("该时段房间已被预约，请选择其他时间");
+        }
+    }
+
+    private void syncSchedulePlayersOnReschedule(Reservation reservation, ScriptSchedule targetSchedule) {
+        if (scriptScheduleService == null || reservation == null) {
+            return;
+        }
+
+        Long oldScheduleId = reservation.getScheduleId();
+        Long newScheduleId = targetSchedule != null ? targetSchedule.getId() : null;
+        if (oldScheduleId != null && !oldScheduleId.equals(newScheduleId)) {
+            scriptScheduleService.decrementCurrentPlayers(oldScheduleId, resolveReservationPlayerCount(reservation));
+        }
+        if (newScheduleId != null && !newScheduleId.equals(oldScheduleId)) {
+            scriptScheduleService.incrementCurrentPlayers(newScheduleId, resolveReservationPlayerCount(reservation));
+        }
+    }
+
+    private void detachReservationFromGroupForReschedule(Reservation reservation, GroupOrder group) {
+        if (reservation == null || group == null) {
+            return;
+        }
+
+        if (!Integer.valueOf(1).equals(group.getStatus())) {
+            reservation.setGroupId(null);
+            return;
+        }
+
+        int playerCount = resolveReservationPlayerCount(reservation);
+        if (groupMemberMapper != null && reservation.getUserId() != null) {
+            LambdaQueryWrapper<com.murder.entity.GroupMember> wrapper = new LambdaQueryWrapper<>();
+            wrapper.eq(com.murder.entity.GroupMember::getGroupId, group.getId())
+                    .eq(com.murder.entity.GroupMember::getUserId, reservation.getUserId())
+                    .eq(com.murder.entity.GroupMember::getStatus, 1);
+            com.murder.entity.GroupMember member = groupMemberMapper.selectOne(wrapper);
+            if (member != null) {
+                int remainingCount = resolveJoinCount(member.getJoinCount()) - playerCount;
+                if (remainingCount > 0) {
+                    member.setJoinCount(remainingCount);
+                } else {
+                    member.setStatus(0);
+                }
+                groupMemberMapper.updateById(member);
+            }
+        }
+
+        int currentCount = Math.max(0, resolveJoinCount(group.getCurrentCount()) - playerCount);
+        GroupOrder update = new GroupOrder();
+        update.setId(group.getId());
+        update.setCurrentCount(currentCount);
+        update.setDescription(buildAutoGroupDescription(currentCount, resolveJoinCount(group.getNeedCount())));
+        groupOrderService.updateById(update);
+
+        group.setCurrentCount(currentCount);
+        group.setDescription(update.getDescription());
+        reservation.setGroupId(null);
+    }
+
+    private void syncCreatorGroupAfterReschedule(GroupOrder group, Reservation reservation) {
+        if (group == null || reservation == null || groupOrderService == null) {
+            return;
+        }
+
+        int currentCount = resolveJoinCount(group.getCurrentCount());
+        Integer requiredPlayers = group.getPlayerCount() != null && group.getPlayerCount() > 0
+                ? group.getPlayerCount()
+                : resolveRequiredPlayerCount(reservation.getScriptId());
+        int needCount = requiredPlayers != null && requiredPlayers > 0
+                ? resolveActiveGroupNeedCount(reservation, requiredPlayers, group.getId(), currentCount)
+                : Math.max(currentCount, resolveJoinCount(group.getNeedCount()));
+
+        GroupOrder update = new GroupOrder();
+        update.setId(group.getId());
+        update.setPlayTime(reservation.getReservationTime());
+        update.setNeedCount(needCount);
+        update.setDescription(buildAutoGroupDescription(currentCount, needCount));
+        groupOrderService.updateById(update);
+
+        group.setPlayTime(reservation.getReservationTime());
+        group.setNeedCount(needCount);
+        group.setDescription(update.getDescription());
+        groupOrderService.refreshGroupStatus(group.getId());
+    }
+
+    private int resolveActiveGroupNeedCount(Reservation reservation, int requiredPlayers, Long groupId, int currentCount) {
+        if (reservation == null || reservation.getScheduleId() == null) {
+            return Math.max(currentCount, requiredPlayers);
+        }
+        int outsidePlayers = countActivePlayersOutsideGroupForSchedule(reservation.getScheduleId(), groupId);
+        return Math.max(currentCount, requiredPlayers - outsidePlayers);
+    }
+
+    private int countActivePlayersOutsideGroupForSchedule(Long scheduleId, Long groupId) {
+        if (scheduleId == null) {
+            return 0;
+        }
+        LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Reservation::getScheduleId, scheduleId)
+                .eq(Reservation::getIsDeleted, 0)
+                .ne(Reservation::getStatus, 4);
+        List<Reservation> reservations = reservationMapper.selectList(wrapper);
+        int count = 0;
+        for (Reservation item : reservations) {
+            if (groupId != null && groupId.equals(item.getGroupId())) {
+                continue;
+            }
+            count += resolveReservationPlayerCount(item);
+        }
+        return count;
+    }
+
+    private int resolveReservationPlayerCount(Reservation reservation) {
+        return reservation != null && reservation.getPlayerCount() != null && reservation.getPlayerCount() > 0
+                ? reservation.getPlayerCount()
+                : 1;
+    }
+
+    private int resolveJoinCount(Integer count) {
+        return count != null && count > 0 ? count : 1;
+    }
+
+    private String buildAutoGroupDescription(int currentCount, int needCount) {
+        int remaining = Math.max(0, needCount - currentCount);
+        return remaining > 0
+                ? "预约自动发起的拼团，还差" + remaining + "位玩家"
+                : "预约自动发起的拼团，已满足成团人数";
     }
 
     @Override
@@ -921,6 +1292,43 @@ public class ReservationServiceImpl implements ReservationService {
             log.debug("查询剧本开场人数失败: scriptId={}", scriptId, e);
             return null;
         }
+    }
+
+    private boolean hasScheduleStarted(ScriptSchedule schedule) {
+        if (schedule == null || schedule.getScheduleDate() == null || schedule.getStartTime() == null) {
+            return false;
+        }
+        LocalDateTime startAt = LocalDateTime.of(schedule.getScheduleDate(), schedule.getStartTime());
+        return !startAt.isAfter(LocalDateTime.now());
+    }
+
+    private void closeExpiredSchedule(ScriptSchedule schedule) {
+        if (schedule == null || schedule.getId() == null || scriptScheduleService == null
+                || Integer.valueOf(2).equals(schedule.getStatus())) {
+            return;
+        }
+
+        ScriptSchedule update = new ScriptSchedule();
+        update.setId(schedule.getId());
+        update.setStatus(2);
+        update.setRemark(buildExpiredScheduleRemark(schedule.getRemark()));
+        try {
+            scriptScheduleService.update(update);
+            schedule.setStatus(2);
+        } catch (Exception e) {
+            log.warn("关闭已开场排期失败: scheduleId={}", schedule.getId(), e);
+        }
+    }
+
+    private String buildExpiredScheduleRemark(String currentRemark) {
+        String expiredRemark = "开场时间已过，排期已自动关闭";
+        if (!StringUtils.hasText(currentRemark)) {
+            return expiredRemark;
+        }
+        if (currentRemark.contains(expiredRemark)) {
+            return currentRemark;
+        }
+        return currentRemark + "；" + expiredRemark;
     }
 
     private Integer resolveGroupStatus(Reservation reservation) {

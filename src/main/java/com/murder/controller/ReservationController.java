@@ -10,7 +10,6 @@ import com.murder.service.ReservationService;
 import com.murder.vo.ReservationVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -56,21 +55,20 @@ public class ReservationController {
             @RequestParam(required = false) Integer payStatus,
             @RequestParam(required = false) Integer checkInStatus,
             @RequestParam(required = false) Integer refundStatus,
-            @RequestParam(required = false) Boolean hasRefund,
-            HttpServletRequest request
+            @RequestParam(required = false) Boolean hasRefund
     ) {
-        String clientType = request.getHeader("X-Client-Type");
+        boolean adminOperator = isAdminOperator();
 
-        if (!"admin".equals(clientType)) {
+        if (!adminOperator) {
             userId = BaseContext.getCurrentId();
         }
 
-        if ("admin".equals(clientType) && "STORE_ADMIN".equals(BaseContext.getRole())) {
+        if ("STORE_ADMIN".equals(BaseContext.getRole())) {
             storeId = BaseContext.getStoreId();
         }
 
-        log.info("分页查询预约列表: page={}, pageSize={}, userId={}, storeId={}, reservationDate={}, status={}, payStatus={}, checkInStatus={}, refundStatus={}, hasRefund={}, clientType={}",
-                page, pageSize, userId, storeId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund, clientType);
+        log.info("分页查询预约列表: page={}, pageSize={}, userId={}, storeId={}, reservationDate={}, status={}, payStatus={}, checkInStatus={}, refundStatus={}, hasRefund={}, role={}",
+                page, pageSize, userId, storeId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund, BaseContext.getRole());
         return Result.success(
                 reservationService.pageQueryWithDetails(page, pageSize, userId, storeId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund)
         );
@@ -78,12 +76,11 @@ public class ReservationController {
 
     @GetMapping("/{id}")
     @Operation(summary = "查询预约详情")
-    public Result<ReservationVO> getById(@PathVariable Long id, HttpServletRequest request) {
+    public Result<ReservationVO> getById(@PathVariable Long id) {
         log.info("查询预约详情: {}", id);
         ReservationVO vo = reservationService.getDetailById(id);
         // 用户端：校验预约归属
-        String clientType = request.getHeader("X-Client-Type");
-        if (!"admin".equals(clientType) && vo != null) {
+        if (!isAdminOperator() && vo != null) {
             Long currentUserId = BaseContext.getCurrentId();
             if (!Objects.equals(currentUserId, vo.getUserId())) {
                 log.warn("用户{}尝试查看不属于自己的预约{}", currentUserId, id);
@@ -95,12 +92,11 @@ public class ReservationController {
 
     @GetMapping("/{id}/detail")
     @Operation(summary = "查询预约详情")
-    public Result<ReservationVO> getDetail(@PathVariable Long id, HttpServletRequest request) {
+    public Result<ReservationVO> getDetail(@PathVariable Long id) {
         log.info("查询预约详情: {}", id);
         ReservationVO vo = reservationService.getDetailById(id);
         // 用户端：校验预约归属
-        String clientType = request.getHeader("X-Client-Type");
-        if (!"admin".equals(clientType) && vo != null) {
+        if (!isAdminOperator() && vo != null) {
             Long currentUserId = BaseContext.getCurrentId();
             if (!Objects.equals(currentUserId, vo.getUserId())) {
                 log.warn("用户{}尝试查看不属于自己的预约{}", currentUserId, id);
@@ -120,6 +116,9 @@ public class ReservationController {
     @PutMapping("/{id}/confirm")
     @Operation(summary = "确认预约")
     public Result<String> confirm(@PathVariable Long id) {
+        if (!isAdminOperator()) {
+            return Result.error(403, "没有管理端访问权限");
+        }
         log.info("确认预约: {}", id);
         reservationService.confirm(id);
         return Result.success("确认成功");
@@ -136,6 +135,9 @@ public class ReservationController {
     @PutMapping("/{id}/check-in")
     @Operation(summary = "到店核销")
     public Result<String> checkIn(@PathVariable Long id, @RequestParam String checkInCode) {
+        if (!isAdminOperator()) {
+            return Result.error(403, "没有管理端访问权限");
+        }
         log.info("到店核销: id={}, checkInCode={}", id, checkInCode);
         reservationService.checkIn(id, checkInCode);
         return Result.success("核销成功");
@@ -144,6 +146,9 @@ public class ReservationController {
     @PutMapping("/{id}/complete")
     @Operation(summary = "完成预约")
     public Result<String> complete(@PathVariable Long id) {
+        if (!isAdminOperator()) {
+            return Result.error(403, "没有管理端访问权限");
+        }
         log.info("完成预约: {}", id);
         reservationService.complete(id);
         return Result.success("完成成功");
@@ -152,6 +157,9 @@ public class ReservationController {
     @PutMapping("/{id}/pay")
     @Operation(summary = "支付预约")
     public Result<String> pay(@PathVariable Long id) {
+        if (!isAdminOperator()) {
+            return Result.error(403, "没有管理端访问权限");
+        }
         log.info("支付预约: {}", id);
         reservationService.pay(id);
         return Result.success("支付成功");
@@ -186,8 +194,16 @@ public class ReservationController {
     @PutMapping("/{id}/assign-dm")
     @Operation(summary = "分配预约主持 DM")
     public Result<String> assignDm(@PathVariable Long id, @RequestParam Long dmId) {
+        if (!isAdminOperator()) {
+            return Result.error(403, "没有管理端访问权限");
+        }
         log.info("分配预约主持 DM: reservationId={}, dmId={}", id, dmId);
         reservationService.assignDm(id, dmId);
         return Result.success("分配成功");
+    }
+
+    private boolean isAdminOperator() {
+        String role = BaseContext.getRole();
+        return "SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role);
     }
 }

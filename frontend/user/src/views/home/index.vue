@@ -29,13 +29,6 @@
               <h1 class="hero-title">{{ item.title }}</h1>
               <p class="hero-description">{{ item.description }}</p>
               
-              <!-- 特色标签 -->
-              <div class="hero-features">
-                <span class="feature-tag">🔥 500+精选剧本</span>
-                <span class="feature-tag">🏠 100+优质门店</span>
-                <span class="feature-tag">👥 10W+玩家信赖</span>
-              </div>
-              
               <div class="hero-buttons">
                 <el-button class="hero-btn-primary" size="large" @click="router.push(item.link)">
                   <span class="btn-icon">🎮</span>
@@ -60,26 +53,6 @@
       </el-carousel>
     </section>
 
-    <!-- 数据统计展示 - 剧本杀主题 -->
-    <div class="statistics-section">
-      <div class="stats-title">
-        <span class="stats-icon">📊</span>
-        <span>平台数据</span>
-      </div>
-      <el-row :gutter="20" v-loading="statisticsLoading">
-        <el-col :xs="12" :sm="6" v-for="stat in statistics" :key="stat.id">
-          <div class="stat-card" :class="'stat-card-' + stat.id">
-            <div class="stat-emoji">{{ stat.emoji }}</div>
-            <div class="stat-content">
-              <div class="stat-value">{{ stat.value }}</div>
-              <div class="stat-label">{{ stat.label }}</div>
-            </div>
-            <div class="stat-decoration"></div>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
-
     <!-- 快速入口 - 剧本杀主题 -->
     <div class="quick-entry">
       <div class="quick-entry-title">
@@ -95,6 +68,67 @@
             <div class="entry-title">{{ entry.title }}</div>
             <div class="entry-desc">{{ entry.description }}</div>
             <div class="entry-arrow">→</div>
+          </div>
+        </el-col>
+      </el-row>
+    </div>
+
+    <!-- 已排期剧本杀 -->
+    <div class="section scheduled-section">
+      <div class="section-header">
+        <div class="header-left">
+          <h3>📅 已排期剧本杀</h3>
+          <span class="header-subtitle">按日期挑当天能开的车，跨门店快速上车</span>
+        </div>
+        <el-link type="primary" @click="router.push('/schedule/list')">
+          查看排期大厅 <el-icon class="el-icon--right"><ArrowRight /></el-icon>
+        </el-link>
+      </div>
+
+      <el-row :gutter="20" v-loading="scheduledSessionsLoading">
+        <el-col :xs="24" :sm="12" :md="6" v-for="session in visibleScheduledSessions" :key="session.id">
+          <div class="scheduled-card" @click="handleOpenScheduledSession(session)">
+            <div class="scheduled-cover">
+              <LazyImage
+                :src="session.cover || getScriptCover(session.scriptName, '')"
+                :alt="session.scriptName"
+                :height="190"
+                :immediate="true"
+                @error="handleImageError"
+              />
+              <div class="scheduled-date">{{ formatScheduleCardDate(session.scheduleDate) }}</div>
+              <div class="scheduled-time">{{ formatScheduleCardTime(session) }}</div>
+              <div class="scheduled-remain" :class="getScheduledRemainClass(session)">
+                {{ getScheduledRemainText(session) }}
+              </div>
+            </div>
+
+            <div class="scheduled-body">
+              <h4>{{ session.scriptName }}</h4>
+              <div class="scheduled-meta">
+                <span class="meta-badge difficulty" :class="'diff-' + (session.difficulty || 2)">
+                  {{ getDifficultyText(session.difficulty) }}
+                </span>
+                <span class="meta-badge">👥 {{ session.playerCount || session.maxPlayers }}人本</span>
+                <span class="meta-badge">⏱️ {{ session.duration || 3 }}h</span>
+              </div>
+
+              <div class="scheduled-info-line">🏠 {{ session.storeName || '待定门店' }}</div>
+              <div class="scheduled-info-line">🚪 {{ session.roomName || '待定房间' }}</div>
+
+              <div class="scheduled-footer">
+                <span class="scheduled-price">¥{{ Number(session.price || 0).toFixed(0) }}/人</span>
+                <span class="scheduled-action">查看场次 →</span>
+              </div>
+            </div>
+          </div>
+        </el-col>
+
+        <el-col :span="24" v-if="!scheduledSessionsLoading && visibleScheduledSessions.length === 0">
+          <div class="empty-groups">
+            <el-empty description="最近暂无开放场次">
+              <el-button type="primary" @click="router.push('/schedule/list')">去排期大厅看看</el-button>
+            </el-empty>
           </div>
         </el-col>
       </el-row>
@@ -279,7 +313,7 @@
         <el-col :span="24" v-if="!groupsLoading && hotGroups.length === 0">
           <div class="empty-groups">
             <el-empty description="暂无拼单，快来发起第一个吧！">
-              <el-button type="primary" @click="router.push('/group/create')">发起拼单</el-button>
+              <el-button type="primary" @click="router.push('/schedule/list')">发起拼单</el-button>
             </el-empty>
           </div>
         </el-col>
@@ -350,7 +384,7 @@
         </el-link>
       </div>
       <el-row :gutter="20" v-loading="hotStoresLoading">
-        <el-col :xs="24" :sm="12" :md="8" v-for="(store, index) in hotStores.slice(0, 6)" :key="store.id">
+        <el-col :xs="24" :sm="12" :md="6" v-for="(store, index) in hotStores.slice(0, 4)" :key="store.id">
           <div class="store-card" @click="router.push(`/store/${store.id}`)">
             <div class="store-image">
               <LazyImage :src="store.coverImage || PLACEHOLDERS.STORE" :alt="store.name" :height="180" :immediate="true" />
@@ -364,7 +398,7 @@
             <div class="store-info">
               <div class="store-header">
                 <h4>{{ store.name }}</h4>
-                <span class="store-distance" v-if="store.distance">{{ store.distance }}km</span>
+                <span class="store-distance" v-if="store.distanceText">{{ store.distanceText }}</span>
               </div>
               <div class="store-address">
                 <span class="address-icon">📍</span>
@@ -439,21 +473,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
 import SkeletonHome from '@/components/Skeleton/SkeletonHome.vue'
 import LazyImage from '@/components/LazyImage.vue'
 import { useRouter } from 'vue-router'
 import { Reading, ArrowRight } from '@element-plus/icons-vue'
-import { getHotScripts, getRecommendedScripts } from '@/api/script'
+import { getHotScripts, getRecommendedScripts, getScheduledSessions } from '@/api/script'
 import { PLACEHOLDERS } from '@/assets/placeholders'
 import { getScriptCover } from '@/assets/script-covers'
 import { getHotStores } from '@/api/store'
 import { getRecommendedArticles } from '@/api/article'
 import { getHotGroups } from '@/api/group'
 import { Shop, Clock } from '@element-plus/icons-vue'
-import request from '@/utils/request'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
+import { hasScheduleStarted } from '@/utils/schedule-time'
+import { getCachedUserLocation, calculateDistance, formatDistance } from '@/utils/location'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -528,11 +563,11 @@ const quickEntries = ref([
   },
   {
     id: 3,
-    title: '立即预约',
-    description: '一键预约剧本体验',
-    emoji: '🎭',
+    title: '排期场次',
+    description: '当天开车场次一眼看全',
+    emoji: '📅',
     color: '#faad14',
-    path: '/script'
+    path: '/schedule/list'
   },
   {
     id: 4,
@@ -544,43 +579,15 @@ const quickEntries = ref([
   }
 ])
 
-const statistics = ref([
-  {
-    id: 1,
-    label: '累计服务人次',
-    value: '10000+',
-    emoji: '👥',
-    color: '#667eea'
-  },
-  {
-    id: 2,
-    label: '精选剧本',
-    value: '500+',
-    emoji: '📜',
-    color: '#f5576c'
-  },
-  {
-    id: 3,
-    label: '合作门店',
-    value: '100+',
-    emoji: '🏠',
-    color: '#4facfe'
-  },
-  {
-    id: 4,
-    label: '用户好评',
-    value: '98%',
-    emoji: '⭐',
-    color: '#43e97b'
-  }
-])
-
 // 页面整体加载状态
 const pageLoading = ref(true)
 
-const statisticsLoading = ref(false)
 const hotScripts = ref([])
 const hotScriptsLoading = ref(false)
+const scheduledSessions = ref([])
+const scheduledSessionsLoading = ref(false)
+const scheduleNowTick = ref(Date.now())
+const scheduleClockTimer = ref(null)
 const recommendedScripts = ref([])
 const recommendedScriptsLoading = ref(false)
 const hotStores = ref([])
@@ -661,44 +668,6 @@ const getCategoryIcon = (category) => {
 const handleImageError = () => {
   // LazyImage 组件内部已经处理了错误显示，这里不需要做任何操作
   console.log('图片加载失败，已使用默认图片')
-}
-
-// 加载统计数据
-const loadStatistics = async () => {
-  statisticsLoading.value = true
-  try {
-    const res = await request({
-      url: '/statistics/overview',
-      method: 'get'
-    })
-    if (res.code === 200 && res.data) {
-      console.log('统计数据:', res.data)
-      // 更新统计数据
-      if (res.data.totalUsers !== undefined && res.data.totalUsers !== null) {
-        const users = res.data.totalUsers
-        statistics.value[0].value = users >= 10000 
-          ? `${Math.floor(users / 1000)}k+` 
-          : `${users}+`
-      }
-      if (res.data.totalScripts !== undefined && res.data.totalScripts !== null) {
-        statistics.value[1].value = `${res.data.totalScripts}+`
-      }
-      if (res.data.totalStores !== undefined && res.data.totalStores !== null) {
-        statistics.value[2].value = `${res.data.totalStores}+`
-      }
-      if (res.data.satisfactionRate !== undefined && res.data.satisfactionRate !== null) {
-        // 处理 BigDecimal，取整数部分
-        const rate = Math.round(parseFloat(res.data.satisfactionRate))
-        statistics.value[3].value = `${rate}%`
-      }
-    }
-  } catch (error) {
-    // 静默失败，使用默认模拟数据
-    console.error('加载统计数据失败:', error)
-    console.log('使用默认统计数据')
-  } finally {
-    statisticsLoading.value = false
-  }
 }
 
 const loadHotScripts = async () => {
@@ -806,6 +775,27 @@ const loadHotScripts = async () => {
   }
 }
 
+const loadScheduledSessions = async () => {
+  scheduledSessionsLoading.value = true
+  try {
+    const res = await getScheduledSessions({ days: 7 })
+    const list = Array.isArray(res.data) ? res.data : []
+    scheduledSessions.value = list
+  } catch (error) {
+    console.error('加载已排期场次失败:', error)
+    scheduledSessions.value = []
+  } finally {
+    scheduledSessionsLoading.value = false
+  }
+}
+
+const visibleScheduledSessions = computed(() => {
+  const now = scheduleNowTick.value
+  return scheduledSessions.value
+    .filter((session) => !hasScheduleStarted(session, now))
+    .slice(0, 4)
+})
+
 const loadRecommendedScripts = async () => {
   recommendedScriptsLoading.value = true
   try {
@@ -872,11 +862,27 @@ const loadHotStores = async () => {
   try {
     const res = await getHotStores()
     if (res.data) {
+      const userLocation = getCachedUserLocation()
       hotStores.value = res.data.slice(0, 6).map(store => {
         if (!store.coverImage && store.images) {
           const imageList = store.images.split(',').map(img => img.trim()).filter(img => img)
           if (imageList.length > 0) store.coverImage = imageList[0]
         }
+
+        if (userLocation && store.latitude && store.longitude) {
+          const distanceKm = calculateDistance(
+            userLocation.latitude,
+            userLocation.longitude,
+            Number(store.latitude),
+            Number(store.longitude)
+          )
+          store.distance = distanceKm
+          store.distanceText = formatDistance(distanceKm)
+        } else {
+          store.distance = null
+          store.distanceText = ''
+        }
+
         return store
       })
     }
@@ -1031,6 +1037,63 @@ const getGroupStatusClass = (status) => {
   return classMap[status] || ''
 }
 
+const getScheduledRemainCount = (session) => {
+  return Math.max(0, Number(session.maxPlayers || 0) - Number(session.currentPlayers || 0))
+}
+
+const getScheduledRemainText = (session) => {
+  const remain = getScheduledRemainCount(session)
+  if (remain <= 0) return '已满员'
+  if (remain === 1) return '差1人成团'
+  return `余${remain}位`
+}
+
+const getScheduledRemainClass = (session) => {
+  const remain = getScheduledRemainCount(session)
+  if (remain <= 0) return 'full'
+  if (remain <= 2) return 'few'
+  return 'ok'
+}
+
+const formatScheduleCardDate = (scheduleDate) => {
+  const value = String(scheduleDate || '').slice(0, 10)
+  if (!value) return '待定日期'
+  const [year, month, day] = value.split('-')
+  return `${month}/${day}`
+}
+
+const formatScheduleCardTime = (session) => {
+  const startTime = String(session.startTime || '').slice(0, 5)
+  const endTime = String(session.endTime || '').slice(0, 5)
+  return `${startTime}${endTime ? ` - ${endTime}` : ''}`
+}
+
+const handleOpenScheduledSession = (session) => {
+  router.push({
+    path: '/schedule/list',
+    query: {
+      date: String(session.scheduleDate || '').slice(0, 10)
+    }
+  })
+}
+
+const startScheduleClock = () => {
+  if (scheduleClockTimer.value) {
+    return
+  }
+  scheduleClockTimer.value = setInterval(() => {
+    scheduleNowTick.value = Date.now()
+  }, 30000)
+}
+
+const stopScheduleClock = () => {
+  if (!scheduleClockTimer.value) {
+    return
+  }
+  clearInterval(scheduleClockTimer.value)
+  scheduleClockTimer.value = null
+}
+
 // 加入拼单
 const handleJoinGroup = (group) => {
   if (!userStore.isLoggedIn) {
@@ -1089,10 +1152,11 @@ const resumeAutoPlay = () => {
 }
 
 onMounted(async () => {
+  startScheduleClock()
   try {
     // 并行加载所有数据
     await Promise.all([
-      loadStatistics(),
+      loadScheduledSessions(),
       loadHotScripts(),
       loadHotGroups(),
       loadRecommendedScripts(),
@@ -1118,6 +1182,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   stopAutoPlay()
+  stopScheduleClock()
 })
 </script>
 
@@ -1336,107 +1401,6 @@ onBeforeUnmount(() => {
   }
 }
 
-/* 数据统计区域 - 剧本杀主题 */
-.statistics-section {
-  margin: 40px auto;
-  max-width: 1200px;
-  padding: 0 20px;
-  position: relative;
-  z-index: 10;
-}
-
-.stats-title {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-bottom: 20px;
-  font-size: 18px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.stats-icon {
-  font-size: 24px;
-}
-
-.stat-card {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  padding: 25px 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 12px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: default;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.stat-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, #8B0000, #ff6b6b);
-}
-
-.stat-card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 15px 40px rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.stat-emoji {
-  font-size: 42px;
-  margin-bottom: 5px;
-}
-
-.stat-decoration {
-  position: absolute;
-  bottom: -20px;
-  right: -20px;
-  width: 80px;
-  height: 80px;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), transparent);
-  border-radius: 50%;
-}
-
-.stat-icon {
-  width: 60px;
-  height: 60px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  flex-shrink: 0;
-}
-
-.stat-content {
-  flex: 1;
-}
-
-.stat-value {
-  font-size: 28px;
-  font-weight: bold;
-  color: #fff;
-  margin-bottom: 5px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
 /* 快速入口 */
 /* 快速入口 - 剧本杀主题 */
 .quick-entry {
@@ -1645,6 +1609,152 @@ onBeforeUnmount(() => {
 .header-subtitle {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.6);
+}
+
+.scheduled-section {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  padding: 40px 20px;
+  border-radius: 16px;
+  margin-bottom: 40px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scheduled-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.28);
+}
+
+.scheduled-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.3);
+  border-color: rgba(139, 0, 0, 0.5);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.scheduled-cover {
+  position: relative;
+  height: 190px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a2e, #2d2d44);
+}
+
+.scheduled-cover :deep(img) {
+  transition: transform 0.5s ease;
+}
+
+.scheduled-card:hover .scheduled-cover :deep(img) {
+  transform: scale(1.12);
+}
+
+.scheduled-date,
+.scheduled-time,
+.scheduled-remain {
+  position: absolute;
+  left: 12px;
+  z-index: 2;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  backdrop-filter: blur(5px);
+}
+
+.scheduled-date {
+  top: 12px;
+  background: rgba(139, 0, 0, 0.9);
+  color: #fff;
+  font-weight: 600;
+}
+
+.scheduled-time {
+  top: 48px;
+  background: rgba(0, 0, 0, 0.55);
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.scheduled-remain {
+  bottom: 12px;
+  font-weight: 600;
+}
+
+.scheduled-remain.ok {
+  background: rgba(103, 194, 58, 0.2);
+  color: #9be7a2;
+}
+
+.scheduled-remain.few {
+  background: rgba(230, 162, 60, 0.2);
+  color: #ffd18b;
+}
+
+.scheduled-remain.full {
+  background: rgba(245, 108, 108, 0.2);
+  color: #ffc2c2;
+}
+
+.scheduled-body {
+  padding: 18px;
+}
+
+.scheduled-body h4 {
+  margin: 0 0 12px;
+  font-size: 18px;
+  color: #fff;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheduled-meta {
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.scheduled-info-line {
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.76);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scheduled-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  margin-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.scheduled-price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ff8f8f;
+}
+
+.scheduled-action {
+  font-size: 12px;
+  color: #8B0000;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.scheduled-card:hover .scheduled-action {
+  opacity: 1;
 }
 
 /* 横向滚动容器 */
@@ -2542,20 +2652,6 @@ onBeforeUnmount(() => {
   
   .banner-content p {
     font-size: 16px;
-  }
-  
-  .statistics-section {
-    margin-top: 30px;
-    margin-bottom: 30px;
-  }
-  
-  .stat-card {
-    padding: 20px;
-    margin-bottom: 15px;
-  }
-  
-  .stat-value {
-    font-size: 24px;
   }
   
   .section-header h3 {

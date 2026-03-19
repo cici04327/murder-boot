@@ -42,18 +42,6 @@
               <span>支付宝</span>
             </div>
           </el-radio>
-          <el-radio label="wechat">
-            <div class="method-item">
-              <el-icon :size="24" color="#07c160"><Wallet /></el-icon>
-              <span>微信支付</span>
-            </div>
-          </el-radio>
-          <el-radio label="mock">
-            <div class="method-item">
-              <el-icon :size="24" color="#f56c6c"><Money /></el-icon>
-              <span>模拟支付（测试）</span>
-            </div>
-          </el-radio>
         </el-radio-group>
       </el-card>
       
@@ -76,7 +64,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getReservationDetail, createPayment, queryPaymentStatus } from '@/api/reservation'
+import { getReservationDetail, createPayment } from '@/api/reservation'
 
 const route = useRoute()
 const router = useRouter()
@@ -84,7 +72,7 @@ const router = useRouter()
 const loading = ref(false)
 const paying = ref(false)
 const reservation = ref(null)
-const paymentMethod = ref('mock')
+const paymentMethod = ref('alipay')
 
 // 优惠券折扣金额
 const couponDiscount = computed(() => {
@@ -138,11 +126,9 @@ const handlePay = async () => {
   // 防重复提交：正在支付中则直接返回
   if (paying.value) return
 
-  const methodLabel = { alipay: '支付宝', wechat: '微信支付', mock: '模拟支付' }[paymentMethod.value] || '当前方式'
-
   try {
     await ElMessageBox.confirm(
-      `确认使用【${methodLabel}】支付 ¥${finalPrice.value}？`,
+      `确认使用【支付宝】支付 ¥${finalPrice.value}？`,
       '确认支付',
       {
         confirmButtonText: '确认支付',
@@ -158,35 +144,20 @@ const handlePay = async () => {
 
   paying.value = true
   try {
-    const res = await createPayment(route.params.id, paymentMethod.value)
+    const res = await createPayment(route.params.id, 'alipay')
     
     if (res.code === 1 || res.code === 200) {
       const payResult = res.data
-      
-      // 模拟支付直接成功
-      if (payResult === 'MOCK_PAY_SUCCESS' || payResult === 'ALIPAY_MOCK_SUCCESS') {
-        ElMessage.success('支付成功')
-        router.push({
-          path: '/payment/result',
-          query: { success: true, reservationId: route.params.id }
-        })
-      } 
-      // 真实支付宝支付：显示支付表单并自动提交
-      else if (payResult && payResult.includes('<form')) {
+
+      if (payResult && payResult.includes('<form')) {
         const div = document.createElement('div')
         div.innerHTML = payResult
         document.body.appendChild(div)
         setTimeout(() => {
           document.forms[document.forms.length - 1].submit()
         }, 100)
-      } 
-      // 其他情况
-      else {
-        ElMessage.success('支付成功')
-        router.push({
-          path: '/payment/result',
-          query: { success: true, reservationId: route.params.id }
-        })
+      } else {
+        throw new Error('未获取到有效的支付宝支付表单')
       }
     }
   } catch (error) {

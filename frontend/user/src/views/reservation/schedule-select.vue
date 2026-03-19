@@ -77,7 +77,7 @@
         <span>👆 请先选择门店</span>
       </div>
 
-      <div v-else-if="schedules.length === 0" class="empty-tip">
+      <div v-else-if="visibleSchedules.length === 0" class="empty-tip">
         <el-empty description="今日暂无可约场次" :image-size="80">
           <el-button @click="selectDate(getNextAvailableDate())">查看其他日期</el-button>
         </el-empty>
@@ -85,7 +85,7 @@
 
       <div v-else class="schedule-cards">
         <div
-          v-for="schedule in schedules"
+          v-for="schedule in visibleSchedules"
           :key="schedule.id"
           class="schedule-card"
           :class="{
@@ -156,13 +156,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft, Loading } from '@element-plus/icons-vue'
 import { getAvailableSchedules, getScriptDetail } from '@/api/script'
 import { getStoreDetail, getStoreList } from '@/api/store'
 import { useUserStore } from '@/store/user'
+import { hasScheduleStarted } from '@/utils/schedule-time'
 
 const route = useRoute()
 const router = useRouter()
@@ -181,6 +182,8 @@ const storeList = ref([])
 const selectedStoreId = ref(fixedStoreId || null)
 const schedules = ref([])
 const loading = ref(false)
+const scheduleNowTick = ref(Date.now())
+let scheduleClockTimer = null
 
 // 获取本地日期字符串（避免 toISOString() 因 UTC 时区导致日期偏移）
 const toLocalDateStr = (d) => {
@@ -296,6 +299,11 @@ const getNextAvailableDate = () => {
   return dateList.value[Math.min(idx + 1, dateList.value.length - 1)].value
 }
 
+const visibleSchedules = computed(() => {
+  const now = scheduleNowTick.value
+  return schedules.value.filter((schedule) => !hasScheduleStarted(schedule, now))
+})
+
 // 余量计算
 const remainCount = (s) => (s.maxPlayers || 0) - (s.currentPlayers || 0)
 
@@ -317,6 +325,10 @@ const formatTime = (t) => t ? String(t).substring(0, 5) : ''
 
 // 选择场次 → 跳转预约确认页
 const handleSelectSchedule = (schedule) => {
+  if (hasScheduleStarted(schedule, scheduleNowTick.value)) {
+    ElMessage.warning('该场次已开场，请选择其他场次')
+    return
+  }
   if (schedule.currentPlayers >= schedule.maxPlayers) {
     ElMessage.warning('该场次已满，请选择其他场次')
     return
@@ -338,7 +350,25 @@ const handleSelectSchedule = (schedule) => {
   })
 }
 
+const startScheduleClock = () => {
+  if (scheduleClockTimer) {
+    return
+  }
+  scheduleClockTimer = setInterval(() => {
+    scheduleNowTick.value = Date.now()
+  }, 30000)
+}
+
+const stopScheduleClock = () => {
+  if (!scheduleClockTimer) {
+    return
+  }
+  clearInterval(scheduleClockTimer)
+  scheduleClockTimer = null
+}
+
 onMounted(async () => {
+  startScheduleClock()
   // 串行：先并行加载剧本信息和门店列表，确保 selectedStoreId 赋值完成后再查场次
   await Promise.all([
     loadScriptInfo(),
@@ -347,6 +377,10 @@ onMounted(async () => {
   ])
   // 此时 selectedStoreId 已赋值，可以安全加载场次
   await loadSchedules()
+})
+
+onBeforeUnmount(() => {
+  stopScheduleClock()
 })
 </script>
 

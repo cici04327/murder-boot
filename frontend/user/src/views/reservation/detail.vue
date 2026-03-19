@@ -74,7 +74,7 @@
           {{ reservation.checkInTime || '-' }}
         </el-descriptions-item>
         <el-descriptions-item label="核销码" :span="2">
-          <div v-if="reservation.payStatus === 1 || reservation.checkInCode" class="check-in-code-wrapper">
+          <div v-if="reservation.payStatus === 1" class="check-in-code-wrapper">
             <div class="check-in-code">
               <span>{{ reservation.checkInCode || '-' }}</span>
               <span class="check-in-tip">到店后出示给门店工作人员进行核销</span>

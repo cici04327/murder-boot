@@ -8,7 +8,7 @@ public interface PaymentService {
     /**
      * 创建支付宝支付订单
      * @param reservationId 预约ID
-     * @param paymentMethod 支付方式（alipay/wechat/mock）
+     * @param paymentMethod 支付方式（当前仅支持 alipay）
      * @return 支付表单HTML或支付URL
      */
     String createPayment(Long reservationId, String paymentMethod);

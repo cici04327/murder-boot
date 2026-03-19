@@ -133,15 +133,11 @@ export const GROUP_STATUS_LABEL = {
 
 // ==================== 支付方式 ====================
 export const PAYMENT_METHOD = {
-  ALIPAY: 'alipay',
-  WECHAT: 'wechat',
-  MOCK: 'mock'
+  ALIPAY: 'alipay'
 }
 
 export const PAYMENT_METHOD_LABEL = {
-  [PAYMENT_METHOD.ALIPAY]: '支付宝',
-  [PAYMENT_METHOD.WECHAT]: '微信支付',
-  [PAYMENT_METHOD.MOCK]: '模拟支付'
+  [PAYMENT_METHOD.ALIPAY]: '支付宝'
 }
 
 // ==================== 通知类型 ====================

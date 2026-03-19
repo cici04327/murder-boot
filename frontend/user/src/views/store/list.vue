@@ -209,7 +209,7 @@ import { useRouter } from 'vue-router'
 import { getStoreListAdvanced } from '@/api/store'
 import { useUserStore } from '@/store/user'
 import { ElMessage } from 'element-plus'
-import { getUserLocation as getUserLocationUtil, formatDistance as formatDistanceUtil, calculateDistance, requestLocationPermission } from '@/utils/location'
+import { getUserLocation as getUserLocationUtil, getCachedUserLocation, formatDistance as formatDistanceUtil, calculateDistance } from '@/utils/location'
 import SkeletonStoreCard from '@/components/Skeleton/SkeletonStoreCard.vue'
 import LazyImage from '@/components/LazyImage.vue'
 import LocationPermissionDialog from '@/components/LocationPermissionDialog.vue'
@@ -274,8 +274,8 @@ const loadStores = async () => {
         }
       })
 
-      // 自动计算所有门店的距离
-      calculateStoresDistance()
+      // 统一补齐门店距离展示
+      applyStoreDistances()
     }
   } catch (error) {
     console.error('加载门店列表失败:', error)
@@ -288,23 +288,20 @@ const loadStores = async () => {
 }
 
 // 计算所有门店的距离
-const calculateStoresDistance = () => {
-  // 如果没有用户位置，不计算
-  if (!userLocation.value) return
-  
-  // 为每个门店计算距离
+const applyStoreDistances = (force = false) => {
+  const activeLocation = userLocation.value || getCachedUserLocation()
+  if (!activeLocation) return
+
   stores.value.forEach(store => {
-    if (store.latitude && store.longitude) {
-      // 计算距离（公里）
-      const distance = calculateDistance(
-        userLocation.value.latitude,
-        userLocation.value.longitude,
-        store.latitude,
-        store.longitude
-      )
-      // 添加distance属性
-      store.distance = distance
-    }
+    if (!store.latitude || !store.longitude) return
+    if (!force && typeof store.distance === 'number') return
+
+    store.distance = calculateDistance(
+      activeLocation.latitude,
+      activeLocation.longitude,
+      Number(store.latitude),
+      Number(store.longitude)
+    )
   })
 }
 
@@ -384,6 +381,7 @@ const getUserLocation = async () => {
   
   try {
     const location = await getUserLocationUtil()
+    userLocation.value = location
     searchForm.latitude = location.latitude
     searchForm.longitude = location.longitude
     console.log('获取位置成功:', location)
@@ -425,7 +423,7 @@ const handleLocationSuccess = (location) => {
   
   // 重新计算已加载门店的距离
   if (stores.value.length > 0) {
-    calculateStoresDistance()
+    applyStoreDistances(true)
   }
   
   // 如果当前是按距离排序，重新加载
@@ -455,20 +453,13 @@ const initUserLocation = () => {
 
   // 用户之前已主动授权过，尝试从缓存恢复（不弹任何弹窗）
   if (hasGrantedInApp) {
-    const cached = localStorage.getItem('user_location')
-    if (cached) {
-      try {
-        const { location, timestamp } = JSON.parse(cached)
-        const age = Date.now() - timestamp
-        if (age < 5 * 60 * 1000) {
-          // 缓存5分钟内有效，直接使用
-          userLocation.value = location
-          searchForm.latitude = location.latitude
-          searchForm.longitude = location.longitude
-          calculateStoresDistance()
-          return
-        }
-      } catch (e) { /* 忽略解析错误 */ }
+    const cachedLocation = getCachedUserLocation()
+    if (cachedLocation) {
+      userLocation.value = cachedLocation
+      searchForm.latitude = cachedLocation.latitude
+      searchForm.longitude = cachedLocation.longitude
+      applyStoreDistances(true)
+      return
     }
     // 缓存过期但用户曾授权过 → 显示提示卡片让用户再次点击获取
     // 不自动重新请求，避免意外弹出浏览器权限框

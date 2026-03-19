@@ -3,6 +3,7 @@ package com.murder.common.handler;
 import com.murder.common.exception.BaseException;
 import com.murder.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -29,12 +30,30 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 捕获请求方法不支持异常
+     */
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public Result<String> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
+        log.warn("请求方法不支持: {}", ex.getMessage());
+        return Result.error("请求方法不支持: " + ex.getMethod());
+    }
+
+    /**
      * 捕获业务异常
      */
     @ExceptionHandler(BaseException.class)
     public Result<String> handleBaseException(BaseException ex) {
         log.error("业务异常: {}", ex.getMessage());
         return Result.error(ex.getMessage());
+    }
+
+    /**
+     * 捕获权限异常
+     */
+    @ExceptionHandler(SecurityException.class)
+    public Result<String> handleSecurityException(SecurityException ex) {
+        log.warn("权限异常: {}", ex.getMessage());
+        return Result.error(403, ex.getMessage() != null ? ex.getMessage() : "没有权限执行该操作");
     }
 
     /**

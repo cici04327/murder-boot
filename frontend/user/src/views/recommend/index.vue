@@ -346,6 +346,7 @@ import {
   getHotRecommendations 
 } from '@/api/recommendation'
 import { useUserStore } from '@/store/user'
+import { getCachedUserLocation, calculateDistance, formatDistance } from '@/utils/location'
 
 const router = useRouter()
 
@@ -661,18 +662,22 @@ const loadRecommendedStores = async () => {
   try {
     const res = await getHotStores()
     if (res.code === 1 && res.data) {
-      // 获取用户位置（如果允许）
-      const userLocation = await getUserLocation()
+      const userLocation = getCachedUserLocation()
       
       recommendedStores.value = res.data.map((store, index) => {
-        // 计算距离
-        const distance = calculateDistance(userLocation, {
-          latitude: store.latitude,
-          longitude: store.longitude
-        })
+        const hasLocation = userLocation && store.latitude && store.longitude
+        const distanceKm = hasLocation
+          ? calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              Number(store.latitude),
+              Number(store.longitude)
+            )
+          : null
+        const distanceText = distanceKm != null ? formatDistance(distanceKm) : '未知'
         
         // 生成推荐理由
-        const recommendReason = getStoreRecommendReason(store, distance, index)
+        const recommendReason = getStoreRecommendReason(store, distanceKm, index)
         
         return {
           id: store.id,
@@ -681,7 +686,7 @@ const loadRecommendedStores = async () => {
           address: store.address || '地址未知',
           rating: store.rating || 4.5,
           reviewCount: store.reviewCount || 0,
-          distance: distance,
+          distance: distanceText,
           recommendReason: recommendReason
         }
       }).slice(0, 6)
@@ -693,68 +698,9 @@ const loadRecommendedStores = async () => {
   }
 }
 
-// 获取用户位置
-const getUserLocation = () => {
-  return new Promise((resolve) => {
-    // 尝试从localStorage获取上次保存的位置
-    const savedLocation = localStorage.getItem('userLocation')
-    if (savedLocation) {
-      resolve(JSON.parse(savedLocation))
-      return
-    }
-    
-    // 尝试使用浏览器定位API
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const location = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          }
-          // 保存位置
-          localStorage.setItem('userLocation', JSON.stringify(location))
-          resolve(location)
-        },
-        () => {
-          // 定位失败，使用默认位置（北京天安门）
-          resolve({ latitude: 39.9042, longitude: 116.4074 })
-        }
-      )
-    } else {
-      // 不支持定位，使用默认位置
-      resolve({ latitude: 39.9042, longitude: 116.4074 })
-    }
-  })
-}
-
-// 计算两点之间的距离（使用Haversine公式）
-const calculateDistance = (point1, point2) => {
-  if (!point1 || !point2 || !point2.latitude || !point2.longitude) {
-    return '未知'
-  }
-  
-  const R = 6371 // 地球半径（公里）
-  const lat1 = point1.latitude * Math.PI / 180
-  const lat2 = point2.latitude * Math.PI / 180
-  const deltaLat = (point2.latitude - point1.latitude) * Math.PI / 180
-  const deltaLon = (point2.longitude - point1.longitude) * Math.PI / 180
-  
-  const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-            Math.cos(lat1) * Math.cos(lat2) *
-            Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2)
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  const distance = R * c
-  
-  if (distance < 1) {
-    return `${Math.round(distance * 1000)}m`
-  } else {
-    return `${distance.toFixed(1)}km`
-  }
-}
-
 // 获取门店推荐理由
 const getStoreRecommendReason = (store, distance, index) => {
-  if (distance !== '未知' && parseFloat(distance) < 2) {
+  if (typeof distance === 'number' && distance < 2) {
     return '距离你最近的高评分门店'
   } else if (store.rating >= 4.8) {
     return '高评分优质门店'

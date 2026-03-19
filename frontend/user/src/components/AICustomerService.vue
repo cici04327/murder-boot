@@ -555,7 +555,7 @@ const knowledgeBase = {
     showFeedback: true
   },
   '支付|付款|怎么付|支付方式': {
-    answer: `<div class="kb-answer"><p><strong>💳 支持的支付方式：</strong></p><ul><li>✅ 微信支付（推荐）</li><li>✅ 支付宝</li><li>✅ 银行卡支付</li><li>✅ 余额支付</li></ul><p><strong>🎁 省钱小技巧：</strong></p><ul><li>使用优惠券可享折扣</li><li>积分可抵扣部分金额</li><li>关注平台活动获取红包</li></ul></div>`,
+    answer: `<div class="kb-answer"><p><strong>💳 支持的支付方式：</strong></p><ul><li>✅ 支付宝</li></ul><p><strong>🎁 省钱小技巧：</strong></p><ul><li>使用优惠券可享折扣</li><li>积分可抵扣部分金额</li><li>关注平台活动获取红包</li></ul></div>`,
     showFeedback: true
   },
   '退款|退钱|取消预约|不去了': {
@@ -615,7 +615,7 @@ const knowledgeBase = {
   },
   '人数不够|凑人|少一个|差人': {
     answer: `<div class="kb-answer"><p><strong>👥 人数不够的解决方案：</strong></p><ul><li>🎯 <strong>发起拼车</strong>：创建拼车房间，等待其他玩家加入</li><li>👀 <strong>加入拼车</strong>：浏览已有的拼车房间并加入</li><li>💬 <strong>联系门店</strong>：门店可能有其他散客可以拼场</li></ul><p><strong>💡 小贴士：</strong></p><ul><li>热门剧本拼车成功率更高</li><li>提前2-3天发起拼车效果更好</li></ul></div>`,
-    actions: [{ label: '👥 发起拼车', route: '/group/create', type: 'primary' }, { label: '👀 拼车大厅', route: '/group' }],
+    actions: [{ label: '👥 发起拼车', route: '/schedule/list', type: 'primary' }, { label: '👀 拼车大厅', route: '/group' }],
     showFeedback: true
   },
   '迟到|晚到|赶不上|堵车': {

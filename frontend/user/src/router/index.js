@@ -60,6 +60,12 @@ const routes = [
         meta: { title: '门店详情' }
       },
       {
+        path: 'schedule/list',
+        name: 'ScheduleHall',
+        component: () => import('@/views/schedule/list.vue'),
+        meta: { title: '排期大厅' }
+      },
+      {
         path: 'reservation/schedule',
         name: 'ScheduleSelect',
         component: () => import('@/views/reservation/schedule-select.vue'),
@@ -248,9 +254,7 @@ const routes = [
       },
       {
         path: 'group/create',
-        name: 'GroupCreate',
-        component: () => import('@/views/group/create.vue'),
-        meta: { title: '发起拼单', requireAuth: true }
+        redirect: '/schedule/list'
       },
       {
         path: 'group/:id',

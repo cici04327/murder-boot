@@ -38,7 +38,7 @@ public class PaymentController {
     @Operation(summary = "创建支付订单")
     public Result<String> createPayment(
             @RequestParam Long reservationId,
-            @RequestParam(defaultValue = "mock") String paymentMethod) {
+            @RequestParam(defaultValue = "alipay") String paymentMethod) {
         log.info("创建支付订单: reservationId={}, paymentMethod={}", reservationId, paymentMethod);
         // 校验预约归属：只能为自己的预约付款
         Long currentUserId = BaseContext.getCurrentId();
@@ -123,6 +123,9 @@ public class PaymentController {
             @RequestParam Long reservationId,
             @RequestParam Integer approved,
             @RequestParam(required = false) String adminRemark) {
+        if (!isAdminOperator()) {
+            return Result.error(403, "没有管理端访问权限");
+        }
         log.info("处理退款: reservationId={}, approved={}, adminRemark={}", 
                 reservationId, approved, adminRemark);
         try {
@@ -133,6 +136,11 @@ public class PaymentController {
             log.error("处理退款失败", e);
             return Result.error(e.getMessage());
         }
+    }
+
+    private boolean isAdminOperator() {
+        String role = BaseContext.getRole();
+        return "SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role);
     }
 }
 

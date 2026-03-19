@@ -2,16 +2,24 @@ package com.murder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.entity.Dm;
+import com.murder.entity.Script;
 import com.murder.entity.ScriptSchedule;
+import com.murder.entity.Store;
+import com.murder.entity.StoreRoom;
 import com.murder.mapper.DmMapper;
+import com.murder.mapper.ScriptMapper;
 import com.murder.mapper.ScriptScheduleMapper;
+import com.murder.mapper.StoreMapper;
+import com.murder.mapper.StoreRoomMapper;
 import com.murder.service.ScriptScheduleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,17 +40,26 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
     @Autowired(required = false)
     private DmMapper dmMapper;
 
+    @Autowired
+    private ScriptMapper scriptMapper;
+
+    @Autowired
+    private StoreMapper storeMapper;
+
+    @Autowired
+    private StoreRoomMapper storeRoomMapper;
+
     @Override
     public List<ScriptSchedule> listByStoreAndDate(Long storeId, LocalDate scheduleDate) {
         List<ScriptSchedule> list = scriptScheduleMapper.listByStoreAndDate(storeId, scheduleDate);
-        fillDmInfo(list);
+        fillScheduleDisplayInfo(list);
         return list;
     }
 
     @Override
     public List<ScriptSchedule> listByStoreAndDateRange(Long storeId, LocalDate startDate, LocalDate endDate) {
         List<ScriptSchedule> list = scriptScheduleMapper.listByStoreAndDateRange(storeId, startDate, endDate);
-        fillDmInfo(list);
+        fillScheduleDisplayInfo(list);
         return list;
     }
 
@@ -66,6 +83,70 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
                 s.setDmAvatar(dm.getAvatar());
             }
         });
+    }
+
+    private void fillScheduleDisplayInfo(List<ScriptSchedule> list) {
+        if (list == null || list.isEmpty()) {
+            return;
+        }
+
+        List<Long> scriptIds = list.stream()
+                .map(ScriptSchedule::getScriptId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        List<Long> storeIds = list.stream()
+                .map(ScriptSchedule::getStoreId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+        List<Long> roomIds = list.stream()
+                .map(ScriptSchedule::getRoomId)
+                .filter(id -> id != null)
+                .distinct()
+                .collect(Collectors.toList());
+
+        Map<Long, Script> scriptMap = new HashMap<>();
+        Map<Long, Store> storeMap = new HashMap<>();
+        Map<Long, StoreRoom> roomMap = new HashMap<>();
+
+        if (!scriptIds.isEmpty()) {
+            scriptMapper.selectBatchIds(scriptIds).forEach(script -> scriptMap.put(script.getId(), script));
+        }
+        if (!storeIds.isEmpty()) {
+            storeMapper.selectBatchIds(storeIds).forEach(store -> storeMap.put(store.getId(), store));
+        }
+        if (!roomIds.isEmpty()) {
+            storeRoomMapper.selectBatchIds(roomIds).forEach(room -> roomMap.put(room.getId(), room));
+        }
+
+        list.forEach(schedule -> {
+            Script script = schedule.getScriptId() != null ? scriptMap.get(schedule.getScriptId()) : null;
+            if (script != null) {
+                if (!StringUtils.hasText(schedule.getScriptName())) {
+                    schedule.setScriptName(script.getName());
+                }
+                schedule.setCover(script.getCover());
+                schedule.setPrice(script.getPrice());
+                schedule.setRating(script.getRating());
+                schedule.setDuration(script.getDuration());
+                schedule.setDifficulty(script.getDifficulty());
+                schedule.setPlayerCount(script.getPlayerCount());
+            }
+
+            Store store = schedule.getStoreId() != null ? storeMap.get(schedule.getStoreId()) : null;
+            if (store != null) {
+                schedule.setStoreName(store.getName());
+                schedule.setStoreAddress(store.getAddress());
+            }
+
+            StoreRoom room = schedule.getRoomId() != null ? roomMap.get(schedule.getRoomId()) : null;
+            if (room != null && !StringUtils.hasText(schedule.getRoomName())) {
+                schedule.setRoomName(room.getName());
+            }
+        });
+
+        fillDmInfo(list);
     }
 
     @Override
@@ -269,9 +350,62 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
         // SQL 级过滤：直接排除 currentPlayers >= maxPlayers 的场次（性能优化）
         wrapper.apply("current_players < max_players");
         List<ScriptSchedule> list = scriptScheduleMapper.selectList(wrapper);
-        // 填充 DM 姓名和头像
-        fillDmInfo(list);
-        return list;
+        List<ScriptSchedule> activeList = filterExpiredAvailableSchedules(list);
+        fillScheduleDisplayInfo(activeList);
+        return activeList;
+    }
+
+    private List<ScriptSchedule> filterExpiredAvailableSchedules(List<ScriptSchedule> list) {
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        List<ScriptSchedule> activeList = new ArrayList<>(list.size());
+        for (ScriptSchedule schedule : list) {
+            if (hasScheduleStarted(schedule, now)) {
+                closeExpiredSchedule(schedule);
+                continue;
+            }
+            activeList.add(schedule);
+        }
+        return activeList;
+    }
+
+    private boolean hasScheduleStarted(ScriptSchedule schedule, LocalDateTime now) {
+        if (schedule == null || schedule.getScheduleDate() == null || schedule.getStartTime() == null) {
+            return false;
+        }
+        LocalDateTime startAt = LocalDateTime.of(schedule.getScheduleDate(), schedule.getStartTime());
+        return !startAt.isAfter(now);
+    }
+
+    private void closeExpiredSchedule(ScriptSchedule schedule) {
+        if (schedule == null || schedule.getId() == null || Integer.valueOf(2).equals(schedule.getStatus())) {
+            return;
+        }
+
+        String remark = buildExpiredRemark(schedule.getRemark());
+        ScriptSchedule update = new ScriptSchedule();
+        update.setId(schedule.getId());
+        update.setStatus(2);
+        update.setRemark(remark);
+        scriptScheduleMapper.updateById(update);
+
+        schedule.setStatus(2);
+        schedule.setRemark(remark);
+        log.info("排期开场后自动关闭: scheduleId={}", schedule.getId());
+    }
+
+    private String buildExpiredRemark(String currentRemark) {
+        String expiredRemark = "开场时间已过，排期已自动关闭";
+        if (!StringUtils.hasText(currentRemark)) {
+            return expiredRemark;
+        }
+        if (currentRemark.contains(expiredRemark)) {
+            return currentRemark;
+        }
+        return currentRemark + "；" + expiredRemark;
     }
 
     /**

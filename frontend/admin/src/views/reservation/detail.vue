@@ -55,7 +55,9 @@
             {{ reservation.checkInStatus === 1 ? '已核销' : '未核销' }}
           </el-tag>
         </el-descriptions-item>
-        <el-descriptions-item label="核销码">{{ reservation.checkInCode || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="核销码">
+          {{ reservation.payStatus === 1 ? (reservation.checkInCode || '-') : '支付成功后生成' }}
+        </el-descriptions-item>
         <el-descriptions-item label="核销时间">{{ reservation.checkInTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="支付时间">{{ reservation.payTime || '-' }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ reservation.createTime || '-' }}</el-descriptions-item>

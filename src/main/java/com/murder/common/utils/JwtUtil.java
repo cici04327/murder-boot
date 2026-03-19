@@ -1,6 +1,7 @@
 package com.murder.common.utils;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
@@ -18,15 +19,18 @@ public class JwtUtil {
      */
     public static String createJWT(String secretKey, long ttlMillis, Map<String, Object> claims) {
         SecretKey key = Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
-        
-        long expMillis = System.currentTimeMillis() + ttlMillis;
-        Date exp = new Date(expMillis);
-        
-        return Jwts.builder()
+
+        var builder = Jwts.builder()
                 .claims(claims)
-                .expiration(exp)
-                .signWith(key)
-                .compact();
+                .signWith(key);
+
+        if (ttlMillis > 0) {
+            long expMillis = System.currentTimeMillis() + ttlMillis;
+            Date exp = new Date(expMillis);
+            builder.expiration(exp);
+        }
+
+        return builder.compact();
     }
 
     /**
@@ -40,5 +44,16 @@ public class JwtUtil {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    /**
+     * 解析 JWT 令牌并忽略过期时间，仅用于管理端长期登录场景。
+     */
+    public static Claims parseJWTIgnoreExpiration(String secretKey, String token) {
+        try {
+            return parseJWT(secretKey, token);
+        } catch (ExpiredJwtException ex) {
+            return ex.getClaims();
+        }
     }
 }

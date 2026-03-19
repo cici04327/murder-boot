@@ -688,11 +688,6 @@ const loadStoreDetail = async () => {
         store.value.description = getDefaultDescription(store.value.name)
       }
       
-      // 如果门店有经纬度信息，自动计算距离
-      if (store.value.latitude && store.value.longitude) {
-        calculateDistance()
-      }
-
       // 记录浏览历史
       if (userStore.isLoggedIn) {
         browseStartTime.value = Date.now()
@@ -869,8 +864,6 @@ const loadStoreDetail = async () => {
       latitude: 39.908815, // 示例坐标：北京天安门
       longitude: 116.397529
     }
-    // 自动计算距离
-    calculateDistance()
   } finally {
     loading.value = false
   }
@@ -952,24 +945,6 @@ const getMyLocation = async () => {
     }
   } finally {
     locationLoading.value = false
-  }
-}
-
-// 自动计算距离（静默模式，不显示错误）
-const calculateDistance = async () => {
-  if (!store.value?.latitude || !store.value?.longitude) return
-  
-  try {
-    const userLocation = await getUserLocation()
-    const targetLocation = {
-      latitude: store.value.latitude,
-      longitude: store.value.longitude
-    }
-    
-    distance.value = getDistanceText(userLocation, targetLocation)
-  } catch (error) {
-    // 静默失败，不影响页面显示
-    console.log('自动获取距离失败，用户可手动获取')
   }
 }
 

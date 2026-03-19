@@ -131,3 +131,12 @@ export const getAvailableSchedules = (params) => {
     params
   })
 }
+
+// 获取已排期的可约场次（用户端首页/排期大厅）
+export const getScheduledSessions = (params) => {
+  return request({
+    url: '/script/schedule/available',
+    method: 'get',
+    params
+  })
+}

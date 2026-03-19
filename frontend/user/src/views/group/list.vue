@@ -7,7 +7,7 @@
         <div class="header-icon">🎭</div>
         <h1>神秘车站</h1>
         <p class="header-subtitle">寻找命运的同行者，开启未知的剧本之旅</p>
-        <el-button type="primary" class="create-btn" @click="router.push('/group/create')">
+        <el-button type="primary" class="create-btn" @click="router.push('/schedule/list')">
           <el-icon><Plus /></el-icon>
           发起组局
         </el-button>
@@ -128,7 +128,7 @@
 
       <!-- 空状态 -->
       <el-empty v-if="!loading && groups.length === 0" description="暂无神秘局等待组建">
-        <el-button type="primary" @click="router.push('/group/create')">发起组局</el-button>
+        <el-button type="primary" @click="router.push('/schedule/list')">发起组局</el-button>
       </el-empty>
 
       <!-- 分页 -->
