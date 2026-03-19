@@ -267,12 +267,6 @@
             <!-- 套餐名称 -->
             <h3 class="package-name">{{ pkg.name }}</h3>
 
-            <!-- 预约折扣专属标签 -->
-            <div class="booking-discount-tag" v-if="pkg.specialDiscount">
-              <span class="discount-icon">💎</span>
-              <span>预约享 <strong>{{ Math.round(pkg.specialDiscount * 10) }}折</strong> 优惠</span>
-            </div>
-
             <!-- 价格 -->
             <div class="package-price">
               <div class="current-price">
@@ -1213,28 +1207,6 @@ onMounted(() => {
     font-weight: bold;
     color: #fff;
     margin: 0 0 8px 0;
-  }
-
-  .booking-discount-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: linear-gradient(135deg, rgba(230, 162, 60, 0.2) 0%, rgba(255, 200, 0, 0.15) 100%);
-    border: 1px solid rgba(230, 162, 60, 0.5);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 13px;
-    color: #e6a23c;
-    margin-bottom: 12px;
-
-    strong {
-      font-size: 15px;
-      color: #ffd700;
-    }
-
-    .discount-icon {
-      font-size: 16px;
-    }
   }
 
   .package-duration {

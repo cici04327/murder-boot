@@ -66,8 +66,8 @@
 
       <el-descriptions title="到店核销" :column="2" border style="margin-top: 20px">
         <el-descriptions-item label="核销状态">
-          <el-tag :type="reservation.checkInStatus === 1 ? 'success' : 'info'">
-            {{ reservation.checkInStatus === 1 ? '已核销' : '未核销' }}
+          <el-tag :type="isCheckedIn ? 'success' : 'info'">
+            {{ isCheckedIn ? '已核销' : '未核销' }}
           </el-tag>
         </el-descriptions-item>
         <el-descriptions-item label="核销时间">
@@ -138,7 +138,7 @@
           评价订单
         </el-button>
         <el-button
-          v-if="reservation.status < 3 && reservation.status !== 4 && reservation.checkInStatus !== 1"
+          v-if="reservation.status < 3 && reservation.status !== 4 && !isCheckedIn"
           type="warning"
           size="large"
           @click="handleReschedule"
@@ -146,7 +146,7 @@
           申请改期
         </el-button>
         <el-button
-          v-if="reservation.status < 3 && reservation.status !== 4 && reservation.checkInStatus !== 1"
+          v-if="reservation.status < 3 && reservation.status !== 4 && !isCheckedIn"
           type="danger"
           size="large"
           @click="handleCancel"
@@ -275,7 +275,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, onBeforeUnmount, watch, nextTick } from 'vue'
+import { computed, onMounted, onActivated, ref, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import QRCode from 'qrcode'
@@ -306,6 +306,12 @@ const countdownTimerId = ref(null)
 
 // QR code canvas ref
 const qrcodeCanvas = ref(null)
+const isCheckedIn = computed(() => {
+  if (!reservation.value) return false
+  return Number(reservation.value.checkInStatus || 0) === 1
+    || !!reservation.value.checkInTime
+    || Number(reservation.value.status) === 3
+})
 
 const timeline = computed(() => {
   if (!reservation.value) return []
@@ -388,6 +394,12 @@ const loadReservation = async () => {
     ElMessage.error(error.message || '加载预约详情失败')
   } finally {
     loading.value = false
+  }
+}
+
+const refreshReservationIfVisible = () => {
+  if (document.visibilityState === 'visible' && route.params.id) {
+    loadReservation()
   }
 }
 
@@ -603,12 +615,20 @@ watch(
 
 onMounted(() => {
   loadReservation()
+  window.addEventListener('focus', refreshReservationIfVisible)
+  document.addEventListener('visibilitychange', refreshReservationIfVisible)
+})
+
+onActivated(() => {
+  refreshReservationIfVisible()
 })
 
 onBeforeUnmount(() => {
   if (countdownTimerId.value) {
     clearInterval(countdownTimerId.value)
   }
+  window.removeEventListener('focus', refreshReservationIfVisible)
+  document.removeEventListener('visibilitychange', refreshReservationIfVisible)
 })
 </script>
 

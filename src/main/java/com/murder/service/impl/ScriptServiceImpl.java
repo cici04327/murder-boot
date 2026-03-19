@@ -173,9 +173,9 @@ public class ScriptServiceImpl implements ScriptService {
 
     /**
      * 根据ID查询剧本详情
+     * 详情数据经常被后台直接调整价格/文案，去掉缓存避免用户端读到旧值
      */
     @Override
-    @org.springframework.cache.annotation.Cacheable(value = "script:detail", key = "#id", unless = "#result == null")
     public Script getById(Long id) {
         Script script = scriptMapper.selectById(id);
         if (script != null && script.getCategoryId() != null) {

@@ -1,67 +1,54 @@
 <template>
-  <div class="global-search" :class="{ 'is-focused': isFocused }">
+  <div ref="searchRootRef" class="global-search" :class="{ 'is-focused': isFocused }">
     <!-- 搜索输入框 -->
-    <el-popover
-      v-model:visible="showPanel"
-      :width="650"
-      placement="bottom-start"
-      trigger="manual"
-      popper-class="search-popover"
-      :show-arrow="false"
-    >
-      <template #reference>
-        <div class="search-input-wrapper" @click="handleFocus">
-          <el-icon class="search-icon"><Search /></el-icon>
-          <input
-            ref="searchInputRef"
-            v-model="searchKeyword"
-            :placeholder="placeholderText"
-            @focus="handleFocus"
-            @blur="handleBlur"
-            @input="handleInput"
-            @keyup.enter="handleSearch"
-            @keyup.up.prevent="navigateResult(-1)"
-            @keyup.down.prevent="navigateResult(1)"
-            @keyup.esc="handleEsc"
-            class="search-input"
-          />
-          <!-- 语音搜索按钮 -->
-          <el-tooltip content="语音搜索" placement="bottom" v-if="speechSupported">
-            <el-button 
-              text 
-              circle 
-              size="small" 
-              class="voice-btn"
-              :class="{ 'is-recording': isRecording }"
-              @click.stop="toggleVoiceSearch"
-            >
-              <el-icon><Microphone /></el-icon>
-            </el-button>
-          </el-tooltip>
-          <!-- 清除按钮 -->
-          <el-button 
-            v-if="searchKeyword" 
-            text 
-            circle 
-            size="small" 
-            class="clear-btn"
-            @click.stop="clearSearch"
-          >
-            <el-icon><Close /></el-icon>
-          </el-button>
-          <!-- 快捷键提示 -->
-          <span class="shortcut-hint" v-if="!isFocused && !searchKeyword">
-            <kbd>Ctrl</kbd><kbd>K</kbd>
-          </span>
-        </div>
-      </template>
-
-      <!-- 搜索面板：mousedown 时标记正在点击，防止 blur 误关闭面板 -->
-      <div class="search-panel" :class="{ 'has-results': hasResults }"
-        @mousedown="isPanelClicking = true"
-        @mouseup="isPanelClicking = false"
-        @mouseleave="isPanelClicking = false"
+    <div class="search-input-wrapper" @click="handleFocus">
+      <el-icon class="search-icon"><Search /></el-icon>
+      <input
+        ref="searchInputRef"
+        v-model="searchKeyword"
+        :placeholder="placeholderText"
+        @focus="handleFocus"
+        @input="handleInput"
+        @keyup.enter="handleSearch"
+        @keyup.up.prevent="navigateResult(-1)"
+        @keyup.down.prevent="navigateResult(1)"
+        @keyup.esc="handleEsc"
+        class="search-input"
+      />
+      <!-- 语音搜索按钮 -->
+      <el-tooltip content="语音搜索" placement="bottom" v-if="speechSupported">
+        <el-button 
+          text 
+          circle 
+          size="small" 
+          class="voice-btn"
+          :class="{ 'is-recording': isRecording }"
+          @click.stop="toggleVoiceSearch"
+        >
+          <el-icon><Microphone /></el-icon>
+        </el-button>
+      </el-tooltip>
+      <!-- 清除按钮 -->
+      <el-button 
+        v-if="searchKeyword" 
+        text 
+        circle 
+        size="small" 
+        class="clear-btn"
+        @click.stop="clearSearch"
       >
+        <el-icon><Close /></el-icon>
+      </el-button>
+      <!-- 快捷键提示 -->
+      <span class="shortcut-hint" v-if="!isFocused && !searchKeyword">
+        <kbd>Ctrl</kbd><kbd>K</kbd>
+      </span>
+    </div>
+
+    <transition name="fade">
+      <!-- 搜索面板：通过外部点击/焦点切换统一控制显示状态 -->
+      <div v-if="showPanel" class="search-dropdown">
+      <div class="search-panel" :class="{ 'has-results': hasResults }">
         <!-- 分类筛选标签 -->
         <div class="filter-tabs" v-if="searchKeyword">
           <div 
@@ -350,7 +337,8 @@
           </el-button>
         </div>
       </div>
-    </el-popover>
+      </div>
+    </transition>
     
     <!-- 语音识别提示 -->
     <transition name="fade">
@@ -392,6 +380,7 @@ import { PLACEHOLDERS } from '@/assets/placeholders'
 const router = useRouter()
 
 // 搜索输入框引用
+const searchRootRef = ref(null)
 const searchInputRef = ref(null)
 
 // 搜索状态
@@ -458,8 +447,20 @@ let recognition = null
 // 防抖定时器
 let debounceTimer = null
 let placeholderTimer = null
-// 标记用户是否正在点击面板内部（mousedown 先于 blur 触发）
-let isPanelClicking = false
+
+const closePanel = ({ blurInput = false } = {}) => {
+  showPanel.value = false
+  isFocused.value = false
+  selectedIndex.value = -1
+  if (blurInput) {
+    searchInputRef.value?.blur()
+  }
+}
+
+const isInsideSearch = (target) => {
+  if (!target) return false
+  return searchRootRef.value?.contains(target) || false
+}
 
 // ========== 初始化 ==========
 const initSpeechRecognition = () => {
@@ -551,20 +552,8 @@ const handleFocus = () => {
   })
 }
 
-const handleBlur = () => {
-  // 如果用户正在点击面板内部，不关闭（mousedown 比 blur 先触发）
-  if (isPanelClicking) return
-  setTimeout(() => {
-    if (isPanelClicking) return
-    isFocused.value = false
-    showPanel.value = false
-  }, 300)
-}
-
 const handleEsc = () => {
-  showPanel.value = false
-  isFocused.value = false
-  searchInputRef.value?.blur()
+  closePanel({ blurInput: true })
 }
 
 const clearSearch = () => {
@@ -639,8 +628,7 @@ const handleSearch = () => {
     query: { keyword: searchKeyword.value, type: activeFilter.value !== 'all' ? activeFilter.value : undefined }
   })
   
-  showPanel.value = false
-  isFocused.value = false
+  closePanel()
 }
 
 // ========== 键盘导航 ==========
@@ -724,24 +712,24 @@ const handleViewMore = (type) => {
   if (!searchKeyword.value.trim()) return
   saveSearchHistory(searchKeyword.value)
   router.push({ path: '/search', query: { keyword: searchKeyword.value, type } })
-  showPanel.value = false
+  closePanel()
 }
 
 const handleClickScript = (script) => {
   if (searchKeyword.value) saveSearchHistory(searchKeyword.value)
   router.push(`/script/${script.id}`)
-  showPanel.value = false
+  closePanel()
 }
 
 const handleClickStore = (store) => {
   if (searchKeyword.value) saveSearchHistory(searchKeyword.value)
   router.push(`/store/${store.id}`)
-  showPanel.value = false
+  closePanel()
 }
 
 const goTo = (path) => {
   router.push(path)
-  showPanel.value = false
+  closePanel()
 }
 
 // ========== 工具方法 ==========
@@ -779,18 +767,32 @@ const handleKeydown = (e) => {
   }
 }
 
+const handleDocumentPointerDown = (event) => {
+  if (!showPanel.value || isInsideSearch(event.target)) return
+  closePanel()
+}
+
+const handleDocumentFocusIn = (event) => {
+  if (!showPanel.value || isInsideSearch(event.target)) return
+  closePanel()
+}
+
 // ========== 生命周期 ==========
 onMounted(() => {
   loadSearchHistory()
   initSpeechRecognition()
   startPlaceholderRotation()
   document.addEventListener('keydown', handleKeydown)
+  document.addEventListener('pointerdown', handleDocumentPointerDown)
+  document.addEventListener('focusin', handleDocumentFocusIn)
 })
 
 onUnmounted(() => {
   clearInterval(placeholderTimer)
   clearTimeout(debounceTimer)
   document.removeEventListener('keydown', handleKeydown)
+  document.removeEventListener('pointerdown', handleDocumentPointerDown)
+  document.removeEventListener('focusin', handleDocumentFocusIn)
   if (recognition) {
     try { recognition.stop() } catch (e) {}
   }
@@ -799,8 +801,10 @@ onUnmounted(() => {
 
 <style scoped>
 .global-search {
+  position: relative;
   width: 320px;
   transition: all 0.3s ease;
+  z-index: 120;
 }
 
 .global-search.is-focused {
@@ -883,6 +887,18 @@ onUnmounted(() => {
 }
 
 /* 搜索面板 */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  width: min(650px, calc(100vw - 32px));
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+  border: none;
+  overflow: hidden;
+}
+
 .search-panel {
   max-height: 520px;
   overflow-y: auto;
@@ -1391,10 +1407,19 @@ onUnmounted(() => {
 </style>
 
 <style>
-.search-popover {
-  padding: 0 !important;
-  border-radius: 16px !important;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12) !important;
-  border: none !important;
+@media (max-width: 768px) {
+  .global-search {
+    width: 100%;
+  }
+
+  .global-search.is-focused {
+    width: 100%;
+  }
+
+  .search-dropdown {
+    width: calc(100vw - 24px);
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
 </style>

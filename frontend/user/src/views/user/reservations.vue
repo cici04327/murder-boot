@@ -70,11 +70,11 @@
                 {{ getStatusText(item) }}
               </el-tag>
               <el-tag
-                :type="item.checkInStatus === 1 ? 'success' : 'info'"
+                :type="isCheckedIn(item) ? 'success' : 'info'"
                 class="status-tag"
                 effect="dark"
               >
-                {{ item.checkInStatus === 1 ? '已核销' : '未核销' }}
+                {{ isCheckedIn(item) ? '已核销' : '未核销' }}
               </el-tag>
             </div>
           </div>
@@ -223,7 +223,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated } from 'vue'
+import { ref, onMounted, onActivated, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/components/EmptyState.vue'
 import { ElMessage } from 'element-plus'
@@ -240,6 +240,8 @@ const pageSize = ref(10)
 const showCancelDialog = ref(false)
 const cancelReason = ref('')
 const currentCancelItem = ref(null)
+
+const isCheckedIn = (item) => Number(item?.checkInStatus || 0) === 1 || !!item?.checkInTime || Number(item?.status) === 3
 
 const getDerivedStatus = (item) => {
   if (item.payStatus === 0) return 0
@@ -294,7 +296,7 @@ const getItemClass = (item) => {
 const canRefund = (item) => {
   return item.payStatus === 1
     && item.status < 3
-    && item.checkInStatus !== 1
+    && !isCheckedIn(item)
     && (!item.refundStatus || item.refundStatus === 0 || item.refundStatus === 3)
 }
 
@@ -337,6 +339,12 @@ const loadReservations = async () => {
     ElMessage.error(error.message || '加载预约列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+const refreshReservationsIfVisible = () => {
+  if (document.visibilityState === 'visible') {
+    loadReservations()
   }
 }
 
@@ -392,10 +400,17 @@ const handleViewDetail = (item) => {
 
 onMounted(() => {
   loadReservations()
+  window.addEventListener('focus', refreshReservationsIfVisible)
+  document.addEventListener('visibilitychange', refreshReservationsIfVisible)
 })
 
 onActivated(() => {
-  loadReservations()
+  refreshReservationsIfVisible()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('focus', refreshReservationsIfVisible)
+  document.removeEventListener('visibilitychange', refreshReservationsIfVisible)
 })
 </script>
 

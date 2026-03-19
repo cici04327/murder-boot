@@ -520,6 +520,8 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation update = new Reservation();
         update.setId(id);
         update.setStatus(3);
+        update.setCheckInStatus(1);
+        update.setCheckInTime(reservation.getCheckInTime() != null ? reservation.getCheckInTime() : LocalDateTime.now());
         reservationMapper.updateById(update);
 
         log.info("预约已完成: id={}, orderNo={}", reservation.getId(), reservation.getOrderNo());
@@ -732,10 +734,22 @@ public class ReservationServiceImpl implements ReservationService {
             needUpdate = true;
         }
 
+        if (Integer.valueOf(3).equals(reservation.getStatus())
+                && !Integer.valueOf(1).equals(reservation.getCheckInStatus())) {
+            reservation.setCheckInStatus(1);
+            if (reservation.getCheckInTime() == null) {
+                reservation.setCheckInTime(
+                        reservation.getUpdateTime() != null ? reservation.getUpdateTime() : LocalDateTime.now()
+                );
+            }
+            needUpdate = true;
+        }
+
         if (needUpdate) {
             Reservation update = new Reservation();
             update.setId(reservation.getId());
             update.setCheckInStatus(reservation.getCheckInStatus());
+            update.setCheckInTime(reservation.getCheckInTime());
             reservationMapper.updateById(update);
         }
     }

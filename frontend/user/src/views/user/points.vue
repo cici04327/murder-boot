@@ -140,7 +140,7 @@
               <div class="coupon-info">
                 <div class="coupon-title">{{ coupon.title }}</div>
                 <div class="coupon-desc">{{ coupon.description }}</div>
-                <div class="coupon-expire">有效期：{{ coupon.validDays }}天</div>
+                <div class="coupon-expire">有效期：{{ coupon.validText || `${coupon.validDays}天` }}</div>
               </div>
               <div class="coupon-footer">
                 <el-tag type="warning" size="small">{{ coupon.points }} 积分</el-tag>
@@ -304,7 +304,7 @@ const coupons = ref([
     description: '订单满100元可用',
     amount: 10,
     points: 100,
-    validDays: 30
+    validText: '长期有效'
   },
   {
     id: 2,
@@ -312,7 +312,7 @@ const coupons = ref([
     description: '订单满200元可用',
     amount: 25,
     points: 250,
-    validDays: 30
+    validText: '长期有效'
   },
   {
     id: 3,
@@ -320,7 +320,7 @@ const coupons = ref([
     description: '订单满300元可用',
     amount: 40,
     points: 400,
-    validDays: 30
+    validText: '长期有效'
   },
   {
     id: 4,
@@ -328,7 +328,7 @@ const coupons = ref([
     description: '订单满500元可用',
     amount: 80,
     points: 800,
-    validDays: 60
+    validText: '长期有效'
   }
 ])
 
