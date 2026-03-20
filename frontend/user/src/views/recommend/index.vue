@@ -779,7 +779,7 @@ onMounted(() => {
 .orb-1 {
   width: 500px;
   height: 500px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #c0392b, #7a1d1d);
   top: -200px;
   left: -200px;
   animation-delay: 0s;
@@ -869,23 +869,23 @@ onMounted(() => {
 .icon-circle {
   width: 100px;
   height: 100px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #c0392b, #7a1d1d);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 30px rgba(192, 57, 43, 0.4);
   animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 10px 30px rgba(192, 57, 43, 0.4);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+    box-shadow: 0 15px 40px rgba(192, 57, 43, 0.6);
   }
 }
 
@@ -910,7 +910,7 @@ onMounted(() => {
 
 .gradient-text {
   display: block;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 50%, #f093fb 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

@@ -66,14 +66,42 @@ public class User implements Serializable {
     /**
      * 邮箱
      */
-    @TableField(exist = false)
     private String email;
     
     /**
      * 生日
      */
-    @TableField(exist = false)
     private java.time.LocalDate birthday;
+
+    /**
+     * 个人简介
+     */
+    private String bio;
+
+    /**
+     * 真实姓名
+     */
+    private String realName;
+
+    /**
+     * 身份证号
+     */
+    private String idCard;
+
+    /**
+     * 实名认证状态：0未认证，1已认证
+     */
+    private Integer realNameVerified;
+
+    /**
+     * 手机是否已验证：0未验证，1已验证
+     */
+    private Integer phoneVerified;
+
+    /**
+     * 邮箱是否已验证：0未验证，1已验证
+     */
+    private Integer emailVerified;
     
     /**
      * 所在城�?     */
@@ -97,7 +125,6 @@ public class User implements Serializable {
     
     /**
      * 最后登录时�?     */
-    @TableField(exist = false)
     private LocalDateTime lastLoginTime;
     
     /**

@@ -432,7 +432,7 @@ const handleUserCommand = (command) => {
   color: #fff;
   padding: 30px 0;
   text-align: center;
-  border-top: 1px solid rgba(139, 0, 0, 0.3);
+  border-top: 1px solid rgba(192, 57, 43, 0.3);
   box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.3);
 }
 
@@ -485,7 +485,7 @@ const handleUserCommand = (command) => {
 /* 下拉菜单深色主题 */
 .el-dropdown-menu {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.3) !important;
+  border: 1px solid rgba(192, 57, 43, 0.3) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
@@ -495,12 +495,12 @@ const handleUserCommand = (command) => {
 
 .el-dropdown-menu__item:hover,
 .el-dropdown-menu__item:focus {
-  background: rgba(139, 0, 0, 0.3) !important;
+  background: rgba(192, 57, 43, 0.3) !important;
   color: #fff !important;
 }
 
 .el-dropdown-menu__item--divided {
-  border-top-color: rgba(139, 0, 0, 0.2) !important;
+  border-top-color: rgba(192, 57, 43, 0.2) !important;
 }
 
 .el-dropdown-menu__item .el-icon {
@@ -515,6 +515,6 @@ const handleUserCommand = (command) => {
 /* 下拉菜单箭头 */
 .el-popper.is-light .el-popper__arrow::before {
   background: rgba(26, 26, 46, 0.98) !important;
-  border-color: rgba(139, 0, 0, 0.3) !important;
+  border-color: rgba(192, 57, 43, 0.3) !important;
 }
 </style>

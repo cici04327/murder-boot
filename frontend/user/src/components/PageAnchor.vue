@@ -56,10 +56,11 @@ const scrollToSection = (index) => {
   right: 30px;
   top: 50%;
   transform: translateY(-50%);
-  background: white;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
   padding: 20px 15px;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(192, 57, 43, 0.2);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
   max-width: 200px;
   z-index: 100;
 }
@@ -67,10 +68,10 @@ const scrollToSection = (index) => {
 .anchor-title {
   font-size: 14px;
   font-weight: bold;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.88);
   margin-bottom: 15px;
   padding-bottom: 10px;
-  border-bottom: 2px solid #409EFF;
+  border-bottom: 2px solid rgba(224, 90, 71, 0.8);
 }
 
 .anchor-list {
@@ -88,16 +89,16 @@ const scrollToSection = (index) => {
   border-radius: 6px;
   transition: all 0.3s;
   font-size: 13px;
-  color: #606266;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .anchor-item:hover {
-  background: #ecf5ff;
-  color: #409EFF;
+  background: rgba(224, 90, 71, 0.14);
+  color: #ffffff;
 }
 
 .anchor-item.active {
-  background: #409EFF;
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   color: white;
 }
 
@@ -121,11 +122,11 @@ const scrollToSection = (index) => {
 }
 
 .anchor-list::-webkit-scrollbar-thumb {
-  background: #dcdfe6;
+  background: rgba(224, 90, 71, 0.26);
   border-radius: 2px;
 }
 
 .anchor-list::-webkit-scrollbar-thumb:hover {
-  background: #c0c4cc;
+  background: rgba(224, 90, 71, 0.38);
 }
 </style>

@@ -431,7 +431,7 @@ onMounted(() => {
 .page-header {
   margin-bottom: 20px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
 }
 
@@ -464,31 +464,31 @@ onMounted(() => {
 
 .header-actions .el-button {
   background: rgba(35, 35, 60, 0.8);
-  border-color: rgba(139, 0, 0, 0.3);
+  border-color: rgba(192, 57, 43, 0.3);
   color: rgba(255, 255, 255, 0.9);
 }
 
 .header-actions .el-button:hover {
-  background: rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  background: rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
   color: #fff;
 }
 
 .header-actions .el-button--danger {
-  background: rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  background: rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
 }
 
 .header-actions .el-button--danger:hover {
-  background: #8B0000;
-  border-color: #8B0000;
+  background: #16213e;
+  border-color: #16213e;
 }
 
 /* 未读统计 */
 .unread-stats {
   margin-bottom: 20px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
 }
 
@@ -497,8 +497,8 @@ onMounted(() => {
 }
 
 .unread-stats :deep(.el-alert--warning) {
-  background: rgba(139, 0, 0, 0.2);
-  border-color: rgba(139, 0, 0, 0.3);
+  background: rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 .unread-stats :deep(.el-alert__title) {
@@ -508,14 +508,14 @@ onMounted(() => {
 /* 消息列表 */
 .notification-list-card {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
 }
 
 .notification-list-card :deep(.el-card__header) {
   padding: 20px 20px 0;
   background: transparent;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .notification-list-card :deep(.el-card__body) {
@@ -531,7 +531,7 @@ onMounted(() => {
 }
 
 .notification-list-card :deep(.el-tabs__active-bar) {
-  background-color: #8B0000;
+  background-color: #16213e;
 }
 
 .tab-badge {
@@ -549,35 +549,35 @@ onMounted(() => {
 .notification-item {
   display: flex;
   padding: 20px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.15);
   cursor: pointer;
   transition: all 0.3s;
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.5) 0%, rgba(30, 45, 80, 0.5) 100%);
   margin-bottom: 10px;
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.1);
+  border: 1px solid rgba(192, 57, 43, 0.1);
 }
 
 .notification-item:hover {
   background: linear-gradient(135deg, rgba(45, 45, 75, 0.8) 0%, rgba(40, 55, 90, 0.8) 100%);
-  border-color: rgba(139, 0, 0, 0.3);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 .notification-item.unread {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.15) 0%, rgba(139, 0, 0, 0.08) 100%);
-  border-color: rgba(139, 0, 0, 0.3);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.15) 0%, rgba(192, 57, 43, 0.08) 100%);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 .notification-item.unread:hover {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.25) 0%, rgba(139, 0, 0, 0.15) 100%);
-  border-color: rgba(139, 0, 0, 0.5);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.25) 0%, rgba(192, 57, 43, 0.15) 100%);
+  border-color: rgba(192, 57, 43, 0.5);
 }
 
 .notification-icon {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  background: rgba(139, 0, 0, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -653,7 +653,7 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .detail-time {
@@ -694,7 +694,7 @@ onMounted(() => {
 }
 
 .pagination :deep(.el-pager li.is-active) {
-  background: #8B0000;
+  background: #16213e;
   color: #fff;
 }
 
@@ -709,11 +709,11 @@ onMounted(() => {
 <style>
 .user-notifications .el-dialog {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
-  border: 1px solid rgba(139, 0, 0, 0.3);
+  border: 1px solid rgba(192, 57, 43, 0.3);
 }
 
 .user-notifications .el-dialog__header {
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .user-notifications .el-dialog__title {
@@ -725,6 +725,6 @@ onMounted(() => {
 }
 
 .user-notifications .el-dialog__footer {
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  border-top: 1px solid rgba(192, 57, 43, 0.2);
 }
 </style>

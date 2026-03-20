@@ -5,7 +5,7 @@
 .info-page .hero-banner {
   position: relative;
   min-height: 400px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -122,28 +122,30 @@
   margin-top: 30px;
   border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  box-shadow: var(--info-shadow-md);
 }
 
 .info-page .info-section {
   margin-bottom: 50px;
   padding: 30px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+  background: var(--info-card-bg);
+  border: 1px solid var(--info-card-border);
   transition: all 0.3s ease;
 }
 
 .info-page .info-section:hover {
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  background: var(--info-card-hover-bg);
+  box-shadow: var(--info-shadow-lg);
   transform: translateY(-2px);
 }
 
 .info-page .info-section h3 {
   font-size: 28px;
-  color: #2c3e50;
+  color: var(--info-text-primary);
   margin-bottom: 20px;
   padding-bottom: 15px;
-  border-bottom: 3px solid #667eea;
+  border-bottom: 3px solid var(--info-primary);
   position: relative;
 }
 
@@ -154,18 +156,18 @@
   left: 0;
   width: 60px;
   height: 3px;
-  background: #764ba2;
+  background: var(--info-secondary);
 }
 
 /* ============ 优势卡片 ============ */
 .info-page .advantage-item {
   padding: 30px;
   border-radius: 16px;
-  background: white;
+  background: var(--info-card-bg);
   text-align: center;
   margin-bottom: 20px;
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  border: 2px solid #f0f0f0;
+  border: 1px solid var(--info-card-border);
   position: relative;
   overflow: hidden;
 }
@@ -177,7 +179,7 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(102,126,234,0.1), transparent);
+  background: linear-gradient(90deg, transparent, rgba(224, 90, 71, 0.08), transparent);
   transition: left 0.5s;
 }
 
@@ -187,18 +189,18 @@
 
 .info-page .advantage-item:hover {
   transform: translateY(-10px) scale(1.02);
-  box-shadow: 0 12px 32px rgba(102,126,234,0.2);
-  border-color: #667eea;
+  box-shadow: var(--info-shadow-lg);
+  border-color: var(--info-primary);
 }
 
 .info-page .advantage-item h4 {
   font-size: 20px;
   margin: 15px 0 10px;
-  color: #2c3e50;
+  color: var(--info-text-primary);
 }
 
 .info-page .advantage-item p {
-  color: #666;
+  color: var(--info-text-secondary);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -209,9 +211,12 @@
 }
 
 .info-page .el-timeline-item__card {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-left: 4px solid #667eea;
+  background: var(--info-card-bg);
+  border-left: 4px solid var(--info-primary);
   transition: all 0.3s ease;
+  border-top: 1px solid var(--info-card-border);
+  border-right: 1px solid var(--info-card-border);
+  border-bottom: 1px solid var(--info-card-border);
 }
 
 .info-page .el-timeline-item__card:hover {
@@ -231,11 +236,12 @@
   align-items: center;
   gap: 10px;
   padding: 20px;
-  background: white;
+  background: var(--info-card-bg);
   border-radius: 12px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--info-primary);
   transition: all 0.3s ease;
   font-size: 16px;
+  color: var(--info-text-primary);
 }
 
 .info-page .contact-info p:hover {
@@ -254,16 +260,16 @@
 .info-page .team-card {
   text-align: center;
   padding: 30px;
-  background: white;
+  background: var(--info-card-bg);
   border-radius: 16px;
   transition: all 0.3s ease;
-  border: 2px solid #f0f0f0;
+  border: 1px solid var(--info-card-border);
 }
 
 .info-page .team-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
-  border-color: #667eea;
+  box-shadow: var(--info-shadow-lg);
+  border-color: var(--info-primary);
 }
 
 .info-page .team-avatar {
@@ -274,18 +280,18 @@
 .info-page .team-name {
   font-size: 22px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--info-text-primary);
   margin-bottom: 5px;
 }
 
 .info-page .team-position {
-  color: #667eea;
+  color: var(--info-primary);
   font-size: 16px;
   margin-bottom: 15px;
 }
 
 .info-page .team-desc {
-  color: #666;
+  color: var(--info-text-secondary);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -301,9 +307,9 @@
 .info-page .achievement-card {
   text-align: center;
   padding: 25px;
-  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  background: var(--info-card-bg);
   border-radius: 12px;
-  border: 2px solid #f0f0f0;
+  border: 1px solid var(--info-card-border);
   transition: all 0.3s ease;
 }
 
@@ -321,13 +327,13 @@
 .info-page .achievement-title {
   font-size: 16px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--info-text-primary);
   margin-bottom: 8px;
 }
 
 .info-page .achievement-org {
   font-size: 13px;
-  color: #999;
+  color: var(--info-text-light);
 }
 
 /* ============ 响应式设计 ============ */
@@ -360,13 +366,16 @@
 
 /* ============ FAQ 样式 ============ */
 .info-page .faq-item {
-  background: white;
+  background: var(--info-card-bg);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 15px;
-  border-left: 4px solid #667eea;
+  border-left: 4px solid var(--info-primary);
   transition: all 0.3s ease;
   cursor: pointer;
+  border-top: 1px solid var(--info-card-border);
+  border-right: 1px solid var(--info-card-border);
+  border-bottom: 1px solid var(--info-card-border);
 }
 
 .info-page .faq-item:hover {
@@ -377,7 +386,7 @@
 .info-page .faq-question {
   font-size: 18px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--info-text-primary);
   margin-bottom: 10px;
   display: flex;
   align-items: center;
@@ -385,26 +394,27 @@
 }
 
 .info-page .faq-answer {
-  color: #666;
+  color: var(--info-text-secondary);
   line-height: 1.8;
   padding-left: 30px;
 }
 
 /* ============ 反馈表单样式 ============ */
 .info-page .feedback-form {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
   padding: 40px;
   border-radius: 16px;
   color: white;
   margin-top: 30px;
+  border: 1px solid var(--info-card-border);
 }
 
 .info-page .feedback-form :deep(.el-input__wrapper) {
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.08);
 }
 
 .info-page .feedback-form :deep(.el-textarea__inner) {
-  background: rgba(255,255,255,0.9);
+  background: rgba(255,255,255,0.08);
 }
 
 /* ============ 特殊效果 ============ */

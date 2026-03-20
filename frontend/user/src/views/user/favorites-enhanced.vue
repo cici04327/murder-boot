@@ -817,9 +817,9 @@ onMounted(() => {
 }
 
 .switch-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 /* 操作按钮 */
@@ -900,7 +900,7 @@ onMounted(() => {
 
 .panel-header {
   padding: 16px 24px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.3) 0%, rgba(122, 29, 29, 0.3) 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 16px;
   color: #fff;
@@ -958,7 +958,7 @@ onMounted(() => {
 }
 
 .filter-item :deep(.el-input__wrapper.is-focus) {
-  border-color: rgba(102, 126, 234, 0.8) !important;
+  border-color: rgba(192, 57, 43, 0.8) !important;
 }
 
 .filter-item :deep(.el-input__inner) {
@@ -1007,7 +1007,7 @@ onMounted(() => {
 }
 
 .filter-item :deep(.el-slider__bar) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
 }
 
 .filter-item :deep(.el-rate__icon) {
@@ -1033,13 +1033,13 @@ onMounted(() => {
 }
 
 .btn-apply {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
 }
 
 .btn-apply:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 .btn-reset {
@@ -1087,7 +1087,7 @@ onMounted(() => {
 }
 
 .filter-tag {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.3) 0%, rgba(122, 29, 29, 0.3) 100%);
   color: #fff;
   padding: 6px 12px;
   border-radius: 20px;
@@ -1172,7 +1172,7 @@ onMounted(() => {
 }
 
 .sort-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-color: transparent;
   color: #fff;
 }
@@ -1224,8 +1224,8 @@ onMounted(() => {
 
 .script-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(102, 126, 234, 0.2);
-  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 /* 卡片装饰角 */
@@ -1339,7 +1339,7 @@ onMounted(() => {
   position: absolute;
   bottom: 0;
   right: 0;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.9) 0%, rgba(122, 29, 29, 0.9) 100%);
   color: #fff;
   padding: 6px 16px;
   font-size: 12px;
@@ -1462,7 +1462,7 @@ onMounted(() => {
 }
 
 .btn-reserve {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   border: none;
   padding: 8px 16px;
@@ -1474,7 +1474,7 @@ onMounted(() => {
 
 .btn-reserve:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 .btn-unfavorite {
@@ -1641,7 +1641,7 @@ onMounted(() => {
 }
 
 .btn-sm.reserve {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
 }
 
@@ -1718,7 +1718,7 @@ onMounted(() => {
 }
 
 .btn-explore {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   border: none;
   padding: 14px 32px;
@@ -1730,7 +1730,7 @@ onMounted(() => {
 
 .btn-explore:hover {
   transform: translateY(-3px);
-  box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 30px rgba(192, 57, 43, 0.4);
 }
 
 /* ========== 分页 ========== */
@@ -1754,7 +1754,7 @@ onMounted(() => {
 }
 
 .pagination-wrapper :deep(.el-pager li.is-active) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
 }
 
@@ -1762,13 +1762,13 @@ onMounted(() => {
 .backtop-btn {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 /* ========== 响应式 ========== */

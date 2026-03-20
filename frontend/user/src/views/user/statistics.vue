@@ -22,7 +22,7 @@
           </div>
           <div class="level-progress-wrap">
             <el-progress :percentage="playerLevel.progress" :show-text="false" :stroke-width="6"
-              style="width: 120px;" color="linear-gradient(90deg,#667eea,#f093fb)" />
+              style="width: 120px;" color="linear-gradient(90deg,#c0392b,#f093fb)" />
             <span class="level-tip">距下一级 {{ playerLevel.remaining }} 场</span>
           </div>
         </div>
@@ -122,7 +122,7 @@
           <div class="achievement-desc">{{ a.desc }}</div>
           <div class="achievement-bar">
             <div class="achievement-fill" :style="{ width: a.progress + '%',
-              background: a.unlocked ? 'linear-gradient(90deg,#67c23a,#95d475)' : 'linear-gradient(90deg,#667eea,#764ba2)' }">
+              background: a.unlocked ? 'linear-gradient(90deg,#67c23a,#95d475)' : 'linear-gradient(90deg,#c0392b,#7a1d1d)' }">
             </div>
           </div>
           <div class="achievement-pct">{{ a.progress }}%</div>
@@ -201,7 +201,7 @@ const playerLevel = computed(() => {
 
 // 六宫格数据
 const statTiles = computed(() => [
-  { key: 'reservation', emoji: '🎭', label: '总预约', value: stats.reservationCount, sub: `已完成 ${stats.completedCount}`, color: '#667eea', glow: 'rgba(102,126,234,0.3)' },
+  { key: 'reservation', emoji: '🎭', label: '总预约', value: stats.reservationCount, sub: `已完成 ${stats.completedCount}`, color: '#c0392b', glow: 'rgba(192, 57, 43,0.3)' },
   { key: 'favorite',    emoji: '⭐', label: '剧本收藏', value: stats.favoriteCount, sub: stats.favoriteCount > 0 ? '继续探索' : '去收藏吧', color: '#f6d365', glow: 'rgba(246,211,101,0.3)' },
   { key: 'points',      emoji: '💎', label: '当前积分', value: stats.points, sub: `累计 ${stats.totalEarned}`, color: '#a18cd1', glow: 'rgba(161,140,209,0.3)' },
   { key: 'coupon',      emoji: '🎫', label: '可用优惠券', value: stats.couponCount, sub: stats.couponCount > 0 ? '快去使用' : '暂无可用', color: '#f093fb', glow: 'rgba(240,147,251,0.3)' },
@@ -213,7 +213,7 @@ const statTiles = computed(() => [
 const pieData = computed(() => [
   { name: '已完成', value: stats.completedCount, color: '#67c23a' },
   { name: '已取消', value: stats.cancelledCount, color: '#909399' },
-  { name: '待处理', value: Math.max(0, stats.reservationCount - stats.completedCount - stats.cancelledCount), color: '#667eea' },
+  { name: '待处理', value: Math.max(0, stats.reservationCount - stats.completedCount - stats.cancelledCount), color: '#c0392b' },
 ])
 
 const achievements = ref([
@@ -426,10 +426,10 @@ const initChart = async () => {
     tooltip: {
       trigger: 'axis',
       backgroundColor: 'rgba(15,20,50,0.95)',
-      borderColor: 'rgba(102,126,234,0.4)',
+      borderColor: 'rgba(192, 57, 43,0.4)',
       borderWidth: 1,
       textStyle: { color: 'rgba(255,255,255,0.9)', fontSize: 13 },
-      axisPointer: { type: 'cross', label: { backgroundColor: '#667eea' } }
+      axisPointer: { type: 'cross', label: { backgroundColor: '#c0392b' } }
     },
     legend: {
       data: ['预约次数', '已完成', '已取消'],
@@ -441,24 +441,24 @@ const initChart = async () => {
       type: 'category',
       boundaryGap: false,
       data: fd.map(s => s.month.slice(5) + '月'),
-      axisLine: { lineStyle: { color: 'rgba(102,126,234,0.2)' } },
+      axisLine: { lineStyle: { color: 'rgba(192, 57, 43,0.2)' } },
       axisLabel: { color: 'rgba(255,255,255,0.45)', fontSize: 12 },
       splitLine: { show: false }
     },
     yAxis: {
       type: 'value',
-      axisLine: { lineStyle: { color: 'rgba(102,126,234,0.2)' } },
+      axisLine: { lineStyle: { color: 'rgba(192, 57, 43,0.2)' } },
       axisLabel: { color: 'rgba(255,255,255,0.45)' },
-      splitLine: { lineStyle: { type: 'dashed', color: 'rgba(102,126,234,0.08)' } }
+      splitLine: { lineStyle: { type: 'dashed', color: 'rgba(192, 57, 43,0.08)' } }
     },
     series: [
       {
         name: '预约次数', type: 'line', data: fd.map(s => s.count),
         smooth: true, symbolSize: 7,
-        itemStyle: { color: '#667eea' },
-        lineStyle: { width: 3, color: '#667eea' },
+        itemStyle: { color: '#c0392b' },
+        lineStyle: { width: 3, color: '#c0392b' },
         areaStyle: { color: { type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [{ offset: 0, color: 'rgba(102,126,234,0.35)' }, { offset: 1, color: 'rgba(102,126,234,0.02)' }] } }
+          colorStops: [{ offset: 0, color: 'rgba(192, 57, 43,0.35)' }, { offset: 1, color: 'rgba(192, 57, 43,0.02)' }] } }
       },
       {
         name: '已完成', type: 'line', data: fd.map(s => s.completed),
@@ -488,7 +488,7 @@ const initPieChart = async () => {
     tooltip: {
       trigger: 'item',
       backgroundColor: 'rgba(15,20,50,0.95)',
-      borderColor: 'rgba(102,126,234,0.4)',
+      borderColor: 'rgba(192, 57, 43,0.4)',
       textStyle: { color: '#fff' },
       formatter: '{b}: {c} ({d}%)'
     },
@@ -501,7 +501,7 @@ const initPieChart = async () => {
       data: [
         { name: '已完成', value: stats.completedCount, itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 1, colorStops: [{ offset: 0, color: '#43e97b' }, { offset: 1, color: '#38f9d7' }] } } },
         { name: '已取消', value: stats.cancelledCount, itemStyle: { color: '#606266' } },
-        { name: '待处理', value: Math.max(0, total - stats.completedCount - stats.cancelledCount), itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 1, colorStops: [{ offset: 0, color: '#667eea' }, { offset: 1, color: '#764ba2' }] } } },
+        { name: '待处理', value: Math.max(0, total - stats.completedCount - stats.cancelledCount), itemStyle: { color: { type: 'linear', x: 0, y: 0, x2: 1, y2: 1, colorStops: [{ offset: 0, color: '#c0392b' }, { offset: 1, color: '#7a1d1d' }] } } },
       ]
     }]
   })
@@ -559,7 +559,7 @@ onUnmounted(() => {
   padding: 32px 36px;
   margin-bottom: 24px;
   overflow: hidden;
-  border: 1px solid rgba(102,126,234,0.25);
+  border: 1px solid rgba(192, 57, 43,0.25);
 }
 
 .hero-bg-particles {
@@ -571,7 +571,7 @@ onUnmounted(() => {
 .particle {
   position: absolute;
   border-radius: 50%;
-  background: rgba(102,126,234,0.6);
+  background: rgba(192, 57, 43,0.6);
   animation: float linear infinite;
 }
 
@@ -598,7 +598,7 @@ onUnmounted(() => {
   width: 80px; height: 80px;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid rgba(102,126,234,0.6);
+  border: 3px solid rgba(192, 57, 43,0.6);
   display: block;
 }
 
@@ -607,7 +607,7 @@ onUnmounted(() => {
   inset: -6px;
   border-radius: 50%;
   border: 2px solid transparent;
-  background: linear-gradient(135deg,#667eea,#f093fb) border-box;
+  background: linear-gradient(135deg,#c0392b,#f093fb) border-box;
   -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: destination-out;
   mask-composite: exclude;
@@ -620,7 +620,7 @@ onUnmounted(() => {
 .hero-text h1 {
   font-size: 22px; font-weight: 700;
   color: #fff; margin: 0 0 8px;
-  text-shadow: 0 0 20px rgba(102,126,234,0.5);
+  text-shadow: 0 0 20px rgba(192, 57, 43,0.5);
 }
 .hero-text p { color: rgba(255,255,255,0.6); margin: 0; font-size: 14px; line-height: 1.8; }
 .hero-text strong { color: #f093fb; font-size: 18px; }
@@ -628,8 +628,8 @@ onUnmounted(() => {
 .hero-level { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .level-badge {
   display: flex; align-items: center; gap: 8px;
-  background: rgba(102,126,234,0.15);
-  border: 1px solid rgba(102,126,234,0.3);
+  background: rgba(192, 57, 43,0.15);
+  border: 1px solid rgba(192, 57, 43,0.3);
   border-radius: 20px; padding: 6px 16px;
 }
 .level-icon { font-size: 20px; }
@@ -700,7 +700,7 @@ onUnmounted(() => {
 /* ===== 通用深色卡片 ===== */
 .dark-card {
   background: linear-gradient(135deg, rgba(26,26,46,0.98), rgba(22,33,62,0.98));
-  border: 1px solid rgba(102,126,234,0.2);
+  border: 1px solid rgba(192, 57, 43,0.2);
   border-radius: 16px;
   overflow: hidden;
 }
@@ -708,7 +708,7 @@ onUnmounted(() => {
 .dark-card-header {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 20px;
-  border-bottom: 1px solid rgba(102,126,234,0.15);
+  border-bottom: 1px solid rgba(192, 57, 43,0.15);
 }
 
 .card-title { font-size: 16px; font-weight: 600; color: #fff; }
@@ -722,15 +722,15 @@ onUnmounted(() => {
 .period-tabs { display: flex; gap: 4px; }
 .period-btn {
   padding: 4px 12px; border-radius: 20px; font-size: 12px;
-  border: 1px solid rgba(102,126,234,0.3);
+  border: 1px solid rgba(192, 57, 43,0.3);
   background: rgba(255,255,255,0.05);
   color: rgba(255,255,255,0.6);
   cursor: pointer; transition: all 0.2s;
 }
-.period-btn:hover { background: rgba(102,126,234,0.2); color: #fff; }
+.period-btn:hover { background: rgba(192, 57, 43,0.2); color: #fff; }
 .period-btn.active {
-  background: linear-gradient(135deg,#667eea,#764ba2);
-  border-color: #667eea; color: #fff;
+  background: linear-gradient(135deg,#c0392b,#7a1d1d);
+  border-color: #c0392b; color: #fff;
 }
 
 /* 饼图 */
@@ -753,17 +753,17 @@ onUnmounted(() => {
   gap: 8px;
 }
 .table-head {
-  background: rgba(102,126,234,0.08);
+  background: rgba(192, 57, 43,0.08);
   font-size: 12px; color: rgba(255,255,255,0.5);
   font-weight: 600; letter-spacing: 1px;
-  border-bottom: 1px solid rgba(102,126,234,0.1);
+  border-bottom: 1px solid rgba(192, 57, 43,0.1);
 }
 .table-row {
-  border-bottom: 1px solid rgba(102,126,234,0.06);
+  border-bottom: 1px solid rgba(192, 57, 43,0.06);
   font-size: 13px; color: rgba(255,255,255,0.75);
   transition: background 0.2s;
 }
-.table-row:hover { background: rgba(102,126,234,0.06); }
+.table-row:hover { background: rgba(192, 57, 43,0.06); }
 .table-row.has-data { color: rgba(255,255,255,0.9); }
 .table-row:last-child { border-bottom: none; }
 .table-empty { padding: 40px; text-align: center; color: rgba(255,255,255,0.3); font-size: 14px; }
@@ -774,7 +774,7 @@ onUnmounted(() => {
   display: inline-block; padding: 2px 10px;
   border-radius: 10px; font-size: 12px; font-weight: 600;
 }
-.badge-blue  { background: rgba(102,126,234,0.2); color: #a5b4fc; border: 1px solid rgba(102,126,234,0.3); }
+.badge-blue  { background: rgba(192, 57, 43,0.2); color: #a5b4fc; border: 1px solid rgba(192, 57, 43,0.3); }
 .badge-green { background: rgba(67,233,123,0.15); color: #6ee7b7; border: 1px solid rgba(67,233,123,0.3); }
 .badge-gray  { background: rgba(144,147,153,0.15); color: #9ca3af; border: 1px solid rgba(144,147,153,0.3); }
 
@@ -784,7 +784,7 @@ onUnmounted(() => {
 }
 .mini-bar {
   height: 100%; border-radius: 2px;
-  background: linear-gradient(90deg,#667eea,#43e97b);
+  background: linear-gradient(90deg,#c0392b,#43e97b);
   transition: width 0.6s ease;
 }
 .mini-pct { font-size: 11px; color: rgba(255,255,255,0.4); }
@@ -805,7 +805,7 @@ onUnmounted(() => {
 .achievement-tile {
   position: relative;
   background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(102,126,234,0.12);
+  border: 1px solid rgba(192, 57, 43,0.12);
   border-radius: 14px; padding: 20px 12px;
   text-align: center; transition: all 0.3s;
   opacity: 0.5; overflow: hidden;

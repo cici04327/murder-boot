@@ -189,7 +189,7 @@ defineExpose({
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -210,7 +210,7 @@ defineExpose({
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  border: 3px solid #8B0000;
+  border: 3px solid rgba(224, 90, 71, 0.72);
   animation: pulse 2s ease-out infinite;
   z-index: 1;
 }
@@ -231,19 +231,20 @@ defineExpose({
 .dialog-title {
   font-size: 22px;
   font-weight: 600;
-  color: #333;
+  color: rgba(255, 255, 255, 0.88);
   margin-bottom: 12px;
 }
 
 .dialog-desc {
   font-size: 15px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.66);
   margin-bottom: 24px;
   line-height: 1.6;
 }
 
 .feature-list {
-  background: #f9f9f9;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.18);
   border-radius: 12px;
   padding: 16px 20px;
   margin-bottom: 16px;
@@ -256,7 +257,7 @@ defineExpose({
   gap: 10px;
   padding: 8px 0;
   font-size: 14px;
-  color: #444;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .feature-icon {
@@ -270,9 +271,9 @@ defineExpose({
   justify-content: center;
   gap: 6px;
   font-size: 12px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.54);
   padding: 10px;
-  background: #f5f7fa;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 8px;
 }
 
@@ -292,11 +293,11 @@ defineExpose({
 }
 
 .dialog-footer .el-button--primary {
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   border: none;
 }
 
 .dialog-footer .el-button--primary:hover {
-  background: linear-gradient(135deg, #a01010 0%, #c01515 100%);
+  background: linear-gradient(135deg, #55141d 0%, #7a1d1d 100%);
 }
 </style>

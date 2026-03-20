@@ -1026,7 +1026,7 @@ onMounted(async () => {
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #ffd700 100%);
+  background: linear-gradient(90deg, #c0392b 0%, #ffd700 100%);
   border-radius: 4px;
   transition: width 0.5s ease;
 }
@@ -1105,13 +1105,13 @@ onMounted(async () => {
 }
 
 .sign-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
 }
 
 .sign-btn:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.4);
 }
 
 .sign-btn:disabled {
@@ -1203,7 +1203,7 @@ onMounted(async () => {
 .task-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  border-color: rgba(102, 126, 234, 0.5);
+  border-color: rgba(192, 57, 43, 0.5);
 }
 
 .task-card.completed {
@@ -1273,7 +1273,7 @@ onMounted(async () => {
 }
 
 .task-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   border: none;
   padding: 6px 14px;
@@ -1285,7 +1285,7 @@ onMounted(async () => {
 
 .task-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 .done-text {
@@ -1304,7 +1304,7 @@ onMounted(async () => {
   font-size: 16px;
   margin-bottom: 25px;
   padding: 15px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-radius: 12px;
   color: #fff;
 }
@@ -1327,8 +1327,8 @@ onMounted(async () => {
 }
 
 .coupon-card:hover {
-  border-color: #667eea;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+  border-color: #c0392b;
+  box-shadow: 0 4px 20px rgba(192, 57, 43, 0.3);
   transform: translateY(-3px);
 }
 
@@ -1398,7 +1398,7 @@ onMounted(async () => {
 .rule-card:hover {
   background: rgba(255, 255, 255, 0.1);
   transform: translateY(-5px);
-  border-color: rgba(102, 126, 234, 0.3);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 .rule-icon {
@@ -1449,7 +1449,7 @@ onMounted(async () => {
 }
 
 .filter-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-color: transparent;
   color: #fff;
 }
@@ -1584,7 +1584,7 @@ onMounted(async () => {
 }
 
 .pagination-wrapper :deep(.el-pager li.is-active) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
 }
 
@@ -1606,13 +1606,13 @@ onMounted(async () => {
 .backtop-btn {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 /* ========== 响应式 ========== */

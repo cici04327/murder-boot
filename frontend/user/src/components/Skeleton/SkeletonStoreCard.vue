@@ -59,8 +59,8 @@ import SkeletonBase from './SkeletonBase.vue'
 
 <style scoped>
 .skeleton-store-card {
-  background: #fff;
-  border: 1px solid #f0f0f0;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;

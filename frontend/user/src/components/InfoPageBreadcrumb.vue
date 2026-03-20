@@ -28,7 +28,7 @@ const currentPage = computed(() => {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
   border-radius: 8px;
   margin-bottom: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .el-breadcrumb {

@@ -1259,7 +1259,7 @@ onMounted(() => {
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 /* 门店头部信息 */
@@ -1415,16 +1415,16 @@ onMounted(() => {
   padding: 16px;
   background: rgba(35, 35, 60, 0.8);
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .feature-item {
   padding: 6px 14px;
-  background: rgba(139, 0, 0, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   border-radius: 15px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(139, 0, 0, 0.3);
+  border: 1px solid rgba(192, 57, 43, 0.3);
 }
 
 /* 操作按钮区域 */
@@ -1445,21 +1445,21 @@ onMounted(() => {
   letter-spacing: 1px;
   border: none !important;
   border-radius: 12px !important;
-  background: linear-gradient(135deg, #c0392b 0%, #8B0000 60%, #6b0000 100%) !important;
+  background: linear-gradient(135deg, #55141d 0%, #16213e 60%, #132743 100%) !important;
   color: #fff !important;
-  box-shadow: 0 4px 18px rgba(139, 0, 0, 0.5);
+  box-shadow: 0 4px 18px rgba(192, 57, 43, 0.5);
   transition: all 0.3s ease;
 }
 
 .action-buttons :deep(.btn-reserve:hover) {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 60%, #8B0000 100%) !important;
+  background: linear-gradient(135deg, #2b4d85 0%, #55141d 60%, #16213e 100%) !important;
   box-shadow: 0 6px 24px rgba(192, 57, 43, 0.6);
   transform: translateY(-2px);
 }
 
 .action-buttons :deep(.btn-reserve:active) {
   transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(139, 0, 0, 0.4);
+  box-shadow: 0 2px 10px rgba(192, 57, 43, 0.4);
 }
 
 /* 电话咨询按钮 */
@@ -1498,14 +1498,14 @@ onMounted(() => {
 }
 
 .store-actions .el-button--danger {
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   border: none;
   padding: 12px 28px;
   border-radius: 10px;
 }
 
 .store-actions .el-button--danger:hover {
-  background: linear-gradient(135deg, #a01010 0%, #b81818 100%);
+  background: linear-gradient(135deg, #0f3460 0%, #b81818 100%);
 }
 
 /* 卡片通用样式 */
@@ -1514,7 +1514,7 @@ onMounted(() => {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .card-header {
@@ -1532,7 +1532,7 @@ onMounted(() => {
 /* 房间卡片样式 */
 .rooms-card .room-item {
   padding: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   margin-bottom: 15px;
   transition: all 0.3s;
@@ -1540,8 +1540,8 @@ onMounted(() => {
 }
 
 .rooms-card .room-item:hover {
-  border-color: #8B0000;
-  box-shadow: 0 4px 15px rgba(139,0,0,0.3);
+  border-color: #16213e;
+  box-shadow: 0 4px 15px rgba(192, 57, 43,0.3);
 }
 
 .room-name {
@@ -1575,7 +1575,7 @@ onMounted(() => {
 /* 评价卡片样式 */
 .reviews-card .review-item {
   padding: 20px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .reviews-card .review-item:last-child {
@@ -1644,8 +1644,8 @@ onMounted(() => {
 }
 
 .store-schedule-item:hover {
-  background: rgba(139,0,0,0.2);
-  border-color: rgba(139,0,0,0.5);
+  background: rgba(192, 57, 43,0.2);
+  border-color: rgba(192, 57, 43,0.5);
   transform: translateY(-2px);
 }
 
@@ -1801,7 +1801,7 @@ onMounted(() => {
   color: #fff;
   margin: 0 0 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid rgba(139, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(192, 57, 43, 0.3);
 }
 
 .section-title .el-icon {
@@ -1857,13 +1857,13 @@ onMounted(() => {
   margin-bottom: 10px;
   transition: all 0.3s;
   cursor: default;
-  border: 1px solid rgba(139, 0, 0, 0.15);
+  border: 1px solid rgba(192, 57, 43, 0.15);
 }
 
 .facility-item:hover {
   background: rgba(45, 45, 75, 0.9);
   transform: translateX(5px);
-  border-color: rgba(139, 0, 0, 0.3);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 .facility-item .el-icon {
@@ -1895,13 +1895,13 @@ onMounted(() => {
   margin-bottom: 20px;
   border-left: 4px solid #ff6b6b;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.15);
+  border: 1px solid rgba(192, 57, 43, 0.15);
   border-left-width: 4px;
 }
 
 .store-description :deep(.store-intro:hover) {
   background: rgba(45, 45, 75, 0.9);
-  box-shadow: 0 2px 12px rgba(139, 0, 0, 0.2);
+  box-shadow: 0 2px 12px rgba(192, 57, 43, 0.2);
   transform: translateX(5px);
 }
 
@@ -1949,7 +1949,7 @@ onMounted(() => {
 }
 
 .store-description :deep(.store-intro.store-contact) {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.4) 0%, rgba(139, 0, 0, 0.2) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.4) 0%, rgba(192, 57, 43, 0.2) 100%);
   color: #fff;
   border-left-color: #ff6b6b;
 }
@@ -2020,22 +2020,22 @@ onMounted(() => {
   padding: 20px;
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   margin-bottom: 15px;
   transition: all 0.3s;
 }
 
 .info-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 24px rgba(139, 0, 0, 0.2);
-  border-color: #8B0000;
+  box-shadow: 0 8px 24px rgba(192, 57, 43, 0.2);
+  border-color: #16213e;
 }
 
 .info-icon {
   width: 50px;
   height: 50px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.5) 0%, rgba(139, 0, 0, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.5) 0%, rgba(192, 57, 43, 0.3) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2125,7 +2125,7 @@ onMounted(() => {
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 15px;
-  border: 2px solid rgba(139, 0, 0, 0.25);
+  border: 2px solid rgba(192, 57, 43, 0.25);
   transition: all 0.3s ease;
   overflow: hidden;
 }

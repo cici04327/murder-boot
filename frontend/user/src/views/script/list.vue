@@ -554,8 +554,8 @@ onMounted(() => {
 }
 
 .hero-tag:hover {
-  background: rgba(139, 0, 0, 0.8);
-  border-color: #8B0000;
+  background: rgba(192, 57, 43, 0.8);
+  border-color: #16213e;
   transform: translateY(-2px);
 }
 
@@ -565,7 +565,7 @@ onMounted(() => {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .search-header {
@@ -574,7 +574,7 @@ onMounted(() => {
   justify-content: space-between;
   margin-bottom: 15px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .search-title {
@@ -586,7 +586,7 @@ onMounted(() => {
 .filter-count {
   font-size: 12px;
   color: #ff6b6b;
-  background: rgba(139, 0, 0, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   padding: 4px 10px;
   border-radius: 12px;
 }
@@ -611,14 +611,14 @@ onMounted(() => {
 .search-form :deep(.el-select .el-input.el-input--suffix .el-input__wrapper) {
   background-color: rgba(35, 35, 60, 0.9) !important;
   background: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
 }
 
 /* 确保所有 Element Plus 输入框都是深色背景 */
 .search-card :deep(.el-input__wrapper) {
   background-color: rgba(35, 35, 60, 0.9) !important;
   background: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
 }
 
 .search-card :deep(.el-input__inner) {
@@ -633,7 +633,7 @@ onMounted(() => {
 .search-card :deep(.el-select__wrapper) {
   background-color: rgba(35, 35, 60, 0.9) !important;
   background: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
 }
 
 .search-card :deep(.el-select__selection) {
@@ -654,7 +654,7 @@ onMounted(() => {
 
 .search-form :deep(.el-input__wrapper) {
   background-color: rgba(35, 35, 60, 0.8) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
 }
 
 .search-form :deep(.el-input__inner) {
@@ -666,7 +666,7 @@ onMounted(() => {
 }
 
 .search-form :deep(.el-select .el-input.is-focus .el-input__wrapper) {
-  box-shadow: 0 0 0 1px #8B0000 inset !important;
+  box-shadow: 0 0 0 1px #16213e inset !important;
 }
 
 .search-form :deep(.el-form-item__label) {
@@ -724,7 +724,7 @@ onMounted(() => {
 .script-card {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 16px;
   overflow: hidden;
   cursor: pointer;
@@ -735,8 +735,8 @@ onMounted(() => {
 
 .script-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.2);
-  border-color: #8B0000;
+  box-shadow: 0 15px 35px rgba(192, 57, 43, 0.2);
+  border-color: #16213e;
 }
 
 /* 列表项动画 */
@@ -793,7 +793,7 @@ onMounted(() => {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   color: #fff;
   padding: 6px 14px;
   border-radius: 20px;
@@ -973,7 +973,7 @@ onMounted(() => {
 body .el-select-dropdown,
 body .el-popper.el-select__popper {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.99) 0%, rgba(22, 33, 62, 0.99) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.4) !important;
+  border: 1px solid rgba(192, 57, 43, 0.4) !important;
   --el-bg-color-overlay: rgba(26, 26, 46, 0.99) !important;
 }
 
@@ -988,13 +988,13 @@ body .el-select-dropdown__item {
 
 body .el-select-dropdown__item:hover,
 body .el-select-dropdown__item.hover {
-  background: rgba(139, 0, 0, 0.25) !important;
+  background: rgba(192, 57, 43, 0.25) !important;
 }
 
 body .el-select-dropdown__item.is-selected,
 body .el-select-dropdown__item.selected {
   color: #ff6b6b !important;
-  background: rgba(139, 0, 0, 0.2) !important;
+  background: rgba(192, 57, 43, 0.2) !important;
   font-weight: bold;
 }
 
@@ -1009,13 +1009,13 @@ body .el-select-dropdown__empty {
 body .el-popper.is-light,
 body .el-popper.is-pure {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.99) 0%, rgba(22, 33, 62, 0.99) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.4) !important;
+  border: 1px solid rgba(192, 57, 43, 0.4) !important;
 }
 
 body .el-popper.is-light .el-popper__arrow::before,
 body .el-popper.is-pure .el-popper__arrow::before {
   background: rgba(26, 26, 46, 0.99) !important;
-  border-color: rgba(139, 0, 0, 0.4) !important;
+  border-color: rgba(192, 57, 43, 0.4) !important;
 }
 
 /* 下拉框滚动条深色主题 */
@@ -1024,15 +1024,15 @@ body .el-select-dropdown__wrap {
 }
 
 body .el-scrollbar__bar {
-  background: rgba(139, 0, 0, 0.2) !important;
+  background: rgba(192, 57, 43, 0.2) !important;
 }
 
 body .el-scrollbar__thumb {
-  background: rgba(139, 0, 0, 0.4) !important;
+  background: rgba(192, 57, 43, 0.4) !important;
 }
 
 body .el-scrollbar__thumb:hover {
-  background: rgba(139, 0, 0, 0.6) !important;
+  background: rgba(192, 57, 43, 0.6) !important;
 }
 
 /* 排序 Radio Button 深色主题 */
@@ -1044,19 +1044,19 @@ body .el-scrollbar__thumb:hover {
 .script-list-container .el-radio-button__inner {
   background: rgba(35, 35, 60, 0.8) !important;
   color: rgba(255, 255, 255, 0.8) !important;
-  border-color: rgba(139, 0, 0, 0.3) !important;
+  border-color: rgba(192, 57, 43, 0.3) !important;
 }
 
 .script-list-container .el-radio-button__inner:hover {
   color: #fff !important;
-  background: rgba(139, 0, 0, 0.2) !important;
+  background: rgba(192, 57, 43, 0.2) !important;
 }
 
 .script-list-container .el-radio-button__original-radio:checked + .el-radio-button__inner {
-  background: rgba(139, 0, 0, 0.4) !important;
+  background: rgba(192, 57, 43, 0.4) !important;
   color: #ff6b6b !important;
-  border-color: #8B0000 !important;
-  box-shadow: -1px 0 0 0 #8B0000 !important;
+  border-color: #16213e !important;
+  box-shadow: -1px 0 0 0 #16213e !important;
 }
 
 /* 分页组件深色主题 */
@@ -1078,7 +1078,7 @@ body .el-scrollbar__thumb:hover {
 }
 
 .script-list-container .el-pagination .el-pager li.is-active {
-  background: rgba(139, 0, 0, 0.4) !important;
+  background: rgba(192, 57, 43, 0.4) !important;
   color: #ff6b6b !important;
 }
 
@@ -1095,7 +1095,7 @@ body .el-scrollbar__thumb:hover {
 
 .script-list-container .el-pagination .el-input__wrapper {
   background: rgba(35, 35, 60, 0.8) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
 }
 
 .script-list-container .el-pagination .el-input__inner {
@@ -1116,12 +1116,12 @@ body .el-scrollbar__thumb:hover {
 .script-list-container .search-form .el-button:not(.el-button--danger) {
   background: rgba(35, 35, 60, 0.8) !important;
   color: rgba(255, 255, 255, 0.8) !important;
-  border-color: rgba(139, 0, 0, 0.3) !important;
+  border-color: rgba(192, 57, 43, 0.3) !important;
 }
 
 .script-list-container .search-form .el-button:not(.el-button--danger):hover {
-  background: rgba(139, 0, 0, 0.2) !important;
-  border-color: #8B0000 !important;
+  background: rgba(192, 57, 43, 0.2) !important;
+  border-color: #16213e !important;
   color: #fff !important;
 }
 
@@ -1130,7 +1130,7 @@ body .el-scrollbar__thumb:hover {
 .script-list-container .search-form .el-select .el-input .el-input__wrapper {
   background: rgba(35, 35, 60, 0.9) !important;
   background-color: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
   --el-input-bg-color: rgba(35, 35, 60, 0.9) !important;
   --el-fill-color-blank: rgba(35, 35, 60, 0.9) !important;
 }
@@ -1152,13 +1152,13 @@ body .el-scrollbar__thumb:hover {
 }
 
 .script-list-container .search-form .el-select .el-input.is-focus .el-input__wrapper {
-  box-shadow: 0 0 0 1px #8B0000 inset !important;
+  box-shadow: 0 0 0 1px #16213e inset !important;
 }
 
 /* el-select 选中的标签深色主题 */
 .script-list-container .search-form .el-select .el-tag {
-  background: rgba(139, 0, 0, 0.3) !important;
-  border-color: rgba(139, 0, 0, 0.5) !important;
+  background: rgba(192, 57, 43, 0.3) !important;
+  border-color: rgba(192, 57, 43, 0.5) !important;
   color: #ff6b6b !important;
 }
 
@@ -1168,7 +1168,7 @@ body .el-scrollbar__thumb:hover {
 }
 
 .script-list-container .search-form .el-select .el-tag .el-tag__close:hover {
-  background: rgba(139, 0, 0, 0.5) !important;
+  background: rgba(192, 57, 43, 0.5) !important;
   color: #fff !important;
 }
 
@@ -1176,7 +1176,7 @@ body .el-scrollbar__thumb:hover {
 .script-list-container .search-form .el-input .el-input__wrapper {
   background: rgba(35, 35, 60, 0.9) !important;
   background-color: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
   --el-input-bg-color: rgba(35, 35, 60, 0.9) !important;
   --el-fill-color-blank: rgba(35, 35, 60, 0.9) !important;
 }
@@ -1194,6 +1194,6 @@ body .el-scrollbar__thumb:hover {
 }
 
 .script-list-container .search-form .el-input.is-focus .el-input__wrapper {
-  box-shadow: 0 0 0 1px #8B0000 inset !important;
+  box-shadow: 0 0 0 1px #16213e inset !important;
 }
 </style>

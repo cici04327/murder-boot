@@ -235,14 +235,15 @@ const handleRegister = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
   padding: 20px;
 }
 
 .register-box {
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.28);
   padding: 40px;
   width: 100%;
   max-width: 400px;
@@ -255,13 +256,13 @@ const handleRegister = async () => {
 
 .register-header h2 {
   font-size: 28px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.9);
   margin: 0 0 10px;
 }
 
 .register-header p {
   font-size: 14px;
-  color: #999;
+  color: rgba(255, 255, 255, 0.6);
   margin: 0;
 }
 
@@ -273,7 +274,7 @@ const handleRegister = async () => {
   text-align: center;
   margin-top: 20px;
   font-size: 14px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.66);
 }
 
 .register-footer span {

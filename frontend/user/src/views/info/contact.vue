@@ -471,13 +471,13 @@ const resetForm = () => {
   text-align: center;
   box-shadow: 0 2px 12px rgba(0,0,0,0.2);
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .quick-contact-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(139, 0, 0, 0.25);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.25);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .contact-icon-wrapper {
@@ -488,7 +488,7 @@ const resetForm = () => {
   align-items: center;
   justify-content: center;
   margin: 0 auto 15px;
-  background: rgba(139, 0, 0, 0.2) !important;
+  background: rgba(192, 57, 43, 0.2) !important;
 }
 
 .contact-emoji {
@@ -519,7 +519,7 @@ const resetForm = () => {
   margin-bottom: 20px;
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   --el-card-bg-color: transparent !important;
 }
 
@@ -535,7 +535,7 @@ const resetForm = () => {
 
 .info-card :deep(.el-card__header) {
   background: transparent !important;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2) !important;
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2) !important;
 }
 
 .info-card :deep(.el-card__body) {
@@ -573,13 +573,13 @@ const resetForm = () => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 10px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .cooperation-item:hover {
   background: linear-gradient(135deg, rgba(45, 45, 75, 0.98) 0%, rgba(40, 55, 90, 0.98) 100%);
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .coop-icon {
@@ -631,7 +631,7 @@ const resetForm = () => {
 
 :deep(.el-collapse-item__header) {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 8px;
   margin-bottom: 10px;
   padding: 0 15px;
@@ -650,7 +650,7 @@ const resetForm = () => {
 
 :deep(.el-collapse-item__wrap) {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-top: none;
   border-radius: 0 0 8px 8px;
   margin-bottom: 10px;
@@ -676,7 +676,7 @@ const resetForm = () => {
   padding: 15px;
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 8px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .region-header {
@@ -709,7 +709,7 @@ const resetForm = () => {
 
 .feedback-form :deep(.el-input__wrapper) {
   background: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) !important;
 }
 
 .feedback-form :deep(.el-input__inner) {
@@ -727,7 +727,7 @@ const resetForm = () => {
 
 .feedback-form :deep(.el-textarea__inner) {
   background: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) !important;
   color: #fff !important;
 }
 
@@ -742,7 +742,7 @@ const resetForm = () => {
 
 .feedback-form :deep(.el-select .el-input__wrapper) {
   background: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) !important;
 }
 
 .feedback-form :deep(.el-select .el-input__inner) {
@@ -755,23 +755,23 @@ const resetForm = () => {
 
 .feedback-form :deep(.el-input__wrapper:hover),
 .feedback-form :deep(.el-textarea__inner:hover) {
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.5) !important;
 }
 
 .feedback-form :deep(.el-input__wrapper.is-focus),
 .feedback-form :deep(.el-textarea__inner:focus) {
-  box-shadow: 0 0 0 1px #8B0000 !important;
+  box-shadow: 0 0 0 1px #16213e !important;
 }
 
 .feedback-form :deep(.el-button--default) {
   background: rgba(35, 35, 60, 0.9) !important;
-  border-color: rgba(139, 0, 0, 0.3) !important;
+  border-color: rgba(192, 57, 43, 0.3) !important;
   color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .feedback-form :deep(.el-button--default:hover) {
   background: rgba(45, 45, 75, 0.95) !important;
-  border-color: rgba(139, 0, 0, 0.5) !important;
+  border-color: rgba(192, 57, 43, 0.5) !important;
   color: #fff !important;
 }
 
@@ -786,7 +786,7 @@ const resetForm = () => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 10px;
   margin-bottom: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .qrcode-placeholder {
@@ -838,13 +838,13 @@ const resetForm = () => {
   text-decoration: none;
   font-size: 14px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .social-link:hover {
-  background: #8B0000;
+  background: #16213e;
   color: #fff;
-  border-color: #8B0000;
+  border-color: #16213e;
 }
 
 /* 新手贴士 */
@@ -862,9 +862,9 @@ const resetForm = () => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 8px;
   border-left: 3px solid #f59e0b;
-  border-top: 1px solid rgba(139, 0, 0, 0.15);
-  border-right: 1px solid rgba(139, 0, 0, 0.15);
-  border-bottom: 1px solid rgba(139, 0, 0, 0.15);
+  border-top: 1px solid rgba(192, 57, 43, 0.15);
+  border-right: 1px solid rgba(192, 57, 43, 0.15);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.15);
 }
 
 .tip-icon {
@@ -943,7 +943,7 @@ const resetForm = () => {
 
 .contact-page .info-card.el-card .el-card__header {
   background: transparent !important;
-  border-bottom-color: rgba(139, 0, 0, 0.2) !important;
+  border-bottom-color: rgba(192, 57, 43, 0.2) !important;
 }
 
 .contact-page .info-card.el-card .el-card__body {
@@ -962,7 +962,7 @@ const resetForm = () => {
 /* 修复 el-select 下拉面板蓝紫色 */
 .contact-page .el-select-dropdown {
   background: rgba(26, 26, 46, 0.98) !important;
-  border: 1px solid rgba(139, 0, 0, 0.3) !important;
+  border: 1px solid rgba(192, 57, 43, 0.3) !important;
 }
 
 .contact-page .el-select-dropdown .el-select-dropdown__item {
@@ -971,6 +971,6 @@ const resetForm = () => {
 
 .contact-page .el-select-dropdown .el-select-dropdown__item.hover,
 .contact-page .el-select-dropdown .el-select-dropdown__item:hover {
-  background: rgba(139, 0, 0, 0.2) !important;
+  background: rgba(192, 57, 43, 0.2) !important;
 }
 </style>

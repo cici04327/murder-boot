@@ -135,13 +135,13 @@ export default {
 .section-title {
   font-size: 24px;
   font-weight: bold;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.88);
   margin-bottom: 5px;
 }
 
 .section-subtitle {
   font-size: 14px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.56);
 }
 
 .script-list {
@@ -169,7 +169,8 @@ export default {
 }
 
 .script-item {
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
@@ -189,7 +190,7 @@ export default {
   left: 10px;
   width: 32px;
   height: 32px;
-  background: #8B0000;
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -206,7 +207,7 @@ export default {
   height: 160px;
   position: relative;
   overflow: hidden;
-  background: #f0f0f0;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
 }
 
 .cover-image {
@@ -227,8 +228,8 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f5f7fa;
-  color: #c0c4cc;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 36px;
   gap: 8px;
 }
@@ -244,14 +245,14 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f0f0f0;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
 }
 
 .loading-spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(139, 0, 0, 0.3);
-  border-top-color: #8B0000;
+  border: 3px solid rgba(224, 90, 71, 0.22);
+  border-top-color: #e05a47;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -296,7 +297,7 @@ export default {
 .script-name {
   font-size: 16px;
   font-weight: bold;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.88);
   margin-bottom: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -319,8 +320,8 @@ export default {
 
 .tag-item {
   font-size: 12px;
-  color: #909399;
-  background: #f4f4f5;
+  color: rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.08);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -338,7 +339,7 @@ export default {
 .script-price {
   font-size: 18px;
   font-weight: bold;
-  color: #ff5733;
+  color: #ffd166;
 }
 
 @media (max-width: 767px) {

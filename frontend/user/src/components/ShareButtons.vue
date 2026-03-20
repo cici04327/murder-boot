@@ -124,7 +124,7 @@ const shareToQQ = () => {
   border-radius: 12px;
   color: white;
   text-align: center;
-  border: 1px solid rgba(139, 0, 0, 0.3);
+  border: 1px solid rgba(192, 57, 43, 0.3);
 }
 
 .share-title {
@@ -145,17 +145,17 @@ const shareToQQ = () => {
 }
 
 .share-actions .el-button {
-  background: rgba(139, 0, 0, 0.3);
-  border: 1px solid rgba(139, 0, 0, 0.4);
+  background: rgba(192, 57, 43, 0.3);
+  border: 1px solid rgba(192, 57, 43, 0.4);
   color: #fff;
   transition: all 0.3s;
 }
 
 .share-actions .el-button:hover {
-  background: #8B0000;
-  border-color: #8B0000;
+  background: #16213e;
+  border-color: #16213e;
   transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
   color: #fff;
 }
 
@@ -168,7 +168,7 @@ const shareToQQ = () => {
   height: 200px;
   margin: 0 auto 15px;
   background: rgba(35, 35, 60, 0.9);
-  border: 2px dashed rgba(139, 0, 0, 0.4);
+  border: 2px dashed rgba(192, 57, 43, 0.4);
   border-radius: 8px;
   display: flex;
   align-items: center;

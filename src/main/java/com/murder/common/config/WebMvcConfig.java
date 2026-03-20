@@ -41,7 +41,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/api/script/category/**",
                     "/api/script/review/page",
                     "/api/script/review/*",
-                    "/api/script/favorite/*/status",
                     
                     // ========== 门店相关（公开） ==========
                     "/api/store/page",

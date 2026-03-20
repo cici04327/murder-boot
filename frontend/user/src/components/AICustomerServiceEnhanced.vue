@@ -692,20 +692,20 @@ onUnmounted(() => {
 .service-bubble {
   width: 60px;
   height: 60px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.4);
   transition: all 0.3s;
   position: relative;
 }
 
 .service-bubble:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+  box-shadow: 0 6px 16px rgba(192, 57, 43, 0.5);
 }
 
 .service-bubble.has-unread {
@@ -756,7 +756,7 @@ onUnmounted(() => {
 .chat-window {
   width: min(380px, 92vw);
   height: min(600px, 85vh);
-  background: white;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
   border-radius: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -784,7 +784,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
   color: white;
 }
 
@@ -833,7 +833,7 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background: #f5f7fa;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .message-wrapper {
@@ -872,12 +872,12 @@ onUnmounted(() => {
 }
 
 .message.bot .message-bubble {
-  background: white;
-  border: 1px solid #e4e7ed;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.16);
 }
 
 .message.user .message-bubble {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
   color: white;
 }
 
@@ -897,7 +897,7 @@ onUnmounted(() => {
 .message-feedback {
   margin-top: 8px;
   padding: 8px;
-  background: #f0f2f5;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -908,14 +908,14 @@ onUnmounted(() => {
 .message-time {
   margin-top: 4px;
   font-size: 12px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.46);
 }
 
 .typing-indicator {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  background: white;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
   border-radius: 12px;
   width: fit-content;
 }
@@ -939,14 +939,14 @@ onUnmounted(() => {
 
 .quick-questions {
   padding: 16px;
-  background: #f5f7fa;
-  border-top: 1px solid #e4e7ed;
+  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(192, 57, 43, 0.16);
 }
 
 .quick-title {
   font-size: 14px;
   font-weight: bold;
-  color: #606266;
+  color: rgba(255, 255, 255, 0.64);
   margin-bottom: 12px;
 }
 
@@ -958,15 +958,15 @@ onUnmounted(() => {
 
 .chat-input {
   padding: 16px;
-  background: white;
-  border-top: 1px solid #e4e7ed;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border-top: 1px solid rgba(192, 57, 43, 0.16);
 }
 
 .chat-footer {
   padding: 8px 16px;
   text-align: center;
-  background: #f5f7fa;
-  border-top: 1px solid #e4e7ed;
+  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(192, 57, 43, 0.16);
 }
 
 /* 动画 */
@@ -1081,7 +1081,7 @@ onUnmounted(() => {
 }
 
 .message-copy:hover {
-  color: #667eea;
+  color: #c0392b;
 }
 
 /* 重试按钮 */
@@ -1112,7 +1112,7 @@ onUnmounted(() => {
 }
 
 .quick-questions.collapsed .quick-title:hover {
-  color: #667eea;
+  color: #c0392b;
 }
 
 .quick-toggle {
@@ -1127,26 +1127,26 @@ onUnmounted(() => {
 /* 转人工按钮栏 */
 .transfer-bar {
   padding: 4px 16px;
-  background: #fff;
-  border-top: 1px solid #f0f0f0;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border-top: 1px solid rgba(192, 57, 43, 0.14);
   display: flex;
   justify-content: center;
 }
 
 .transfer-bar .el-button {
-  color: #909399;
+  color: rgba(255, 255, 255, 0.46);
   font-size: 12px;
 }
 
 .transfer-bar .el-button:hover {
-  color: #667eea;
+  color: #c0392b;
 }
 
 /* 人工客服系统消息 */
 .human-system-msg {
   text-align: center;
   font-size: 12px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.46);
   background: rgba(0, 0, 0, 0.04);
   border-radius: 12px;
   padding: 6px 16px;
@@ -1164,7 +1164,7 @@ onUnmounted(() => {
 }
 
 :deep(.kb-answer strong) {
-  color: #667eea;
+  color: #c0392b;
 }
 
 :deep(.kb-answer ol),

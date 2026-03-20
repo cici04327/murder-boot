@@ -231,7 +231,7 @@
       <el-row :gutter="15">
         <el-col :xs="12" :sm="8" :md="6" v-for="action in quickActions" :key="action.name">
           <div class="quick-action-item mystery-action" @click="handleQuickAction(action.path)">
-            <div class="action-icon-wrap" :style="{background: action.gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'}">
+            <div class="action-icon-wrap" :style="{background: action.gradient || 'linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%)'}">
               <span class="action-emoji">{{ action.emoji }}</span>
             </div>
             <div class="action-name">{{ action.name }}</div>
@@ -472,7 +472,7 @@ const detectiveLevels = [
 const recentCases = ref([])
 
 const quickActions = ref([
-  { name: '探索剧本', path: '/script', emoji: '🔍', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { name: '探索剧本', path: '/script', emoji: '🔍', gradient: 'linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%)' },
   { name: '案件记录', path: '/user/reservations', emoji: '📋', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
   { name: '剧本收藏', path: '/user/favorites', emoji: '⭐', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
   { name: '道具背包', path: '/user/coupons', emoji: '🎒', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
@@ -990,7 +990,7 @@ export default {
 .mystery-card {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(102, 126, 234, 0.2) !important;
+  border: 1px solid rgba(192, 57, 43, 0.2) !important;
   border-radius: 16px !important;
   position: relative;
   z-index: 1;
@@ -1026,12 +1026,12 @@ export default {
   position: relative;
   padding: 6px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
 }
 
 .avatar-ring.level-common { background: linear-gradient(135deg, #909399 0%, #606266 100%); }
 .avatar-ring.level-uncommon { background: linear-gradient(135deg, #67C23A 0%, #409EFF 100%); }
-.avatar-ring.level-rare { background: linear-gradient(135deg, #409EFF 0%, #764ba2 100%); }
+.avatar-ring.level-rare { background: linear-gradient(135deg, #409EFF 0%, #7a1d1d 100%); }
 .avatar-ring.level-epic { background: linear-gradient(135deg, #E6A23C 0%, #F56C6C 100%); }
 .avatar-ring.level-legendary { 
   background: linear-gradient(135deg, #FFD700 0%, #FF6B6B 50%, #9B59B6 100%);
@@ -1104,11 +1104,11 @@ export default {
 .title-badge {
   display: inline-block;
   padding: 4px 12px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.3) 0%, rgba(122, 29, 29, 0.3) 100%);
   border-radius: 20px;
   font-size: 14px;
   color: #a0d2ff;
-  border: 1px solid rgba(102, 126, 234, 0.5);
+  border: 1px solid rgba(192, 57, 43, 0.5);
   margin-bottom: 8px;
 }
 
@@ -1123,7 +1123,7 @@ export default {
 
 .exp-progress {
   height: 100%;
-  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(90deg, #c0392b 0%, #7a1d1d 100%);
   border-radius: 4px;
   transition: width 0.5s ease;
 }
@@ -1160,7 +1160,7 @@ export default {
 }
 
 .mystery-btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%) !important;
   border: none !important;
 }
 
@@ -1184,7 +1184,7 @@ export default {
 /* 统计卡片 */
 .stat-card {
   background: linear-gradient(135deg, rgba(40, 40, 70, 0.9) 0%, rgba(30, 30, 55, 0.9) 100%);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 16px;
   padding: 20px;
   position: relative;
@@ -1195,7 +1195,7 @@ export default {
 
 .stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.25);
+  box-shadow: 0 12px 30px rgba(192, 57, 43, 0.25);
 }
 
 .stat-card-original {
@@ -1209,7 +1209,7 @@ export default {
 
 .mystery-stat-card {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(102, 126, 234, 0.2) !important;
+  border: 1px solid rgba(192, 57, 43, 0.2) !important;
 }
 
 .stat-decoration {
@@ -1238,7 +1238,7 @@ export default {
   justify-content: center;
 }
 
-.stat-cases .stat-icon-wrap { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+.stat-cases .stat-icon-wrap { background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%); }
 .stat-scripts .stat-icon-wrap { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
 .stat-clues .stat-icon-wrap { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
 .stat-items .stat-icon-wrap { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
@@ -1256,7 +1256,7 @@ export default {
   font-weight: bold;
   line-height: 1;
   margin-bottom: 5px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -1275,7 +1275,7 @@ export default {
   opacity: 0.3;
 }
 
-.stat-cases .stat-value { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; background-clip: text; }
+.stat-cases .stat-value { background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%); -webkit-background-clip: text; background-clip: text; }
 .stat-scripts .stat-value { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); -webkit-background-clip: text; background-clip: text; }
 .stat-clues .stat-value { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); -webkit-background-clip: text; background-clip: text; }
 .stat-items .stat-value { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); -webkit-background-clip: text; background-clip: text; }
@@ -1308,7 +1308,7 @@ export default {
   gap: 15px;
   padding: 20px;
   background: linear-gradient(135deg, rgba(40, 40, 70, 0.9) 0%, rgba(30, 30, 55, 0.9) 100%);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   cursor: pointer;
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
@@ -1377,7 +1377,7 @@ export default {
 
 .pending-warning::before { background: linear-gradient(180deg, #E6A23C 0%, #F56C6C 100%); }
 .pending-success::before { background: linear-gradient(180deg, #67C23A 0%, #409EFF 100%); }
-.pending-primary::before { background: linear-gradient(180deg, #409EFF 0%, #764ba2 100%); }
+.pending-primary::before { background: linear-gradient(180deg, #409EFF 0%, #7a1d1d 100%); }
 
 /* 侦探工具箱 */
 .quick-actions-section {
@@ -1391,7 +1391,7 @@ export default {
   gap: 12px;
   padding: 20px 10px;
   background: linear-gradient(135deg, rgba(40, 40, 70, 0.9) 0%, rgba(30, 30, 55, 0.9) 100%);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 16px;
   cursor: pointer;
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
@@ -1438,7 +1438,7 @@ export default {
   align-items: center;
   padding: 20px 15px;
   background: linear-gradient(135deg, rgba(40, 40, 70, 0.7) 0%, rgba(30, 30, 55, 0.7) 100%);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 16px;
   text-align: center;
   margin-bottom: 15px;
@@ -1453,7 +1453,7 @@ export default {
 .mystery-achievement.achievement-unlocked {
   opacity: 1;
   background: linear-gradient(135deg, rgba(50, 50, 80, 0.95) 0%, rgba(40, 40, 65, 0.95) 100%);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.2);
 }
 
 .achievement-badge {
@@ -1589,7 +1589,7 @@ export default {
 .case-content {
   flex: 1;
   background: linear-gradient(135deg, rgba(40, 40, 70, 0.9) 0%, rgba(30, 30, 55, 0.9) 100%);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   padding: 15px;
   border-radius: 12px;
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
@@ -1597,7 +1597,7 @@ export default {
 }
 
 .case-content:hover {
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.2);
   transform: translateX(3px) translateZ(0);
 }
 

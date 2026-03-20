@@ -84,7 +84,7 @@ import SkeletonStoreCard from './SkeletonStoreCard.vue'
 <style scoped>
 .skeleton-home {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
 }
 
 .skeleton-banner {
@@ -101,11 +101,12 @@ import SkeletonStoreCard from './SkeletonStoreCard.vue'
 }
 
 .skeleton-stat-card {
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   padding: 24px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
 .skeleton-quick-entry {
@@ -115,7 +116,8 @@ import SkeletonStoreCard from './SkeletonStoreCard.vue'
 }
 
 .skeleton-entry-card {
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   padding: 30px 20px;
   text-align: center;
@@ -146,7 +148,8 @@ import SkeletonStoreCard from './SkeletonStoreCard.vue'
 .skeleton-horizontal-card {
   flex-shrink: 0;
   width: 280px;
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   padding: 16px;
 }
@@ -157,7 +160,7 @@ import SkeletonStoreCard from './SkeletonStoreCard.vue'
 }
 
 .skeleton-horizontal-scroll::-webkit-scrollbar-thumb {
-  background: #ddd;
+  background: rgba(192, 57, 43, 0.3);
   border-radius: 3px;
 }
 

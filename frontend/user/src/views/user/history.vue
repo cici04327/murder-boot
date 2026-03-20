@@ -697,7 +697,7 @@ onMounted(() => {
 }
 
 .filter-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-color: transparent;
   color: #fff;
 }
@@ -773,7 +773,7 @@ onMounted(() => {
 }
 
 .count-badge {
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   color: #a0b4ff;
   padding: 4px 12px;
   border-radius: 12px;
@@ -812,7 +812,7 @@ onMounted(() => {
 
 .history-item:hover {
   background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(102, 126, 234, 0.3);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 /* 封面 */
@@ -870,7 +870,7 @@ onMounted(() => {
 }
 
 .type-script {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
 }
 
@@ -909,7 +909,7 @@ onMounted(() => {
 }
 
 .meta-tag {
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   color: #a0b4ff;
   padding: 2px 10px;
   border-radius: 4px;
@@ -947,7 +947,7 @@ onMounted(() => {
 }
 
 .btn-detail {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   border: none;
   padding: 8px 16px;
@@ -959,7 +959,7 @@ onMounted(() => {
 
 .btn-detail:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 .btn-delete {
@@ -1043,7 +1043,7 @@ onMounted(() => {
 }
 
 .btn-explore {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   border: none;
   padding: 12px 32px;
@@ -1055,7 +1055,7 @@ onMounted(() => {
 
 .btn-explore:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.4);
 }
 
 /* ========== 加载更多 ========== */
@@ -1089,13 +1089,13 @@ onMounted(() => {
 .backtop-btn {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 /* ========== 响应式 ========== */

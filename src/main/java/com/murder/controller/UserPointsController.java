@@ -1,9 +1,12 @@
 package com.murder.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
 import com.murder.entity.UserPointsRecord;
+import com.murder.mapper.UserPointsRecordMapper;
+import com.murder.service.ScriptFavoriteService;
 import com.murder.vo.UserPointsRecordVO;
 import com.murder.service.UserPointsService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +30,12 @@ public class UserPointsController {
 
     @Autowired
     private UserPointsService userPointsService;
+
+    @Autowired
+    private ScriptFavoriteService scriptFavoriteService;
+
+    @Autowired
+    private UserPointsRecordMapper userPointsRecordMapper;
 
     /**
      * 获取当前用户积分信息（含统计�?
@@ -216,6 +225,87 @@ public class UserPointsController {
         
         Map<String, Object> tasksStatus = userPointsService.getTasksStatus(userId);
         return Result.success(tasksStatus);
+    }
+
+    /**
+     * 检查完善资料任务
+     */
+    @PostMapping("/task/complete-profile")
+    @Operation(summary = "检查完善资料任务")
+    public Result<Map<String, Object>> checkCompleteProfileTask() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("请先登录");
+        }
+
+        Map<String, Object> taskStatus = userPointsService.getTasksStatus(userId);
+        boolean profileCompleted = Boolean.TRUE.equals(taskStatus.get("hasCompleteProfile"));
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("completed", false);
+        data.put("alreadyCompleted", false);
+
+        if (!profileCompleted) {
+            return Result.success(data);
+        }
+
+        LambdaQueryWrapper<UserPointsRecord> rewardWrapper = new LambdaQueryWrapper<>();
+        rewardWrapper.eq(UserPointsRecord::getUserId, userId)
+                .eq(UserPointsRecord::getDescription, "完善个人资料");
+
+        Long rewardCount = userPointsRecordMapper.selectCount(rewardWrapper);
+        if (rewardCount != null && rewardCount > 0) {
+            data.put("completed", true);
+            data.put("alreadyCompleted", true);
+            return Result.success(data);
+        }
+
+        userPointsService.addPoints(userId, 30, "完善个人资料");
+        data.put("completed", true);
+        data.put("alreadyCompleted", false);
+        return Result.success(data);
+    }
+
+    /**
+     * 检查收藏剧本任务
+     */
+    @PostMapping("/task/check-favorite")
+    @Operation(summary = "检查收藏剧本任务")
+    public Result<Map<String, Object>> checkFavoriteTask() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("请先登录");
+        }
+
+        int currentFavorites = Math.max(scriptFavoriteService.getFavoriteCount(userId), 0);
+        int requiredFavorites = currentFavorites >= 5 ? ((currentFavorites / 5) + (currentFavorites % 5 == 0 ? 0 : 1)) * 5 : 5;
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("currentFavorites", currentFavorites);
+        data.put("requiredFavorites", requiredFavorites);
+        data.put("completed", false);
+        data.put("alreadyCompleted", false);
+
+        if (currentFavorites < 5 || currentFavorites % 5 != 0) {
+            return Result.success(data);
+        }
+
+        String milestoneDescription = "收藏剧本达到" + currentFavorites + "个";
+        LambdaQueryWrapper<UserPointsRecord> rewardWrapper = new LambdaQueryWrapper<>();
+        rewardWrapper.eq(UserPointsRecord::getUserId, userId)
+                .eq(UserPointsRecord::getDescription, milestoneDescription);
+
+        Long rewardCount = userPointsRecordMapper.selectCount(rewardWrapper);
+        if (rewardCount != null && rewardCount > 0) {
+            data.put("completed", true);
+            data.put("alreadyCompleted", true);
+            return Result.success(data);
+        }
+
+        userPointsService.addPoints(userId, 20, milestoneDescription);
+        data.put("completed", true);
+        data.put("alreadyCompleted", false);
+        return Result.success(data);
     }
     
     /**

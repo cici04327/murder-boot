@@ -176,25 +176,25 @@
         <section class="info-section scroll-reveal">
           <h3>📅 发展历程</h3>
           <el-timeline>
-            <el-timeline-item timestamp="2024年" placement="top" color="#8B0000">
+            <el-timeline-item timestamp="2024年" placement="top" color="#16213e">
               <el-card class="timeline-card">
                 <h4>🚀 全面升级</h4>
                 <p>平台2.0版本上线，新增AI智能推荐、实时拼车、VIP会员体系</p>
               </el-card>
             </el-timeline-item>
-            <el-timeline-item timestamp="2023年" placement="top" color="#8B0000">
+            <el-timeline-item timestamp="2023年" placement="top" color="#16213e">
               <el-card class="timeline-card">
                 <h4>📈 快速增长</h4>
                 <p>合作门店突破100家，累计服务用户超过10万人次，获得行业认可</p>
               </el-card>
             </el-timeline-item>
-            <el-timeline-item timestamp="2022年" placement="top" color="#8B0000">
+            <el-timeline-item timestamp="2022年" placement="top" color="#16213e">
               <el-card class="timeline-card">
                 <h4>🌱 初具规模</h4>
                 <p>完成首轮融资，技术团队扩充，引入智能匹配算法</p>
               </el-card>
             </el-timeline-item>
-            <el-timeline-item timestamp="2021年" placement="top" color="#8B0000">
+            <el-timeline-item timestamp="2021年" placement="top" color="#16213e">
               <el-card class="timeline-card">
                 <h4>🎬 梦想起航</h4>
                 <p>平台正式成立，由一群热爱剧本杀的年轻人创建</p>
@@ -446,13 +446,13 @@ const scriptTypes = ref([
   border-radius: 12px;
   text-align: center;
   transition: all 0.3s;
-  border: 2px solid rgba(139, 0, 0, 0.3);
+  border: 2px solid rgba(192, 57, 43, 0.3);
 }
 
 .script-type-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(139, 0, 0, 0.25);
-  border-color: #8B0000;
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.25);
+  border-color: #16213e;
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.98) 0%, rgba(30, 45, 80, 0.98) 100%);
 }
 
@@ -487,7 +487,7 @@ const scriptTypes = ref([
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   border-radius: 12px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .info-content {
@@ -500,7 +500,7 @@ const scriptTypes = ref([
   padding: 25px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .info-section:last-child {
@@ -512,7 +512,7 @@ const scriptTypes = ref([
   color: #fff;
   margin-bottom: 25px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #8B0000;
+  border-bottom: 2px solid #16213e;
   display: inline-block;
 }
 
@@ -538,13 +538,13 @@ const scriptTypes = ref([
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.2);
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.25);
+  border: 1px solid rgba(192, 57, 43, 0.25);
 }
 
 .mission-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(139,0,0,0.3);
-  border-color: #8B0000;
+  box-shadow: 0 8px 25px rgba(192, 57, 43,0.3);
+  border-color: #16213e;
 }
 
 .mission-icon {
@@ -572,13 +572,13 @@ const scriptTypes = ref([
   border-radius: 12px;
   margin-bottom: 20px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.25);
+  border: 1px solid rgba(192, 57, 43, 0.25);
 }
 
 .advantage-item:hover {
   transform: translateY(-8px);
-  box-shadow: 0 12px 30px rgba(139,0,0,0.3);
-  border-color: #8B0000;
+  box-shadow: 0 12px 30px rgba(192, 57, 43,0.3);
+  border-color: #16213e;
 }
 
 .advantage-icon {
@@ -614,18 +614,18 @@ const scriptTypes = ref([
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 12px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .guide-item:hover {
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .guide-step {
   width: 40px;
   height: 40px;
-  background: #8B0000;
+  background: #16213e;
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -651,7 +651,7 @@ const scriptTypes = ref([
 /* 时间线 */
 .timeline-card {
   box-shadow: none;
-  border: 1px solid rgba(139, 0, 0, 0.25);
+  border: 1px solid rgba(192, 57, 43, 0.25);
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%) !important;
 }
 
@@ -682,12 +682,12 @@ const scriptTypes = ref([
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 10px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .contact-card:hover {
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .contact-card .el-icon {

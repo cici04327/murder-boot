@@ -136,9 +136,16 @@ defineExpose({
 
 <style scoped>
 .search-history {
+  --history-text: #f4e8eb;
+  --history-muted: rgba(244, 232, 235, 0.68);
+  --history-soft: rgba(255, 234, 239, 0.07);
+  --history-border: rgba(255, 234, 239, 0.1);
   padding: 20px;
-  background: #fff;
-  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(33, 24, 39, 0.96) 0%, rgba(21, 16, 28, 0.96) 100%);
+  border-radius: 16px;
+  border: 1px solid var(--history-border);
+  box-shadow: 0 20px 44px rgba(9, 7, 15, 0.32);
+  backdrop-filter: blur(18px);
 }
 
 .history-section,
@@ -164,12 +171,12 @@ defineExpose({
   gap: 8px;
   font-size: 16px;
   font-weight: 500;
-  color: #303133;
+  color: var(--history-text);
 }
 
 .section-title .el-icon {
   font-size: 18px;
-  color: #409eff;
+  color: #d9899a;
 }
 
 .history-tags {
@@ -181,11 +188,15 @@ defineExpose({
 .history-tag {
   cursor: pointer;
   transition: all 0.3s;
+  background: var(--history-soft);
+  border-color: var(--history-border);
+  color: var(--history-text);
 }
 
 .history-tag:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 24px rgba(12, 9, 18, 0.22);
+  border-color: rgba(216, 137, 154, 0.35);
 }
 
 .hot-search-list {
@@ -199,14 +210,15 @@ defineExpose({
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: var(--history-soft);
+  border: 1px solid var(--history-border);
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .hot-search-item:hover {
-  background: #ecf5ff;
+  background: rgba(193, 101, 124, 0.12);
   transform: translateX(4px);
 }
 
@@ -218,8 +230,8 @@ defineExpose({
   height: 24px;
   font-size: 14px;
   font-weight: 500;
-  color: #909399;
-  background: #fff;
+  color: var(--history-muted);
+  background: rgba(255, 234, 239, 0.08);
   border-radius: 4px;
   flex-shrink: 0;
 }
@@ -232,7 +244,7 @@ defineExpose({
 .keyword {
   flex: 1;
   font-size: 14px;
-  color: #303133;
+  color: var(--history-text);
 }
 
 .trend {
@@ -241,11 +253,28 @@ defineExpose({
 }
 
 .trend-up {
-  color: #f56c6c;
+  color: #ff8ca3;
 }
 
 .trend-down {
-  color: #67c23a;
+  color: #81d5a1;
+}
+
+.search-history :deep(.el-button.is-text),
+.search-history :deep(.el-button--text) {
+  color: var(--history-muted);
+}
+
+.search-history :deep(.el-button.is-text:hover),
+.search-history :deep(.el-button--text:hover) {
+  color: #fff1f4;
+  background: rgba(255, 234, 239, 0.06);
+}
+
+.search-history :deep(.el-tag) {
+  --el-tag-bg-color: rgba(255, 234, 239, 0.08);
+  --el-tag-border-color: rgba(255, 234, 239, 0.1);
+  --el-tag-text-color: #f4e8eb;
 }
 
 /* 响应式 */
@@ -263,31 +292,5 @@ defineExpose({
   }
 }
 
-/* 深色模式 */
-@media (prefers-color-scheme: dark) {
-  .search-history {
-    background: #1a1a1a;
-  }
-  
-  .section-title {
-    color: #e0e0e0;
-  }
-  
-  .hot-search-item {
-    background: #2a2a2a;
-  }
-  
-  .hot-search-item:hover {
-    background: #363636;
-  }
-  
-  .keyword {
-    color: #e0e0e0;
-  }
-  
-  .rank {
-    background: #2a2a2a;
-  }
-}
 </style>
 

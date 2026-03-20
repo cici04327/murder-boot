@@ -69,12 +69,13 @@ export default {
 
 <style scoped>
 .script-card {
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
 .script-card:hover {
@@ -87,7 +88,7 @@ export default {
   height: 150px;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
 }
 
 .cover-image {
@@ -108,8 +109,8 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: #f5f7fa;
-  color: #c0c4cc;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 32px;
   gap: 6px;
 }
@@ -117,7 +118,7 @@ export default {
 .image-error p {
   font-size: 11px;
   margin: 0;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .image-loading {
@@ -126,7 +127,7 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
 }
 
 .loading-spinner {
@@ -148,7 +149,7 @@ export default {
   position: absolute;
   top: 10px;
   left: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   padding: 4px 12px;
   border-radius: 12px;
@@ -178,7 +179,7 @@ export default {
 .script-title {
   font-size: 14px;
   font-weight: bold;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.88);
   margin-bottom: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -191,7 +192,7 @@ export default {
   gap: 10px;
   margin-bottom: 6px;
   font-size: 12px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .info-item {
@@ -203,7 +204,7 @@ export default {
 .script-price {
   font-size: 16px;
   font-weight: bold;
-  color: #ff5733;
+  color: #ffd166;
 }
 
 @media (max-width: 767px) {

@@ -67,6 +67,7 @@
                 <el-upload
                   class="avatar-uploader"
                   action="/api/user/upload/avatar"
+                  :headers="uploadHeaders"
                   :show-file-list="false"
                   :on-success="handleAvatarSuccess"
                   :before-upload="beforeAvatarUpload"
@@ -227,7 +228,7 @@
                   <p class="item-desc">查看最近的登录记录</p>
                 </div>
               </div>
-              <el-button @click="showLoginLogDialog = true">查看</el-button>
+              <el-button @click="openLoginLogDialog">查看</el-button>
             </div>
           </div>
         </el-card>
@@ -635,12 +636,13 @@ import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useTheme } from '@/composables/useTheme'
 import {
   User, Lock, View, Bell, Setting, UserFilled, Camera, Phone,
   Message, CreditCard, Document
 } from '@element-plus/icons-vue'
 import {
-  updateUserInfo, updatePassword, uploadAvatar,
+  updateUserInfo, updatePassword,
   sendPhoneCode, bindPhone, sendEmailCode, bindEmail,
   realNameVerify, getLoginLogs,
   getPrivacySettings, updatePrivacySettings,
@@ -652,6 +654,8 @@ import { clearBrowseHistory } from '@/api/history'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { setTheme } = useTheme()
+const uploadHeaders = computed(() => (userStore.token ? { token: userStore.token } : {}))
 
 // 当前激活的标签页
 const activeTab = ref('basic')
@@ -895,11 +899,13 @@ const handleSaveBasic = async () => {
       bio: basicForm.bio
     })
     if (res.code === 1 || res.code === 200) {
-      // 同步更新 store
-      userStore.userInfo.nickname = basicForm.nickname
-      userStore.userInfo.gender = basicForm.gender
-      userStore.userInfo.birthday = basicForm.birthday
-      userStore.userInfo.bio = basicForm.bio
+      userStore.updateUserInfo({
+        nickname: basicForm.nickname,
+        gender: basicForm.gender,
+        birthday: basicForm.birthday,
+        bio: basicForm.bio
+      })
+      await userStore.loadUserInfo()
       ElMessage.success('保存成功')
     } else {
       ElMessage.error(res.msg || '保存失败')
@@ -932,7 +938,7 @@ const handleAvatarSuccess = (response) => {
   if (response.code === 1 || response.code === 200) {
     const url = response.data?.url || response.data
     basicForm.avatar = url
-    userStore.userInfo.avatar = url
+    userStore.updateUserInfo({ avatar: url })
     ElMessage.success('头像上传成功')
   } else {
     ElMessage.error(response.msg || '头像上传失败')
@@ -976,7 +982,8 @@ const handleSendPhoneCode = async () => {
   try {
     const res = await sendPhoneCode(phoneForm.phone)
     if (res.code === 1 || res.code === 200) {
-      ElMessage.success('验证码已发送')
+      const debugCode = res.data?.debugCode
+      ElMessage.success(debugCode ? `验证码已发送，开发环境验证码：${debugCode}` : '验证码已发送')
       countdown.value = 60
       const timer = setInterval(() => { countdown.value--; if (countdown.value <= 0) clearInterval(timer) }, 1000)
     } else {
@@ -994,7 +1001,8 @@ const handleSendEmailCode = async () => {
   try {
     const res = await sendEmailCode(emailForm.email)
     if (res.code === 1 || res.code === 200) {
-      ElMessage.success('验证码已发送到您的邮箱')
+      const debugCode = res.data?.debugCode
+      ElMessage.success(debugCode ? `验证码已发送到您的邮箱，开发环境验证码：${debugCode}` : '验证码已发送到您的邮箱')
       countdown.value = 60
       const timer = setInterval(() => { countdown.value--; if (countdown.value <= 0) clearInterval(timer) }, 1000)
     } else {
@@ -1013,6 +1021,7 @@ const handleUpdatePhone = async () => {
     const res = await bindPhone({ phone: phoneForm.phone, code: phoneForm.code })
     if (res.code === 1 || res.code === 200) {
       securityInfo.value.phone = phoneForm.phone
+      userStore.updateUserInfo({ phone: phoneForm.phone, phoneVerified: 1 })
       ElMessage.success('手机号绑定成功')
       showPhoneDialog.value = false
       phoneForm.phone = ''; phoneForm.code = ''
@@ -1035,6 +1044,7 @@ const handleUpdateEmail = async () => {
     const res = await bindEmail({ email: emailForm.email, code: emailForm.code })
     if (res.code === 1 || res.code === 200) {
       securityInfo.value.email = emailForm.email
+      userStore.updateUserInfo({ email: emailForm.email, emailVerified: 1 })
       ElMessage.success('邮箱绑定成功')
       showEmailDialog.value = false
       emailForm.email = ''; emailForm.code = ''
@@ -1057,6 +1067,7 @@ const handleRealNameVerify = async () => {
     const res = await realNameVerify({ realName: realNameForm.realName, idCard: realNameForm.idCard })
     if (res.code === 1 || res.code === 200) {
       securityInfo.value.realNameVerified = true
+      userStore.updateUserInfo({ realName: realNameForm.realName, realNameVerified: 1 })
       ElMessage.success('实名认证提交成功')
       showRealNameDialog.value = false
       realNameForm.realName = ''; realNameForm.idCard = ''
@@ -1086,6 +1097,12 @@ const loadLoginLogs = async () => {
     loginLogs.value = []
     loginLogTotal.value = 0
   }
+}
+
+const openLoginLogDialog = async () => {
+  showLoginLogDialog.value = true
+  loginLogPage.value = 1
+  await loadLoginLogs()
 }
 
 // 隐私设置变更
@@ -1121,6 +1138,7 @@ const handlePreferenceChange = async () => {
   try {
     const res = await updatePreferenceSettings({ ...preferenceSettings })
     if (res.code === 1 || res.code === 200) {
+      applyPreferenceSideEffects()
       ElMessage.success('设置已保存')
     } else {
       ElMessage.error(res.msg || '保存失败')
@@ -1160,7 +1178,7 @@ const handleDeactivateAccount = () => {
     inputErrorMessage: '请输入"确认注销"'
   }).then(async () => {
     try {
-      const res = await deactivateAccount({})
+      const res = await deactivateAccount({ confirmText: '确认注销' })
       if (res.code === 1 || res.code === 200) {
         ElMessage.success('账号已注销')
         setTimeout(() => {
@@ -1190,7 +1208,8 @@ const maskEmail = (email) => {
 }
 
 // 加载用户数据
-const loadUserData = () => {
+const loadUserData = async () => {
+  await userStore.loadUserInfo()
   const user = userStore.userInfo
   if (user) {
     basicForm.avatar = user.avatar || ''
@@ -1202,10 +1221,12 @@ const loadUserData = () => {
 
     securityInfo.value.phone = user.phone || ''
     securityInfo.value.email = user.email || ''
-    securityInfo.value.realNameVerified = user.realNameVerified || false
+    securityInfo.value.realNameVerified = !!user.realNameVerified
+    securityInfo.value.hasPassword = true
 
     accountInfo.value.userId = user.id || ''
     accountInfo.value.createTime = user.createTime ? new Date(user.createTime).toLocaleDateString() : ''
+    accountInfo.value.status = Number(user.status) === 1 ? '正常' : '禁用'
     accountInfo.value.vipLevel = user.memberLevel || user.vipLevel || 0
   }
 }
@@ -1246,10 +1267,27 @@ const loadSettings = async () => {
     }
     if (prefRes.status === 'fulfilled' && (prefRes.value.code === 1 || prefRes.value.code === 200)) {
       Object.assign(preferenceSettings, prefRes.value.data || {})
+      applyPreferenceSideEffects()
     }
   } catch (e) {
     console.error('加载设置失败:', e)
   }
+}
+
+const applyPreferenceSideEffects = () => {
+  const prefersDark = typeof window !== 'undefined'
+    && window.matchMedia
+    && window.matchMedia('(prefers-color-scheme: dark)').matches
+  const themeMap = {
+    light: 'light',
+    dark: 'dark',
+    auto: prefersDark ? 'dark' : 'default'
+  }
+  setTheme(themeMap[preferenceSettings.theme] || 'default')
+  localStorage.setItem('user-default-page', preferenceSettings.defaultPage || '/home')
+  localStorage.setItem('user-list-view', preferenceSettings.listView || 'grid')
+  localStorage.setItem('user-page-size', String(preferenceSettings.pageSize || 12))
+  localStorage.setItem('user-auto-play-video', preferenceSettings.autoPlayVideo ? '1' : '0')
 }
 
 onMounted(() => {
@@ -1262,23 +1300,33 @@ onMounted(() => {
 <style scoped>
 .settings-page {
   padding: 20px;
-  background: #f5f7fa;
+  background:
+    radial-gradient(circle at top left, rgba(192, 57, 43, 0.18), transparent 34%),
+    radial-gradient(circle at top right, rgba(139, 0, 0, 0.12), transparent 28%),
+    linear-gradient(180deg, #0a0f1f 0%, #10182d 42%, #0c1426 100%);
   min-height: 100vh;
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .page-header {
   margin-bottom: 30px;
+  padding: 28px 30px;
+  border: 1px solid rgba(192, 57, 43, 0.14);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(16, 24, 45, 0.96), rgba(20, 32, 60, 0.88));
+  box-shadow: 0 22px 48px rgba(3, 8, 20, 0.34);
+  backdrop-filter: blur(18px);
 }
 
 .page-header h1 {
   margin: 0 0 10px 0;
   font-size: 28px;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .page-header p {
   margin: 0;
-  color: #909399;
+  color: rgba(201, 214, 255, 0.7);
   font-size: 14px;
 }
 
@@ -1286,20 +1334,106 @@ onMounted(() => {
 .settings-nav {
   position: sticky;
   top: 20px;
+  border: 1px solid rgba(192, 57, 43, 0.14);
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(14, 24, 46, 0.96), rgba(19, 34, 66, 0.9));
+  box-shadow: 0 22px 48px rgba(3, 8, 20, 0.32);
+  backdrop-filter: blur(18px);
 }
 
 .nav-menu {
   border: none;
+  background: transparent;
 }
 
-.nav-menu .el-menu-item {
+:deep(.settings-nav .el-card__body) {
+  padding: 18px;
+  background: transparent;
+}
+
+:deep(.settings-nav.el-card) {
+  background: transparent;
+  border: none;
+}
+
+:deep(.nav-menu.el-menu) {
+  background: transparent;
+}
+
+:deep(.nav-menu .el-menu-item) {
   border-radius: 8px;
-  margin-bottom: 5px;
+  margin-bottom: 8px;
+  color: rgba(224, 232, 255, 0.8);
+  transition: all 0.25s ease;
+}
+
+:deep(.nav-menu .el-menu-item:hover) {
+  background: rgba(192, 57, 43, 0.12);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+:deep(.nav-menu .el-menu-item.is-active) {
+  background: linear-gradient(135deg, rgba(92, 20, 28, 0.96), rgba(122, 18, 24, 0.92));
+  color: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 28px rgba(8, 14, 32, 0.28);
 }
 
 /* 内容卡片 */
 .settings-content {
   margin-bottom: 20px;
+  border: 1px solid rgba(192, 57, 43, 0.14);
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(16, 24, 45, 0.96), rgba(20, 32, 60, 0.9));
+  box-shadow: 0 24px 54px rgba(3, 8, 20, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+:deep(.settings-content.el-card) {
+  background: transparent;
+  border: none;
+}
+
+:deep(.settings-content .el-card__header) {
+  padding: 22px 26px;
+  border-bottom: 1px solid rgba(192, 57, 43, 0.12);
+  background: linear-gradient(180deg, rgba(18, 29, 56, 0.82), rgba(18, 29, 56, 0.36));
+  color: rgba(255, 255, 255, 0.92);
+}
+
+:deep(.settings-content .el-card__body) {
+  padding: 26px;
+  background: transparent;
+}
+
+:deep(.settings-content .el-form-item__label) {
+  color: rgba(224, 232, 255, 0.82);
+}
+
+:deep(.settings-content .el-descriptions__label.el-descriptions__cell) {
+  background: rgba(11, 21, 41, 0.96);
+  color: rgba(224, 232, 255, 0.7);
+  border-color: rgba(192, 57, 43, 0.12);
+}
+
+:deep(.settings-content .el-descriptions__content.el-descriptions__cell) {
+  background: rgba(18, 31, 59, 0.92);
+  color: rgba(255, 255, 255, 0.88);
+  border-color: rgba(192, 57, 43, 0.12);
+}
+
+:deep(.settings-content .el-descriptions__table) {
+  border-color: rgba(192, 57, 43, 0.12);
+}
+
+:deep(.settings-content .el-checkbox) {
+  color: rgba(224, 232, 255, 0.82);
+}
+
+:deep(.settings-content .el-checkbox__label),
+:deep(.settings-content .el-radio__label) {
+  color: rgba(224, 232, 255, 0.82);
 }
 
 .card-header {
@@ -1308,6 +1442,7 @@ onMounted(() => {
   align-items: center;
   font-size: 18px;
   font-weight: bold;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 /* 头像上传 */
@@ -1333,7 +1468,7 @@ onMounted(() => {
 
 .security-progress p {
   margin: 10px 0 0 0;
-  color: #606266;
+  color: rgba(201, 214, 255, 0.72);
 }
 
 /* 安全项 */
@@ -1348,14 +1483,16 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(15, 26, 48, 0.94), rgba(20, 35, 67, 0.86));
+  border: 1px solid rgba(192, 57, 43, 0.12);
+  border-radius: 18px;
   transition: all 0.3s;
 }
 
 .security-item:hover {
-  background: #fff;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  transform: translateY(-2px);
+  border-color: rgba(192, 57, 43, 0.2);
+  box-shadow: 0 18px 36px rgba(3, 8, 20, 0.22);
 }
 
 .item-info {
@@ -1372,13 +1509,13 @@ onMounted(() => {
 .item-content h4 {
   margin: 0 0 5px 0;
   font-size: 16px;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .item-desc {
   margin: 5px 0;
   font-size: 13px;
-  color: #909399;
+  color: rgba(201, 214, 255, 0.68);
 }
 
 /* 密码强度 */
@@ -1404,22 +1541,23 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  background: #f5f7fa;
-  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(15, 26, 48, 0.94), rgba(20, 35, 67, 0.86));
+  border: 1px solid rgba(192, 57, 43, 0.12);
+  border-radius: 18px;
 }
 
 .privacy-info h4,
 .notification-info span {
   margin: 0 0 5px 0;
   font-size: 16px;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.92);
 }
 
 .privacy-info p,
 .notification-info p {
   margin: 0;
   font-size: 13px;
-  color: #909399;
+  color: rgba(201, 214, 255, 0.68);
 }
 
 /* 通知分组 */
@@ -1430,29 +1568,48 @@ onMounted(() => {
 .notification-group h4 {
   margin: 0 0 15px 0;
   font-size: 16px;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.9);
   padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(192, 57, 43, 0.12);
 }
 
 /* 账号管理 */
 .account-management > div {
   margin-bottom: 30px;
+  padding: 24px;
+  border: 1px solid rgba(192, 57, 43, 0.12);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(15, 26, 48, 0.9), rgba(20, 35, 67, 0.84));
 }
 
 .account-management h4 {
   margin: 0 0 20px 0;
   font-size: 16px;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.account-stats-section :deep(.el-statistic) {
+  padding: 18px 16px;
+  border: 1px solid rgba(192, 57, 43, 0.12);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(10, 20, 40, 0.94), rgba(18, 31, 59, 0.88));
+}
+
+.account-stats-section :deep(.el-statistic__head) {
+  color: rgba(201, 214, 255, 0.68);
+}
+
+.account-stats-section :deep(.el-statistic__content) {
+  color: rgba(255, 255, 255, 0.92);
 }
 
 /* 危险区域 */
 .danger-zone {
   margin-top: 40px;
   padding: 20px;
-  border: 1px solid #f56c6c;
-  border-radius: 8px;
-  background: #fef0f0;
+  border: 1px solid rgba(255, 122, 122, 0.3);
+  border-radius: 20px;
+  background: linear-gradient(145deg, rgba(37, 18, 28, 0.94), rgba(69, 24, 39, 0.82));
 }
 
 .danger-actions {
@@ -1466,20 +1623,43 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 15px;
-  background: #fff;
-  border-radius: 8px;
+  background: linear-gradient(145deg, rgba(18, 31, 59, 0.96), rgba(16, 24, 45, 0.9));
+  border: 1px solid rgba(255, 122, 122, 0.16);
+  border-radius: 16px;
 }
 
 .danger-info h5 {
   margin: 0 0 5px 0;
   font-size: 15px;
-  color: #303133;
+  color: rgba(255, 255, 255, 0.86);
 }
 
 .danger-info p {
   margin: 0;
   font-size: 13px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.54);
+}
+
+:deep(.settings-page .el-button:not(.el-button--primary):not(.el-button--danger)) {
+  border-color: rgba(192, 57, 43, 0.16);
+  background: rgba(18, 31, 59, 0.88);
+  color: rgba(232, 238, 255, 0.86);
+}
+
+:deep(.settings-page .el-button:not(.el-button--primary):not(.el-button--danger):hover) {
+  border-color: rgba(192, 57, 43, 0.24);
+  background: rgba(24, 41, 79, 0.94);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+:deep(.settings-page .el-alert) {
+  border: 1px solid rgba(192, 57, 43, 0.14);
+  background: linear-gradient(145deg, rgba(10, 20, 40, 0.94), rgba(18, 31, 59, 0.88));
+}
+
+:deep(.settings-page .el-alert__title),
+:deep(.settings-page .el-alert__description) {
+  color: rgba(232, 238, 255, 0.86);
 }
 
 /* 响应式 */
@@ -1501,6 +1681,20 @@ onMounted(() => {
   .item-info {
     width: 100%;
   }
+
+  .page-header {
+    padding: 22px 20px;
+  }
+
+  :deep(.settings-content .el-card__body) {
+    padding: 20px;
+  }
+
+  .account-management > div,
+  .danger-zone {
+    padding: 18px;
+  }
 }
+
 </style>
 

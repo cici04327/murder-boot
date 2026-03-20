@@ -200,6 +200,6 @@ onMounted(() => {
 .create-form { padding: 20px 0; }
 .create-form .el-select { width: 100%; }
 .form-tip { margin-left: 10px; color: #999; font-size: 13px; }
-.el-button--primary { background: #8B0000; border-color: #8B0000; }
-.el-button--primary:hover { background: rgba(139, 0, 0, 0.9); }
+.el-button--primary { background: #16213e; border-color: #16213e; }
+.el-button--primary:hover { background: rgba(192, 57, 43, 0.9); }
 </style>

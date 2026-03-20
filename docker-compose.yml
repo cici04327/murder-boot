@@ -23,10 +23,10 @@ services:
   # Redis 缓存
   redis:
     image: redis:7-alpine
-    container_name: murder-boot-redis
+    container_name: murder-redis
     restart: always
     ports:
-      - "6380:6379"
+      - "6379:6379"
     volumes:
       - ./redis-data:/data
     command: redis-server --appendonly yes

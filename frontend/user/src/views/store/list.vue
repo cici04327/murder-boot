@@ -576,7 +576,11 @@ onMounted(() => {
   border-radius: 12px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
+}
+
+.search-card :deep(.el-card__body) {
+  background: transparent;
 }
 
 .search-header {
@@ -585,7 +589,7 @@ onMounted(() => {
   justify-content: space-between;
   margin-bottom: 15px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .search-title {
@@ -608,6 +612,83 @@ onMounted(() => {
   margin: 0;
 }
 
+.search-card :deep(.el-form-item__label) {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 600;
+}
+
+.search-card :deep(.el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(192, 57, 43, 0.16);
+  box-shadow: none;
+  border-radius: 12px;
+}
+
+.search-card :deep(.el-input__wrapper:hover) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(224, 90, 71, 0.24);
+}
+
+.search-card :deep(.el-input__wrapper.is-focus) {
+  box-shadow: 0 0 0 1px rgba(224, 90, 71, 0.45) inset;
+  border-color: rgba(224, 90, 71, 0.28);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.search-card :deep(.el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.search-card :deep(.el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.search-card :deep(.el-input__prefix),
+.search-card :deep(.el-input__suffix),
+.search-card :deep(.el-input__icon) {
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.search-card :deep(.el-button) {
+  min-height: 40px;
+  padding: 0 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  box-shadow: none;
+  transition: all 0.25s ease;
+}
+
+.search-card :deep(.el-button .el-icon) {
+  margin-right: 6px;
+}
+
+.search-card :deep(.el-button--danger) {
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 52, 96, 0.24);
+}
+
+.search-card :deep(.el-button--danger:hover) {
+  background: linear-gradient(135deg, #55141d 0%, #7a1d1d 100%);
+  border-color: transparent;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.search-card :deep(.el-button--default) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(192, 57, 43, 0.16);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.search-card :deep(.el-button--default:hover) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(224, 90, 71, 0.24);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
 .list-header {
   display: flex;
   align-items: center;
@@ -616,7 +697,7 @@ onMounted(() => {
   padding: 18px 20px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.18);
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
@@ -624,6 +705,16 @@ onMounted(() => {
 .total {
   font-size: 14px;
   color: #fff;
+}
+
+.list-header :deep(.el-tag) {
+  border: 1px solid rgba(110, 224, 164, 0.24);
+  background: rgba(65, 135, 97, 0.18);
+  color: #d9ffe8;
+}
+
+.list-header :deep(.el-tag .el-icon) {
+  margin-right: 4px;
 }
 
 .sort-buttons {
@@ -635,17 +726,65 @@ onMounted(() => {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
-.sort-buttons .el-radio-button :deep(.el-radio-button__inner) {
+.sort-buttons :deep(.el-radio-group) {
+  display: inline-flex;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(192, 57, 43, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.sort-buttons :deep(.el-radio-button) {
+  overflow: hidden;
+  border-radius: 999px;
+}
+
+.sort-buttons :deep(.el-radio-button__inner) {
   display: flex;
   align-items: center;
   gap: 5px;
+  min-height: 38px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.76);
+  box-shadow: none;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.sort-buttons :deep(.el-radio-button:first-child .el-radio-button__inner),
+.sort-buttons :deep(.el-radio-button:last-child .el-radio-button__inner) {
+  border-radius: 999px;
+}
+
+.sort-buttons :deep(.el-radio-button__inner:hover) {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+}
+
+.sort-buttons :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner) {
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 52, 96, 0.3);
+}
+
+.sort-buttons :deep(.el-radio-button__original-radio:checked + .el-radio-button__inner:hover) {
+  background: linear-gradient(135deg, #55141d 0%, #7a1d1d 100%);
+}
+
+.sort-buttons :deep(.el-radio-button__inner .el-icon) {
+  font-size: 14px;
 }
 
 .location-info {
   position: absolute;
-  right: -90px;
+  right: -78px;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -666,15 +805,15 @@ onMounted(() => {
   padding: 16px 20px;
   margin-bottom: 20px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
-  border: 1px solid rgba(139, 0, 0, 0.3);
+  border: 1px solid rgba(192, 57, 43, 0.22);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .location-tip-card:hover {
-  border-color: #8B0000;
-  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+  border-color: rgba(224, 90, 71, 0.34);
+  box-shadow: 0 4px 12px rgba(15, 52, 96, 0.3);
   transform: translateY(-2px);
 }
 
@@ -682,7 +821,7 @@ onMounted(() => {
   width: 48px;
   height: 48px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -708,12 +847,12 @@ onMounted(() => {
 }
 
 .location-tip-card .el-button {
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   border: none;
 }
 
 .location-tip-card .el-button:hover {
-  background: linear-gradient(135deg, #a01010 0%, #c01515 100%);
+  background: linear-gradient(135deg, #55141d 0%, #7a1d1d 100%);
 }
 
 /* 位置提示样式（保留兼容） */
@@ -767,13 +906,13 @@ onMounted(() => {
   margin-bottom: 20px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   display: flex;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.18);
 }
 
 .store-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 12px 30px rgba(139, 0, 0, 0.35);
-  border-color: #8B0000;
+  box-shadow: 0 12px 30px rgba(15, 52, 96, 0.32);
+  border-color: rgba(224, 90, 71, 0.3);
   background: linear-gradient(135deg, rgba(45, 45, 75, 0.98) 0%, rgba(40, 55, 90, 0.98) 100%);
 }
 
@@ -826,7 +965,7 @@ onMounted(() => {
 
 .overlay-btn {
   padding: 12px 24px;
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   color: white;
   border-radius: 25px;
   font-size: 14px;
@@ -929,8 +1068,8 @@ onMounted(() => {
 
 .distance-tag {
   padding: 4px 12px;
-  background: rgba(139, 0, 0, 0.3);
-  color: #ff6b6b;
+  background: rgba(224, 90, 71, 0.16);
+  color: #b9ceff;
   font-size: 12px;
   border-radius: 15px;
   font-weight: 500;
@@ -965,10 +1104,10 @@ onMounted(() => {
 .feature-tag {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.9);
-  background: rgba(139, 0, 0, 0.25);
+  background: rgba(224, 90, 71, 0.12);
   padding: 4px 10px;
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.18);
 }
 
 .store-tags {
@@ -980,8 +1119,8 @@ onMounted(() => {
 
 .tag-item {
   font-size: 12px;
-  color: #ff6b6b;
-  background: rgba(139, 0, 0, 0.2);
+  color: #b9ceff;
+  background: rgba(224, 90, 71, 0.12);
   padding: 4px 12px;
   border-radius: 12px;
 }
@@ -991,13 +1130,86 @@ onMounted(() => {
   display: flex;
   gap: 10px;
   padding-top: 15px;
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  border-top: 1px solid rgba(192, 57, 43, 0.18);
+}
+
+.store-footer :deep(.el-button--default) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(192, 57, 43, 0.16);
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.store-footer :deep(.el-button--default:hover) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(224, 90, 71, 0.24);
+  color: #ffffff;
 }
 
 .pagination {
   margin-top: 30px;
   display: flex;
   justify-content: center;
+}
+
+.pagination :deep(.el-pagination) {
+  --el-pagination-bg-color: rgba(255, 255, 255, 0.06);
+  --el-pagination-text-color: rgba(255, 255, 255, 0.76);
+  --el-pagination-button-color: rgba(255, 255, 255, 0.76);
+  --el-pagination-button-bg-color: rgba(255, 255, 255, 0.06);
+  --el-pagination-hover-color: #fff3f6;
+  --el-pagination-border-radius: 12px;
+}
+
+.pagination :deep(.el-pagination__total),
+.pagination :deep(.el-pagination__jump) {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.pagination :deep(.btn-prev),
+.pagination :deep(.btn-next),
+.pagination :deep(.el-pager li) {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(192, 57, 43, 0.12);
+  color: rgba(255, 255, 255, 0.76);
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.pagination :deep(.btn-prev:hover),
+.pagination :deep(.btn-next:hover),
+.pagination :deep(.el-pager li:hover) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(224, 90, 71, 0.24);
+  color: #ffffff;
+}
+
+.pagination :deep(.el-pager li.is-active) {
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.pagination :deep(.el-pagination__editor .el-input__wrapper) {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(192, 57, 43, 0.12);
+  box-shadow: none;
+}
+
+.pagination :deep(.el-pagination__editor .el-input__inner) {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pagination :deep(.el-pagination__editor .el-input__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.store-list-container :deep(.el-empty__description p) {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.store-list-container :deep(.el-empty__image svg) {
+  opacity: 0.88;
+  filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.28));
 }
 
 @media (max-width: 768px) {

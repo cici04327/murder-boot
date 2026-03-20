@@ -766,7 +766,7 @@ onMounted(() => {
     right: -10%;
     width: 400px;
     height: 400px;
-    background: radial-gradient(circle, rgba(102, 126, 234, 0.15) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(192, 57, 43, 0.15) 0%, transparent 70%);
     border-radius: 50%;
   }
 
@@ -783,7 +783,7 @@ onMounted(() => {
       gap: 24px;
 
       .vip-icon {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+        background: linear-gradient(135deg, rgba(192, 57, 43, 0.3) 0%, rgba(122, 29, 29, 0.3) 100%);
         backdrop-filter: blur(10px);
         border-radius: 20px;
         padding: 20px;
@@ -824,7 +824,7 @@ onMounted(() => {
     .banner-right {
       .current-vip {
         background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(192, 57, 43, 0.2);
         backdrop-filter: blur(10px);
         border-radius: 20px;
         padding: 20px;
@@ -844,7 +844,7 @@ onMounted(() => {
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 
           &.level-1 {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
           }
 
           &.level-2 {
@@ -880,7 +880,7 @@ onMounted(() => {
 
         .vip-expire-card {
           background: linear-gradient(135deg, rgba(40, 40, 70, 0.95) 0%, rgba(30, 30, 60, 0.95) 100%);
-          border: 2px solid rgba(102, 126, 234, 0.3);
+          border: 2px solid rgba(192, 57, 43, 0.3);
           border-radius: 12px;
           padding: 16px;
 
@@ -892,7 +892,7 @@ onMounted(() => {
 
             .expire-icon {
               font-size: 24px;
-              color: #667eea;
+              color: #c0392b;
             }
 
             .expire-content {
@@ -950,7 +950,7 @@ onMounted(() => {
 
         .vip-benefits-mini {
           background: linear-gradient(135deg, rgba(40, 40, 70, 0.95) 0%, rgba(30, 30, 60, 0.95) 100%);
-          border: 2px solid rgba(102, 126, 234, 0.3);
+          border: 2px solid rgba(192, 57, 43, 0.3);
           border-radius: 12px;
           padding: 16px;
 
@@ -971,11 +971,11 @@ onMounted(() => {
               align-items: center;
               gap: 4px;
               padding: 6px 12px;
-              background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+              background: linear-gradient(135deg, rgba(192, 57, 43, 0.2) 0%, rgba(122, 29, 29, 0.2) 100%);
               border-radius: 20px;
               font-size: 13px;
               color: #a0b0ff;
-              border: 1px solid rgba(102, 126, 234, 0.3);
+              border: 1px solid rgba(192, 57, 43, 0.3);
 
               .el-icon {
                 font-size: 14px;
@@ -987,7 +987,7 @@ onMounted(() => {
 
       .non-vip {
         background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(192, 57, 43, 0.2);
         backdrop-filter: blur(10px);
         text-align: center;
         padding: 30px 20px;
@@ -1035,7 +1035,7 @@ onMounted(() => {
 
 .mystery-section {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 20px;
   padding: 40px;
   margin-bottom: 30px;
@@ -1055,7 +1055,7 @@ onMounted(() => {
   }
 
   .el-icon {
-    color: #667eea;
+    color: #c0392b;
   }
 }
 
@@ -1071,13 +1071,13 @@ onMounted(() => {
   padding: 30px 24px;
   text-align: center;
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-  border: 2px solid rgba(102, 126, 234, 0.25);
+  border: 2px solid rgba(192, 57, 43, 0.25);
   will-change: transform;
 
   &:hover {
     transform: translateY(-5px) translateZ(0);
-    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 10px 30px rgba(192, 57, 43, 0.3);
+    border-color: rgba(192, 57, 43, 0.5);
   }
 
   .benefit-icon {
@@ -1086,7 +1086,7 @@ onMounted(() => {
     justify-content: center;
     width: 70px;
     height: 70px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
     border-radius: 50%;
     color: #fff;
     margin-bottom: 20px;
@@ -1128,7 +1128,7 @@ onMounted(() => {
   padding: 32px 24px;
   cursor: pointer;
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-  border: 3px solid rgba(102, 126, 234, 0.25);
+  border: 3px solid rgba(192, 57, 43, 0.25);
   position: relative;
   height: 100%;
   display: flex;
@@ -1137,15 +1137,15 @@ onMounted(() => {
 
   &:hover {
     transform: translateY(-8px) translateZ(0);
-    box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 15px 40px rgba(192, 57, 43, 0.3);
   }
 
   &.recommended {
-    border-color: #667eea;
+    border-color: #c0392b;
     background: linear-gradient(135deg, rgba(40, 40, 80, 0.98) 0%, rgba(30, 30, 70, 0.98) 100%);
 
     .package-tag {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
     }
   }
 
@@ -1223,7 +1223,7 @@ onMounted(() => {
       display: flex;
       align-items: baseline;
       gap: 4px;
-      color: #667eea;
+      color: #c0392b;
 
       .currency {
         font-size: 24px;
@@ -1263,10 +1263,10 @@ onMounted(() => {
     justify-content: center;
     gap: 8px;
     padding: 12px 20px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    background: linear-gradient(135deg, rgba(192, 57, 43, 0.2) 0%, rgba(122, 29, 29, 0.2) 100%);
     border-radius: 10px;
     margin: 20px 0;
-    border: 2px solid rgba(102, 126, 234, 0.3);
+    border: 2px solid rgba(192, 57, 43, 0.3);
 
     .clock-icon {
       font-size: 18px;
@@ -1320,7 +1320,7 @@ onMounted(() => {
   left: 0;
   right: 0;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
-  border-top: 1px solid rgba(102, 126, 234, 0.3);
+  border-top: 1px solid rgba(192, 57, 43, 0.3);
   box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
   z-index: 100;
   padding: 20px;
@@ -1400,13 +1400,13 @@ onMounted(() => {
 // 支付对话框弹窗样式 - append-to-body=false 后可用 :deep() 生效
 :deep(.vip-payment-dialog) {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
-  border: 1px solid rgba(102, 126, 234, 0.4) !important;
+  border: 1px solid rgba(192, 57, 43, 0.4) !important;
   border-radius: 20px !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
 
   .el-dialog__header {
     background: transparent !important;
-    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+    border-bottom: 1px solid rgba(192, 57, 43, 0.2);
     padding: 20px 24px;
 
     .el-dialog__title {
@@ -1430,7 +1430,7 @@ onMounted(() => {
 
   .el-dialog__footer {
     background: transparent !important;
-    border-top: 1px solid rgba(102, 126, 234, 0.2);
+    border-top: 1px solid rgba(192, 57, 43, 0.2);
     padding: 16px 24px;
 
     .el-button--default {
@@ -1451,7 +1451,7 @@ onMounted(() => {
 .payment-dialog {
   .payment-info {
     background: linear-gradient(135deg, rgba(40, 40, 70, 0.95) 0%, rgba(30, 30, 60, 0.95) 100%);
-    border: 1px solid rgba(102, 126, 234, 0.3);
+    border: 1px solid rgba(192, 57, 43, 0.3);
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 24px;
@@ -1501,7 +1501,7 @@ onMounted(() => {
       align-items: center;
       gap: 12px;
       padding: 16px;
-      border: 2px solid rgba(102, 126, 234, 0.3);
+      border: 2px solid rgba(192, 57, 43, 0.3);
       border-radius: 12px;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -1509,12 +1509,12 @@ onMounted(() => {
       background: linear-gradient(135deg, rgba(40, 40, 70, 0.95) 0%, rgba(30, 30, 60, 0.95) 100%);
 
       &:hover {
-        border-color: #667eea;
+        border-color: #c0392b;
         background: linear-gradient(135deg, rgba(50, 50, 90, 0.95) 0%, rgba(40, 40, 80, 0.95) 100%);
       }
 
       &.active {
-        border-color: #667eea;
+        border-color: #c0392b;
         background: linear-gradient(135deg, rgba(50, 50, 90, 0.95) 0%, rgba(40, 40, 80, 0.95) 100%);
 
         .check {
@@ -1584,7 +1584,7 @@ onMounted(() => {
 
   th { background: rgba(255,255,255,0.05); }
 
-  tr:hover td { background: rgba(102,126,234,0.08); }
+  tr:hover td { background: rgba(192, 57, 43,0.08); }
 }
 
 .th-level-badge {
@@ -1594,7 +1594,7 @@ onMounted(() => {
   font-size: 13px;
   display: inline-block;
 
-  &.level-1 { background: linear-gradient(135deg, #667eea, #764ba2); color: #fff; }
+  &.level-1 { background: linear-gradient(135deg, #c0392b, #7a1d1d); color: #fff; }
   &.level-2 { background: linear-gradient(135deg, #C0C0C0, #E8E8E8); color: #333; }
   &.level-3 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #fff; }
   &.level-4 { background: linear-gradient(135deg, #B24FD8, #FF6B9D); color: #fff; }
@@ -1610,8 +1610,8 @@ onMounted(() => {
 // 月度体验券发放状态
 .cp-grant-status {
   margin: 10px 0 8px;
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.3);
+  background: rgba(192, 57, 43, 0.1);
+  border: 1px solid rgba(192, 57, 43, 0.3);
   border-radius: 8px;
   padding: 10px 12px;
   display: flex;
@@ -1667,8 +1667,8 @@ onMounted(() => {
   transition: all 0.2s;
 
   &:hover {
-    border-color: rgba(102,126,234,0.4);
-    background: rgba(102,126,234,0.08);
+    border-color: rgba(192, 57, 43,0.4);
+    background: rgba(192, 57, 43,0.08);
   }
 }
 
@@ -1700,7 +1700,7 @@ onMounted(() => {
   padding: 2px 8px;
   border-radius: 8px;
 
-  &.l1 { background: rgba(102,126,234,0.2); color: #a0b0ff; }
+  &.l1 { background: rgba(192, 57, 43,0.2); color: #a0b0ff; }
   &.l2 { background: rgba(192,192,192,0.2); color: #e0e0e0; }
   &.l3 { background: rgba(255,215,0,0.2); color: #ffd700; }
   &.l4 { background: rgba(178,79,216,0.2); color: #da9fef; }

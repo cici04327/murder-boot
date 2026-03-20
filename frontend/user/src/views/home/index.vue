@@ -288,7 +288,7 @@
                 <el-progress 
                   :percentage="(group.currentCount / group.needCount) * 100" 
                   :show-text="false"
-                  :color="group.currentCount >= group.needCount ? '#67c23a' : '#8B0000'"
+                  :color="group.currentCount >= group.needCount ? '#67c23a' : '#16213e'"
                 />
               </div>
               <div class="group-tags">
@@ -550,7 +550,7 @@ const quickEntries = ref([
     title: '剧本大厅',
     description: '500+精选剧本等你来',
     emoji: '📜',
-    color: '#667eea',
+    color: '#c0392b',
     path: '/script'
   },
   {
@@ -1249,7 +1249,7 @@ onBeforeUnmount(() => {
 .hero-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to right, rgba(26, 26, 26, 0.8), rgba(139, 0, 0, 0.6));
+  background: linear-gradient(to right, rgba(26, 26, 26, 0.8), rgba(192, 57, 43, 0.6));
   z-index: 1;
 }
 
@@ -1291,7 +1291,7 @@ onBeforeUnmount(() => {
 
 .hero-btn-primary {
   padding: 12px 32px;
-  background: #8B0000;
+  background: #16213e;
   color: white;
   border: none;
   border-radius: 8px;
@@ -1301,7 +1301,7 @@ onBeforeUnmount(() => {
 }
 
 .hero-btn-primary:hover {
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   transform: translateY(-2px);
 }
 
@@ -1327,7 +1327,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding: 8px 20px;
-  background: rgba(139, 0, 0, 0.8);
+  background: rgba(192, 57, 43, 0.8);
   border-radius: 25px;
   margin-bottom: 20px;
   font-size: 14px;
@@ -1446,7 +1446,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(139, 0, 0, 0.03) 100%);
+  background: linear-gradient(135deg, transparent 0%, rgba(192, 57, 43, 0.03) 100%);
   opacity: 0;
   transition: opacity 0.3s;
 }
@@ -1457,8 +1457,8 @@ onBeforeUnmount(() => {
 
 .entry-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  box-shadow: 0 15px 35px rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -1476,7 +1476,7 @@ onBeforeUnmount(() => {
 
 .entry-card:hover .entry-icon-wrapper {
   transform: scale(1.1) rotate(5deg);
-  background: rgba(139, 0, 0, 0.3);
+  background: rgba(192, 57, 43, 0.3);
 }
 
 .entry-emoji {
@@ -1506,7 +1506,7 @@ onBeforeUnmount(() => {
 }
 
 .entry-card:hover .entry-arrow {
-  color: #8B0000;
+  color: #16213e;
   transform: translateX(5px);
 }
 
@@ -1519,7 +1519,7 @@ onBeforeUnmount(() => {
 .entry-3,
 .entry-4 {
   background: #111827;            /* 深墨蓝黑 */
-  border-color: rgba(139, 0, 0, 0.35);
+  border-color: rgba(192, 57, 43, 0.35);
   box-shadow: 0 10px 26px rgba(17, 24, 39, 0.22);
 }
 
@@ -1535,8 +1535,8 @@ onBeforeUnmount(() => {
 .entry-2 .entry-icon-wrapper,
 .entry-3 .entry-icon-wrapper,
 .entry-4 .entry-icon-wrapper {
-  background: rgba(139, 0, 0, 0.92); /* 酒红圆徽章 */
-  box-shadow: 0 10px 22px rgba(139, 0, 0, 0.25);
+  background: rgba(192, 57, 43, 0.92); /* 酒红圆徽章 */
+  box-shadow: 0 10px 22px rgba(192, 57, 43, 0.25);
 }
 
 .entry-1 .entry-title,
@@ -1566,7 +1566,7 @@ onBeforeUnmount(() => {
 .entry-3:hover,
 .entry-4:hover {
   background: #0b1220; /* 更深一点，营造"阴影" */
-  border-color: rgba(139, 0, 0, 0.75);
+  border-color: rgba(192, 57, 43, 0.75);
   box-shadow: 0 16px 40px rgba(17, 24, 39, 0.35);
 }
 
@@ -1574,7 +1574,7 @@ onBeforeUnmount(() => {
 .entry-2:hover .entry-arrow,
 .entry-3:hover .entry-arrow,
 .entry-4:hover .entry-arrow {
-  color: #8B0000;
+  color: #16213e;
 }
 
 /* 章节通用样式 */
@@ -1635,8 +1635,8 @@ onBeforeUnmount(() => {
 
 .scheduled-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  box-shadow: 0 15px 35px rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -1669,7 +1669,7 @@ onBeforeUnmount(() => {
 
 .scheduled-date {
   top: 12px;
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   color: #fff;
   font-weight: 600;
 }
@@ -1747,7 +1747,7 @@ onBeforeUnmount(() => {
 
 .scheduled-action {
   font-size: 12px;
-  color: #8B0000;
+  color: #16213e;
   font-weight: 600;
   opacity: 0;
   transition: opacity 0.3s;
@@ -1822,8 +1822,8 @@ onBeforeUnmount(() => {
 
 .script-card-horizontal:hover {
   transform: translateY(-12px);
-  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  box-shadow: 0 15px 35px rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -1842,8 +1842,8 @@ onBeforeUnmount(() => {
 
 .script-card:hover {
   transform: translateY(-12px);
-  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  box-shadow: 0 15px 35px rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -1894,7 +1894,7 @@ onBeforeUnmount(() => {
 
 .overlay-btn {
   padding: 12px 24px;
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   color: white;
   border-radius: 25px;
   font-size: 14px;
@@ -1914,7 +1914,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   backdrop-filter: blur(5px);
   color: #fff;
   padding: 6px 14px;
@@ -1940,7 +1940,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   padding: 6px 12px;
   border-radius: 15px;
@@ -2071,7 +2071,7 @@ onBeforeUnmount(() => {
 
 .book-hint {
   font-size: 12px;
-  color: #8B0000;
+  color: #16213e;
   font-weight: 500;
   opacity: 0;
   transition: opacity 0.3s;
@@ -2084,7 +2084,7 @@ onBeforeUnmount(() => {
 
 /* 推荐区域特殊样式 */
 .recommendation-section {
-  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+  background: linear-gradient(135deg, #c0392b15 0%, #7a1d1d15 100%);
   padding: 40px 20px;
   border-radius: 16px;
   margin-bottom: 60px;
@@ -2105,8 +2105,8 @@ onBeforeUnmount(() => {
 
 .store-card:hover {
   transform: translateY(-12px);
-  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  box-shadow: 0 15px 35px rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -2256,15 +2256,15 @@ onBeforeUnmount(() => {
 
 .store-tag {
   font-size: 11px;
-  color: #8B0000;
-  background: rgba(139, 0, 0, 0.08);
+  color: #16213e;
+  background: rgba(192, 57, 43, 0.08);
   padding: 3px 10px;
   border-radius: 10px;
 }
 
 .visit-hint {
   font-size: 12px;
-  color: #8B0000;
+  color: #16213e;
   font-weight: 500;
   opacity: 0;
   transition: opacity 0.3s;
@@ -2299,8 +2299,8 @@ onBeforeUnmount(() => {
 
 .group-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 24px rgba(139, 0, 0, 0.25);
-  border-color: rgba(139, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(192, 57, 43, 0.25);
+  border-color: rgba(192, 57, 43, 0.3);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -2350,7 +2350,7 @@ onBeforeUnmount(() => {
   position: absolute;
   bottom: -4px;
   right: -8px;
-  background: #8B0000;
+  background: #16213e;
   color: #fff;
   font-size: 9px;
   padding: 1px 5px;
@@ -2384,7 +2384,7 @@ onBeforeUnmount(() => {
 }
 
 .status-active {
-  background: rgba(139, 0, 0, 0.3);
+  background: rgba(192, 57, 43, 0.3);
   color: #ff6b6b;
 }
 
@@ -2486,12 +2486,12 @@ onBeforeUnmount(() => {
 }
 
 .group-footer .el-button--primary {
-  background: #8B0000;
-  border-color: #8B0000;
+  background: #16213e;
+  border-color: #16213e;
 }
 
 .group-footer .el-button--primary:hover:not(:disabled) {
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
 }
 
 .empty-groups {
@@ -2500,8 +2500,8 @@ onBeforeUnmount(() => {
 }
 
 .empty-groups .el-button {
-  background: #8B0000;
-  border-color: #8B0000;
+  background: #16213e;
+  border-color: #16213e;
 }
 
 /* 资讯区域 */
@@ -2528,8 +2528,8 @@ onBeforeUnmount(() => {
 
 .news-card:hover {
   transform: translateY(-10px);
-  box-shadow: 0 15px 35px rgba(139, 0, 0, 0.3);
-  border-color: rgba(139, 0, 0, 0.5);
+  box-shadow: 0 15px 35px rgba(192, 57, 43, 0.3);
+  border-color: rgba(192, 57, 43, 0.5);
   background: rgba(255, 255, 255, 0.12);
 }
 
@@ -2555,7 +2555,7 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   color: #fff;
   padding: 5px 12px;
   border-radius: 15px;
@@ -2629,7 +2629,7 @@ onBeforeUnmount(() => {
 
 .read-more {
   font-size: 13px;
-  color: #8B0000;
+  color: #16213e;
   font-weight: 500;
   opacity: 0;
   transition: opacity 0.3s;

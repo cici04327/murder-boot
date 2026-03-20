@@ -1325,17 +1325,18 @@ onMounted(async () => {
   text-align: center;
   cursor: pointer;
   transition: all 0.2s;
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  color: rgba(255, 255, 255, 0.84);
 }
 
 .dm-card:hover {
-  border-color: #8b0000;
-  box-shadow: 0 2px 8px rgba(139,0,0,0.12);
+  border-color: #16213e;
+  box-shadow: 0 2px 8px rgba(192, 57, 43,0.12);
 }
 
 .dm-card.selected {
-  border-color: #8b0000;
-  background: rgba(139,0,0,0.04);
+  border-color: #16213e;
+  background: rgba(192, 57, 43,0.04);
 }
 
 .dm-card-avatar {
@@ -1364,7 +1365,7 @@ onMounted(async () => {
   position: absolute;
   top: 6px;
   right: 8px;
-  color: #8b0000;
+  color: #16213e;
   font-weight: 700;
   font-size: 14px;
 }
@@ -1436,8 +1437,8 @@ onMounted(async () => {
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 20% 80%, rgba(139, 0, 0, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(139, 0, 0, 0.2) 0%, transparent 50%);
+    radial-gradient(circle at 20% 80%, rgba(192, 57, 43, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(192, 57, 43, 0.2) 0%, transparent 50%);
 }
 
 .header-content {
@@ -1475,7 +1476,7 @@ onMounted(async () => {
   border-radius: 16px;
   margin-bottom: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .step-item {
@@ -1508,8 +1509,8 @@ onMounted(async () => {
 }
 
 .step-item.active .step-icon {
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
-  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
 }
 
 .step-label {
@@ -1528,7 +1529,7 @@ onMounted(async () => {
 }
 
 .step-line.active {
-  background: linear-gradient(90deg, #8B0000, #c41e3a);
+  background: linear-gradient(90deg, #16213e, #55141d);
 }
 
 /* 主要内容区 */
@@ -1553,7 +1554,7 @@ onMounted(async () => {
   margin-bottom: 20px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .card-header {
@@ -1613,7 +1614,7 @@ onMounted(async () => {
 }
 
 .price-tag {
-  color: #8B0000;
+  color: #16213e;
   font-weight: 600;
 }
 
@@ -1621,9 +1622,9 @@ onMounted(async () => {
 .selected-script {
   margin-top: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.15) 0%, rgba(139, 0, 0, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.15) 0%, rgba(192, 57, 43, 0.08) 100%);
   border-radius: 12px;
-  border: 1px dashed rgba(139, 0, 0, 0.3);
+  border: 1px dashed rgba(192, 57, 43, 0.3);
 }
 
 .script-preview {
@@ -1645,14 +1646,14 @@ onMounted(async () => {
 
 .script-tags .tag {
   padding: 4px 12px;
-  background: rgba(139, 0, 0, 0.25);
+  background: rgba(192, 57, 43, 0.25);
   border-radius: 15px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.8);
 }
 
 .script-tags .tag.price {
-  background: rgba(139, 0, 0, 0.35);
+  background: rgba(192, 57, 43, 0.35);
   color: #ff6b6b;
   font-weight: 600;
 }
@@ -1661,7 +1662,7 @@ onMounted(async () => {
 .script-tips {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px dashed rgba(139, 0, 0, 0.2);
+  border-top: 1px dashed rgba(192, 57, 43, 0.2);
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1674,12 +1675,12 @@ onMounted(async () => {
   padding: 10px 12px;
   border-radius: 8px;
   background: rgba(35, 35, 60, 0.6);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .tip-item.people-tip {
-  background: rgba(139, 0, 0, 0.1);
-  border-color: rgba(139, 0, 0, 0.3);
+  background: rgba(192, 57, 43, 0.1);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 .tip-item.difficulty-warning {
@@ -1755,7 +1756,7 @@ onMounted(async () => {
   position: relative;
   padding: 16px;
   background: rgba(35, 35, 60, 0.8);
-  border: 2px solid rgba(139, 0, 0, 0.2);
+  border: 2px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   text-align: center;
   cursor: pointer;
@@ -1763,13 +1764,13 @@ onMounted(async () => {
 }
 
 .room-card:hover {
-  border-color: rgba(139, 0, 0, 0.5);
+  border-color: rgba(192, 57, 43, 0.5);
   background: rgba(45, 45, 75, 0.9);
 }
 
 .room-card.selected {
-  border-color: #8B0000;
-  background: rgba(139, 0, 0, 0.2);
+  border-color: #16213e;
+  background: rgba(192, 57, 43, 0.2);
 }
 
 .room-icon {
@@ -1856,7 +1857,7 @@ onMounted(async () => {
   right: 8px;
   width: 20px;
   height: 20px;
-  background: #8B0000;
+  background: #16213e;
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -1889,7 +1890,7 @@ onMounted(async () => {
 
 .time-slot-button {
   padding: 12px 8px;
-  border: 2px solid rgba(139, 0, 0, 0.3);
+  border: 2px solid rgba(192, 57, 43, 0.3);
   border-radius: 8px;
   background: rgba(35, 35, 60, 0.8);
   color: rgba(255, 255, 255, 0.8);
@@ -1901,16 +1902,16 @@ onMounted(async () => {
 }
 
 .time-slot-button:hover:not(:disabled) {
-  border-color: rgba(139, 0, 0, 0.6);
+  border-color: rgba(192, 57, 43, 0.6);
   background: rgba(45, 45, 75, 0.9);
   color: #fff;
 }
 
 .time-slot-button.selected {
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
-  border-color: #8B0000;
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
+  border-color: #16213e;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
 }
 
 .time-slot-button.disabled,
@@ -1931,8 +1932,8 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(139, 0, 0, 0.03));
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.08), rgba(192, 57, 43, 0.03));
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
 }
 
@@ -2064,7 +2065,7 @@ onMounted(async () => {
   border-radius: 16px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .summary-card.sticky {
@@ -2099,7 +2100,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px dashed rgba(139, 0, 0, 0.2);
+  border-bottom: 1px dashed rgba(192, 57, 43, 0.2);
 }
 
 .item-label {
@@ -2124,7 +2125,7 @@ onMounted(async () => {
 
 .summary-divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(139, 0, 0, 0.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(192, 57, 43, 0.3), transparent);
   margin: 16px 0;
 }
 
@@ -2175,7 +2176,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding: 16px;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.2) 0%, rgba(139, 0, 0, 0.15) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.2) 0%, rgba(192, 57, 43, 0.15) 100%);
   border-radius: 12px;
   margin-bottom: 20px;
 }
@@ -2214,7 +2215,7 @@ onMounted(async () => {
   width: 100%;
   height: 50px;
   font-size: 16px;
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
   border: none;
   border-radius: 25px;
   display: flex;
@@ -2226,7 +2227,7 @@ onMounted(async () => {
 .submit-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #a00000 0%, #d42e4a 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4);
 }
 
 .cancel-btn {
@@ -2241,7 +2242,7 @@ onMounted(async () => {
 .summary-tips {
   padding: 16px 20px;
   background: rgba(26, 26, 46, 0.5);
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  border-top: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .summary-tips p {
@@ -2296,15 +2297,15 @@ onMounted(async () => {
 /* Element Plus 输入框深色主题 */
 :deep(.el-input__wrapper) {
   background-color: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
 }
 
 :deep(.el-input__wrapper:hover) {
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.5) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.5) inset !important;
 }
 
 :deep(.el-input__wrapper.is-focus) {
-  box-shadow: 0 0 0 1px #8B0000 inset !important;
+  box-shadow: 0 0 0 1px #16213e inset !important;
 }
 
 :deep(.el-input__inner) {
@@ -2324,15 +2325,15 @@ onMounted(async () => {
 /* Element Plus 选择器深色主题 */
 :deep(.el-select__wrapper) {
   background-color: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
 }
 
 :deep(.el-select__wrapper:hover) {
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.5) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.5) inset !important;
 }
 
 :deep(.el-select__wrapper.is-focused) {
-  box-shadow: 0 0 0 1px #8B0000 inset !important;
+  box-shadow: 0 0 0 1px #16213e inset !important;
 }
 
 :deep(.el-select__placeholder),
@@ -2357,7 +2358,7 @@ onMounted(async () => {
 /* Element Plus 文本域深色主题 */
 :deep(.el-textarea__inner) {
   background-color: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) inset !important;
   color: #fff !important;
 }
 
@@ -2366,11 +2367,11 @@ onMounted(async () => {
 }
 
 :deep(.el-textarea__inner:hover) {
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.5) inset !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.5) inset !important;
 }
 
 :deep(.el-textarea__inner:focus) {
-  box-shadow: 0 0 0 1px #8B0000 inset !important;
+  box-shadow: 0 0 0 1px #16213e inset !important;
 }
 
 :deep(.el-input__count) {
@@ -2386,7 +2387,7 @@ onMounted(async () => {
 :deep(.el-input-number__decrease),
 :deep(.el-input-number__increase) {
   background-color: rgba(35, 35, 60, 0.9) !important;
-  border-color: rgba(139, 0, 0, 0.3) !important;
+  border-color: rgba(192, 57, 43, 0.3) !important;
   color: rgba(255, 255, 255, 0.8) !important;
 }
 

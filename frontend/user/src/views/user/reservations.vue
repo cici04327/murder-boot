@@ -498,7 +498,7 @@ onBeforeUnmount(() => {
 }
 
 .create-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%) !important;
   border: none !important;
   font-size: 16px;
   padding: 12px 24px;
@@ -519,7 +519,7 @@ onBeforeUnmount(() => {
 .mystery-card {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
   border-radius: 16px !important;
-  border: 1px solid rgba(102, 126, 234, 0.2) !important;
+  border: 1px solid rgba(192, 57, 43, 0.2) !important;
 }
 
 /* 标签页 */
@@ -558,7 +558,7 @@ onBeforeUnmount(() => {
 
 /* 预约项卡片 */
 .reservation-item {
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 15px;
@@ -570,8 +570,8 @@ onBeforeUnmount(() => {
 
 .reservation-item:hover {
   transform: translateY(-3px) translateZ(0);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.25);
-  border-color: rgba(102, 126, 234, 0.5);
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.25);
+  border-color: rgba(192, 57, 43, 0.5);
   background: linear-gradient(135deg, rgba(30, 30, 55, 0.98) 0%, rgba(26, 38, 72, 0.98) 100%);
 }
 
@@ -696,7 +696,7 @@ onBeforeUnmount(() => {
 }
 
 .pay-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%) !important;
   border: none !important;
 }
 
@@ -707,7 +707,7 @@ onBeforeUnmount(() => {
 
 .detail-btn {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-  border: 1px solid rgba(102, 126, 234, 0.3) !important;
+  border: 1px solid rgba(192, 57, 43, 0.3) !important;
   color: #1a1a2e !important;
 }
 

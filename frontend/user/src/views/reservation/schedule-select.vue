@@ -406,8 +406,8 @@ onBeforeUnmount(() => {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(circle at 20% 80%, rgba(139,0,0,0.3) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(139,0,0,0.2) 0%, transparent 50%);
+    radial-gradient(circle at 20% 80%, rgba(192, 57, 43,0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(192, 57, 43,0.2) 0%, transparent 50%);
   border-radius: inherit;
 }
 
@@ -441,7 +441,7 @@ onBeforeUnmount(() => {
   gap: 16px;
   align-items: center;
   background: linear-gradient(135deg, rgba(26,26,46,0.98) 0%, rgba(22,33,62,0.98) 100%);
-  border: 1px solid rgba(102,126,234,0.2);
+  border: 1px solid rgba(192, 57, 43,0.2);
   border-radius: 14px;
   padding: 16px;
   margin: 0 16px 16px;
@@ -493,8 +493,8 @@ onBeforeUnmount(() => {
 
 .store-tab.active,
 .store-tab:hover {
-  background: rgba(139,0,0,0.3);
-  border-color: rgba(139,0,0,0.6);
+  background: rgba(192, 57, 43,0.3);
+  border-color: rgba(192, 57, 43,0.6);
   color: #fff;
 }
 
@@ -539,8 +539,8 @@ onBeforeUnmount(() => {
 }
 
 .date-tab.active {
-  background: linear-gradient(135deg, rgba(139,0,0,0.5) 0%, rgba(196,30,58,0.5) 100%);
-  border-color: rgba(139,0,0,0.7);
+  background: linear-gradient(135deg, rgba(192, 57, 43,0.5) 0%, rgba(196,30,58,0.5) 100%);
+  border-color: rgba(192, 57, 43,0.7);
 }
 
 .date-tab:hover:not(.active) {
@@ -597,7 +597,7 @@ onBeforeUnmount(() => {
 
 .schedule-card {
   background: linear-gradient(135deg, rgba(30,30,55,0.98) 0%, rgba(25,40,75,0.98) 100%);
-  border: 1px solid rgba(102,126,234,0.2);
+  border: 1px solid rgba(192, 57, 43,0.2);
   border-radius: 14px;
   padding: 18px 20px;
   cursor: pointer;
@@ -608,8 +608,8 @@ onBeforeUnmount(() => {
 }
 
 .schedule-card:hover:not(.schedule-full) {
-  border-color: rgba(139,0,0,0.5);
-  box-shadow: 0 4px 20px rgba(139,0,0,0.2);
+  border-color: rgba(192, 57, 43,0.5);
+  box-shadow: 0 4px 20px rgba(192, 57, 43,0.2);
   transform: translateY(-2px);
 }
 

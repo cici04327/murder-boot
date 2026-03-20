@@ -421,7 +421,7 @@ const transferToHuman = async () => {
     console.error('创建人工客服会话失败:', e)
     connectionStatus.value = '在线服务中'
     addAIMessage(
-      '<div class="kb-answer"><p>😔 暂时无法连接人工客服，请稍后重试，或拨打客服热线：<strong style="color:#8B0000;">400-123-4567</strong></p></div>',
+      '<div class="kb-answer"><p>😔 暂时无法连接人工客服，请稍后重试，或拨打客服热线：<strong style="color:#16213e;">400-123-4567</strong></p></div>',
       [], false
     )
   } finally {
@@ -594,7 +594,7 @@ const knowledgeBase = {
     showFeedback: true
   },
   '人工|客服|联系|咨询|电话|转人工': {
-    answer: `<div class="kb-answer"><p><strong>📞 联系方式：</strong></p><ul><li>☎️ 客服热线：<strong style="color: #8B0000;">400-123-4567</strong></li><li>⏰ 服务时间：9:00-22:00（全年无休）</li><li>📧 邮箱：service@jubensha.com</li></ul><p><strong>💡 也可以点击下方按钮直接转接在线人工客服：</strong></p></div>`,
+    answer: `<div class="kb-answer"><p><strong>📞 联系方式：</strong></p><ul><li>☎️ 客服热线：<strong style="color: #16213e;">400-123-4567</strong></li><li>⏰ 服务时间：9:00-22:00（全年无休）</li><li>📧 邮箱：service@jubensha.com</li></ul><p><strong>💡 也可以点击下方按钮直接转接在线人工客服：</strong></p></div>`,
     actions: [{ label: '👤 转接人工客服', type: 'transfer', primary: true }],
     showFeedback: false
   },
@@ -1084,7 +1084,7 @@ onUnmounted(() => {
 .service-bubble {
   width: 64px;
   height: 64px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #8B0000 50%, #1a1a2e 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1093,7 +1093,7 @@ onUnmounted(() => {
   position: relative;
   border: 2px solid rgba(212, 175, 55, 0.4);
   transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 4px 20px rgba(139, 0, 0, 0.5), 0 0 40px rgba(139, 0, 0, 0.2);
+  box-shadow: 0 4px 20px rgba(192, 57, 43, 0.5), 0 0 40px rgba(192, 57, 43, 0.2);
 }
 
 .bubble-glow {
@@ -1101,7 +1101,7 @@ onUnmounted(() => {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  border: 2px solid rgba(139, 0, 0, 0.4);
+  border: 2px solid rgba(192, 57, 43, 0.4);
   animation: pulse-ring 2s ease-out infinite;
 }
 
@@ -1112,7 +1112,7 @@ onUnmounted(() => {
 
 .service-bubble:hover {
   transform: scale(1.1) rotate(10deg);
-  box-shadow: 0 8px 30px rgba(139, 0, 0, 0.6), 0 0 60px rgba(139, 0, 0, 0.3);
+  box-shadow: 0 8px 30px rgba(192, 57, 43, 0.6), 0 0 60px rgba(192, 57, 43, 0.3);
 }
 
 .service-bubble.has-unread {
@@ -1161,7 +1161,7 @@ onUnmounted(() => {
   white-space: nowrap;
   opacity: 0;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.5);
+  border: 1px solid rgba(192, 57, 43, 0.5);
 }
 
 .service-bubble:hover .bubble-tip {
@@ -1176,9 +1176,9 @@ onUnmounted(() => {
   right: 30px;
   width: 400px;
   height: 600px;
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
   border-radius: 20px;
-  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(139, 0, 0, 0.1);
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(192, 57, 43, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1191,7 +1191,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 2px solid #8B0000;
+  border-bottom: 2px solid #16213e;
 }
 
 .header-left {
@@ -1208,7 +1208,7 @@ onUnmounted(() => {
   position: absolute;
   inset: -4px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8B0000, #ffd700);
+  background: linear-gradient(135deg, #16213e, #ffd700);
   animation: avatar-glow 2s ease-in-out infinite;
   opacity: 0.6;
 }
@@ -1219,7 +1219,7 @@ onUnmounted(() => {
 }
 
 .bot-avatar {
-  background: linear-gradient(135deg, #8B0000, #a01010);
+  background: linear-gradient(135deg, #16213e, #0f3460);
   font-size: 24px;
   position: relative;
   z-index: 1;
@@ -1288,8 +1288,8 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #eee;
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.16);
   overflow-x: auto;
 }
 
@@ -1298,8 +1298,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.16);
   border-radius: 20px;
   cursor: pointer;
   white-space: nowrap;
@@ -1308,9 +1308,9 @@ onUnmounted(() => {
 }
 
 .quick-tag:hover {
-  border-color: #8B0000;
-  color: #8B0000;
-  background: #fff5f5;
+  border-color: #16213e;
+  color: #16213e;
+  background: rgba(224, 90, 71, 0.12);
 }
 
 .tag-icon {
@@ -1322,7 +1322,7 @@ onUnmounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
+  background: linear-gradient(180deg, rgba(18, 24, 43, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
 }
 
 .chat-messages::-webkit-scrollbar {
@@ -1330,12 +1330,12 @@ onUnmounted(() => {
 }
 
 .chat-messages::-webkit-scrollbar-thumb {
-  background: rgba(139, 0, 0, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   border-radius: 3px;
 }
 
 .chat-messages::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 0, 0, 0.4);
+  background: rgba(192, 57, 43, 0.4);
 }
 
 .message-item {
@@ -1353,7 +1353,7 @@ onUnmounted(() => {
 }
 
 .ai-avatar {
-  background: linear-gradient(135deg, #8B0000, #a01010);
+  background: linear-gradient(135deg, #16213e, #0f3460);
   font-size: 18px;
 }
 
@@ -1377,15 +1377,15 @@ onUnmounted(() => {
 }
 
 .ai .message-bubble {
-  background: #fff;
-  color: #333;
-  border: 1px solid #eee;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  color: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(192, 57, 43, 0.16);
   border-bottom-left-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .user .message-bubble {
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   color: #fff;
   border-bottom-right-radius: 4px;
 }
@@ -1445,8 +1445,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: #fff;
-  border: 1px solid #eee;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.16);
   border-radius: 16px;
   border-bottom-left-radius: 4px;
 }
@@ -1459,7 +1459,7 @@ onUnmounted(() => {
 .typing-dots span {
   width: 8px;
   height: 8px;
-  background: #8B0000;
+  background: #16213e;
   border-radius: 50%;
   animation: typing-bounce 1.4s infinite ease-in-out;
 }
@@ -1475,13 +1475,13 @@ onUnmounted(() => {
 
 .typing-text {
   font-size: 13px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 /* 快捷问题面板 */
 .quick-questions {
-  background: #fff;
-  border-top: 1px solid #eee;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border-top: 1px solid rgba(192, 57, 43, 0.16);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -1491,11 +1491,11 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px;
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.04);
   font-size: 13px;
   font-weight: 500;
-  color: #666;
-  border-bottom: 1px solid #eee;
+  color: rgba(255, 255, 255, 0.62);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.16);
 }
 
 .quick-questions-list {
@@ -1507,20 +1507,20 @@ onUnmounted(() => {
 
 .quick-question-item {
   padding: 10px 12px;
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 8px;
   font-size: 13px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.84);
   cursor: pointer;
   transition: all 0.3s;
   text-align: center;
 }
 
 .quick-question-item:hover {
-  background: #fff5f5;
-  color: #8B0000;
+  background: rgba(224, 90, 71, 0.12);
+  color: #16213e;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.1);
 }
 
 /* 输入区域 */
@@ -1529,8 +1529,8 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: #fff;
-  border-top: 1px solid #eee;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border-top: 1px solid rgba(192, 57, 43, 0.16);
 }
 
 .input-tools {
@@ -1539,11 +1539,11 @@ onUnmounted(() => {
 }
 
 .input-tools .el-button {
-  color: #666;
+  color: rgba(255, 255, 255, 0.62);
 }
 
 .input-tools .el-button:hover {
-  color: #8B0000;
+  color: #16213e;
 }
 
 .chat-input .el-input {
@@ -1556,25 +1556,25 @@ onUnmounted(() => {
 }
 
 .chat-input :deep(.el-input__wrapper:focus-within) {
-  box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.2);
+  box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.2);
 }
 
 .send-btn {
   border-radius: 20px;
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   border: none;
 }
 
 .send-btn:hover {
-  background: linear-gradient(135deg, #a01010 0%, #8B0000 100%);
+  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
 }
 
 /* 底部提示 */
 .chat-footer {
   padding: 8px 16px;
   text-align: center;
-  background: #fafafa;
-  border-top: 1px solid #eee;
+  background: rgba(255, 255, 255, 0.04);
+  border-top: 1px solid rgba(192, 57, 43, 0.16);
 }
 
 /* 知识库回答样式 */
@@ -1587,7 +1587,7 @@ onUnmounted(() => {
 }
 
 :deep(.kb-answer strong) {
-  color: #8B0000;
+  color: #16213e;
 }
 
 :deep(.kb-answer ol),
@@ -1668,8 +1668,8 @@ onUnmounted(() => {
 
 /* 历史会话面板 */
 .history-panel {
-  background: #fff;
-  border-bottom: 1px solid #eee;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.96) 100%);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.16);
   max-height: 250px;
   overflow-y: auto;
 }
@@ -1679,8 +1679,8 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 10px 16px;
-  background: #fafafa;
-  border-bottom: 1px solid #eee;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.16);
   font-size: 13px;
   font-weight: 500;
 }
@@ -1700,18 +1700,18 @@ onUnmounted(() => {
 }
 
 .history-item:hover {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .history-item.active {
-  background: #fff5f5;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  background: rgba(224, 90, 71, 0.12);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .history-item-title {
   flex: 1;
   font-size: 13px;
-  color: #333;
+  color: rgba(255, 255, 255, 0.84);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1762,7 +1762,7 @@ onUnmounted(() => {
 }
 
 .message-tools .el-button.speaking {
-  color: #8B0000;
+  color: #16213e;
   animation: pulse 1s infinite;
 }
 
@@ -1786,22 +1786,22 @@ onUnmounted(() => {
 }
 
 .suggestion-tag:hover {
-  background: #fff5f5;
-  border-color: #8B0000;
-  color: #8B0000;
+  background: rgba(224, 90, 71, 0.12);
+  border-color: #16213e;
+  color: #16213e;
 }
 
 /* 加载更多 */
 .load-more {
   text-align: center;
   padding: 10px;
-  color: #666;
+  color: rgba(255, 255, 255, 0.62);
   font-size: 12px;
   cursor: pointer;
 }
 
 .load-more:hover {
-  color: #8B0000;
+  color: #16213e;
 }
 
 /* 滚动到底部按钮 */
@@ -1810,7 +1810,7 @@ onUnmounted(() => {
   bottom: 10px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   color: #fff;
   padding: 6px 16px;
   border-radius: 20px;
@@ -1819,7 +1819,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  box-shadow: 0 2px 10px rgba(139, 0, 0, 0.3);
+  box-shadow: 0 2px 10px rgba(192, 57, 43, 0.3);
   z-index: 10;
   width: fit-content;
   margin: 0 auto;
@@ -1832,8 +1832,8 @@ onUnmounted(() => {
 /* 快捷问题分类标签 */
 .quick-questions-tabs {
   padding: 8px 12px;
-  border-bottom: 1px solid #eee;
-  background: #fafafa;
+  border-bottom: 1px solid rgba(192, 57, 43, 0.16);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .quick-questions-tabs :deep(.el-radio-button__inner) {
@@ -1858,14 +1858,14 @@ onUnmounted(() => {
 }
 
 .emoji-item:hover {
-  background: #f5f5f5;
+  background: rgba(255, 255, 255, 0.06);
   transform: scale(1.2);
 }
 
 /* 输入工具按钮激活状态 */
 .input-tools .el-button.active {
-  color: #8B0000;
-  background: rgba(139, 0, 0, 0.1);
+  color: #16213e;
+  background: rgba(192, 57, 43, 0.1);
 }
 
 /* 消息高亮 */
@@ -1874,9 +1874,9 @@ onUnmounted(() => {
 }
 
 @keyframes highlight-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(139, 0, 0, 0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(139, 0, 0, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(139, 0, 0, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(192, 57, 43, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(192, 57, 43, 0); }
 }
 
 /* 滑动动画 */

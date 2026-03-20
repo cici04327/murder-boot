@@ -836,10 +836,10 @@ onMounted(async () => {
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-color: transparent;
   color: #fff;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 20px rgba(192, 57, 43, 0.4);
 }
 
 .tab-icon {
@@ -873,11 +873,11 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 16px;
-  background: rgba(102, 126, 234, 0.1);
+  background: rgba(192, 57, 43, 0.1);
   border-radius: 16px;
   padding: 20px 24px;
   margin-bottom: 24px;
-  border: 1px solid rgba(102, 126, 234, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .section-intro.hot {
@@ -947,8 +947,8 @@ onMounted(async () => {
 
 .script-card:hover {
   transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(102, 126, 234, 0.2);
-  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 30px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.3);
 }
 
 /* 排名徽章 */
@@ -1039,7 +1039,7 @@ onMounted(async () => {
   position: absolute;
   top: 12px;
   right: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   color: #fff;
   padding: 4px 10px;
   border-radius: 20px;
@@ -1135,7 +1135,7 @@ onMounted(async () => {
 }
 
 .tag.category {
-  background: rgba(102, 126, 234, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   color: #a0b4ff;
 }
 
@@ -1298,13 +1298,13 @@ onMounted(async () => {
 .backtop-btn {
   width: 40px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 20px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
 }
 
 /* ========== 响应式 ========== */

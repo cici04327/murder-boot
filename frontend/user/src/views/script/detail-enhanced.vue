@@ -448,6 +448,11 @@ const handleCollect = async () => {
   } catch (error) {
     console.error('收藏操作失败:', error)
     const errorMsg = error.response?.data?.msg || error.msg || '操作失败'
+    if (String(errorMsg).includes('已收藏该剧本')) {
+      isFavorited.value = true
+      ElMessage.success('已收藏该剧本')
+      return
+    }
     ElMessage.error(errorMsg)
   }
 }
@@ -528,7 +533,7 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
   padding: 15px 20px;
   border-radius: 8px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .breadcrumb :deep(.el-breadcrumb__inner) {
@@ -560,7 +565,7 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
   border-radius: 8px;
   padding: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .image-gallery {
@@ -624,13 +629,13 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 8px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .role-card:hover {
   background: linear-gradient(135deg, rgba(45, 45, 75, 0.98) 0%, rgba(40, 55, 90, 0.98) 100%);
   transform: translateX(5px);
-  border-color: rgba(139, 0, 0, 0.4);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .role-info h4 {
@@ -651,7 +656,7 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 8px;
   margin-bottom: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .rating-summary {
@@ -714,7 +719,7 @@ onMounted(() => {
 
 .review-item {
   padding: 20px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .review-header {
@@ -767,7 +772,7 @@ onMounted(() => {
   border-radius: 8px;
   padding: 30px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .script-title {
@@ -853,7 +858,7 @@ onMounted(() => {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
   border-radius: 8px;
   padding: 30px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .recommendations h2 {

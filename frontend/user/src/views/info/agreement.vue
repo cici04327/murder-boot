@@ -406,7 +406,7 @@ const overviewItems = ref([
   margin-bottom: 20px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .card-header {
@@ -439,13 +439,13 @@ const overviewItems = ref([
   border-radius: 12px;
   text-align: center;
   transition: all 0.3s;
-  border: 2px solid rgba(139, 0, 0, 0.2);
+  border: 2px solid rgba(192, 57, 43, 0.2);
 }
 
 .overview-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(139, 0, 0, 0.25);
-  border-color: #8B0000;
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.25);
+  border-color: #16213e;
   background: linear-gradient(135deg, rgba(45, 45, 75, 0.98) 0%, rgba(40, 55, 90, 0.98) 100%);
 }
 
@@ -486,7 +486,7 @@ const overviewItems = ref([
   padding: 25px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .info-section:last-child {
@@ -498,7 +498,7 @@ const overviewItems = ref([
   color: #fff;
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #8B0000;
+  border-bottom: 2px solid #16213e;
   display: inline-block;
 }
 
@@ -506,7 +506,7 @@ const overviewItems = ref([
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.9) 0%, rgba(30, 45, 80, 0.9) 100%);
   padding: 20px;
   border-radius: 10px;
-  border: 1px solid rgba(139, 0, 0, 0.15);
+  border: 1px solid rgba(192, 57, 43, 0.15);
 }
 
 .section-content p {
@@ -517,7 +517,7 @@ const overviewItems = ref([
 }
 
 .section-content p.highlight {
-  background: rgba(139, 0, 0, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   padding: 12px 15px;
   border-radius: 8px;
   border-left: 4px solid #ff6b6b;
@@ -542,12 +542,12 @@ const overviewItems = ref([
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 10px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .contact-card:hover {
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .contact-card .el-icon {
@@ -656,7 +656,7 @@ const overviewItems = ref([
 
 .agreement-page .info-card.el-card .el-card__header {
   background: transparent !important;
-  border-bottom-color: rgba(139, 0, 0, 0.2) !important;
+  border-bottom-color: rgba(192, 57, 43, 0.2) !important;
 }
 
 .agreement-page .info-card.el-card .el-card__body {
@@ -665,8 +665,8 @@ const overviewItems = ref([
 
 /* 覆盖 Element Plus Alert 样式 */
 .agreement-page .el-alert--warning {
-  background: rgba(139, 0, 0, 0.15) !important;
-  border-color: rgba(139, 0, 0, 0.3) !important;
+  background: rgba(192, 57, 43, 0.15) !important;
+  border-color: rgba(192, 57, 43, 0.3) !important;
 }
 
 .agreement-page .el-alert--warning .el-alert__title {

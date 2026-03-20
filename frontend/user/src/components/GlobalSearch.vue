@@ -801,6 +801,16 @@ onUnmounted(() => {
 
 <style scoped>
 .global-search {
+  --search-shell-bg: linear-gradient(135deg, rgba(34, 24, 38, 0.96) 0%, rgba(20, 16, 27, 0.94) 100%);
+  --search-shell-strong: linear-gradient(135deg, rgba(54, 36, 48, 0.98) 0%, rgba(28, 18, 32, 0.98) 100%);
+  --search-border: rgba(186, 112, 124, 0.24);
+  --search-border-active: rgba(203, 113, 138, 0.55);
+  --search-text: #f6e9ec;
+  --search-muted: rgba(246, 233, 236, 0.68);
+  --search-soft: rgba(255, 232, 238, 0.08);
+  --search-soft-strong: rgba(255, 232, 238, 0.12);
+  --search-accent: #d87b8e;
+  --search-shadow: 0 22px 48px rgba(8, 7, 12, 0.42);
   position: relative;
   width: 320px;
   transition: all 0.3s ease;
@@ -816,28 +826,30 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   padding: 8px 16px;
-  background: #f5f7fa;
+  background: var(--search-shell-bg);
   border-radius: 24px;
-  border: 2px solid transparent;
+  border: 1px solid var(--search-border);
+  box-shadow: 0 10px 28px rgba(10, 8, 16, 0.28);
+  backdrop-filter: blur(18px);
   transition: all 0.3s ease;
   cursor: text;
 }
 
 .global-search.is-focused .search-input-wrapper {
-  background: #fff;
-  border-color: #8B0000;
-  box-shadow: 0 4px 20px rgba(139, 0, 0, 0.15);
+  background: var(--search-shell-strong);
+  border-color: var(--search-border-active);
+  box-shadow: 0 16px 40px rgba(12, 8, 18, 0.38);
 }
 
 .search-icon {
   font-size: 18px;
-  color: #909399;
+  color: var(--search-muted);
   margin-right: 8px;
   transition: color 0.3s;
 }
 
 .global-search.is-focused .search-icon {
-  color: #8B0000;
+  color: var(--search-accent);
 }
 
 .search-input {
@@ -846,20 +858,20 @@ onUnmounted(() => {
   outline: none;
   background: transparent;
   font-size: 14px;
-  color: #303133;
+  color: var(--search-text);
 }
 
 .search-input::placeholder {
-  color: #c0c4cc;
+  color: rgba(246, 233, 236, 0.45);
 }
 
 .voice-btn, .clear-btn {
   margin-left: 4px;
-  color: #909399;
+  color: var(--search-muted);
 }
 
 .voice-btn:hover, .clear-btn:hover {
-  color: #8B0000;
+  color: var(--search-accent);
 }
 
 .voice-btn.is-recording {
@@ -881,9 +893,10 @@ onUnmounted(() => {
 .shortcut-hint kbd {
   padding: 2px 6px;
   font-size: 11px;
-  background: #e4e7ed;
+  background: rgba(255, 232, 238, 0.08);
   border-radius: 4px;
-  color: #909399;
+  border: 1px solid rgba(255, 232, 238, 0.12);
+  color: var(--search-muted);
 }
 
 /* 搜索面板 */
@@ -892,10 +905,11 @@ onUnmounted(() => {
   top: calc(100% + 12px);
   left: 0;
   width: min(650px, calc(100vw - 32px));
-  background: #fff;
+  background: var(--search-shell-strong);
   border-radius: 16px;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
-  border: none;
+  box-shadow: var(--search-shadow);
+  border: 1px solid rgba(255, 232, 238, 0.1);
+  backdrop-filter: blur(20px);
   overflow: hidden;
 }
 
@@ -909,7 +923,7 @@ onUnmounted(() => {
 }
 
 .search-panel::-webkit-scrollbar-thumb {
-  background: #ddd;
+  background: rgba(255, 232, 238, 0.18);
   border-radius: 3px;
 }
 
@@ -918,8 +932,8 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   padding: 12px 16px;
-  border-bottom: 1px solid #eee;
-  background: #fafafa;
+  border-bottom: 1px solid rgba(255, 232, 238, 0.08);
+  background: rgba(255, 232, 238, 0.04);
 }
 
 .filter-tab {
@@ -929,18 +943,21 @@ onUnmounted(() => {
   padding: 6px 14px;
   border-radius: 16px;
   font-size: 13px;
-  color: #606266;
+  color: var(--search-muted);
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.3s;
 }
 
 .filter-tab:hover {
-  background: #f0f0f0;
+  background: rgba(255, 232, 238, 0.08);
+  color: var(--search-text);
 }
 
 .filter-tab.active {
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
-  color: #fff;
+  background: linear-gradient(135deg, rgba(166, 64, 92, 0.92) 0%, rgba(117, 29, 50, 0.98) 100%);
+  color: #fff7f8;
+  border-color: rgba(255, 214, 222, 0.2);
 }
 
 .filter-count {
@@ -955,7 +972,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 40px;
-  color: #909399;
+  color: var(--search-muted);
 }
 
 /* 搜索建议 */
@@ -988,12 +1005,12 @@ onUnmounted(() => {
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #303133;
+  color: var(--search-text);
 }
 
 .result-count {
   font-weight: normal;
-  color: #909399;
+  color: var(--search-muted);
   margin-left: 4px;
 }
 
@@ -1008,13 +1025,16 @@ onUnmounted(() => {
 .history-tag {
   cursor: pointer;
   transition: all 0.3s;
-  border-color: #ddd;
+  border-color: rgba(255, 232, 238, 0.12);
+  background: rgba(255, 232, 238, 0.06);
+  color: var(--search-text);
 }
 
 .history-tag:hover,
 .history-tag.selected {
-  border-color: #8B0000;
-  color: #8B0000;
+  border-color: rgba(220, 131, 154, 0.5);
+  color: #ffeef1;
+  background: rgba(188, 89, 116, 0.18);
   transform: translateY(-2px);
 }
 
@@ -1047,7 +1067,7 @@ onUnmounted(() => {
 
 .hot-item:hover,
 .hot-item.selected {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.05) 0%, rgba(139, 0, 0, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(188, 89, 116, 0.12) 0%, rgba(98, 33, 54, 0.2) 100%);
 }
 
 .hot-rank {
@@ -1059,12 +1079,12 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: bold;
   border-radius: 6px;
-  background: #e4e7ed;
-  color: #909399;
+  background: rgba(255, 232, 238, 0.12);
+  color: var(--search-muted);
 }
 
 .hot-rank.rank-1 {
-  background: linear-gradient(135deg, #f56c6c 0%, #e74c3c 100%);
+  background: linear-gradient(135deg, #f56c6c 0%, #2b4d85 100%);
   color: white;
 }
 
@@ -1081,7 +1101,7 @@ onUnmounted(() => {
 .hot-keyword {
   flex: 1;
   font-size: 14px;
-  color: #303133;
+  color: var(--search-text);
 }
 
 .hot-badge {
@@ -1093,14 +1113,14 @@ onUnmounted(() => {
 
 .hot-count {
   font-size: 12px;
-  color: #c0c4cc;
+  color: rgba(246, 233, 236, 0.48);
 }
 
 /* 快速入口 */
 .quick-entries {
   margin-top: 8px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid rgba(255, 232, 238, 0.08);
 }
 
 .entry-grid {
@@ -1122,7 +1142,7 @@ onUnmounted(() => {
 }
 
 .entry-item:hover {
-  background: #f5f7fa;
+  background: rgba(255, 232, 238, 0.07);
   transform: translateY(-2px);
 }
 
@@ -1134,12 +1154,13 @@ onUnmounted(() => {
   justify-content: center;
   font-size: 24px;
   border-radius: 12px;
-  background: #f5f7fa;
+  background: rgba(255, 232, 238, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(255, 232, 238, 0.08);
 }
 
 .entry-item span {
   font-size: 12px;
-  color: #606266;
+  color: var(--search-muted);
 }
 
 /* 搜索建议列表 */
@@ -1158,11 +1179,11 @@ onUnmounted(() => {
 
 .suggestion-item:hover,
 .suggestion-item.selected {
-  background: #f5f7fa;
+  background: rgba(255, 232, 238, 0.07);
 }
 
 .suggestion-item .el-icon {
-  color: #c0c4cc;
+  color: rgba(246, 233, 236, 0.42);
 }
 
 /* 搜索结果 */
@@ -1182,7 +1203,7 @@ onUnmounted(() => {
 
 .result-item:hover,
 .result-item.selected {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.03) 0%, rgba(139, 0, 0, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(188, 89, 116, 0.1) 0%, rgba(67, 24, 40, 0.22) 100%);
 }
 
 /* 结果动画 */
@@ -1215,8 +1236,8 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f7fa;
-  color: #c0c4cc;
+  background: rgba(255, 232, 238, 0.06);
+  color: rgba(246, 233, 236, 0.35);
   font-size: 24px;
 }
 
@@ -1231,15 +1252,15 @@ onUnmounted(() => {
 .result-title {
   font-size: 14px;
   font-weight: 600;
-  color: #303133;
+  color: var(--search-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .result-title :deep(.highlight) {
-  color: #8B0000;
-  background: rgba(139, 0, 0, 0.1);
+  color: #fff4f6;
+  background: rgba(188, 89, 116, 0.28);
   padding: 1px 4px;
   border-radius: 3px;
 }
@@ -1285,7 +1306,7 @@ onUnmounted(() => {
 
 .store-scripts {
   font-size: 12px;
-  color: #909399;
+  color: var(--search-muted);
 }
 
 .result-address {
@@ -1293,7 +1314,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   font-size: 12px;
-  color: #909399;
+  color: var(--search-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1307,12 +1328,12 @@ onUnmounted(() => {
 
 .no-results p {
   margin: 4px 0;
-  color: #606266;
+  color: var(--search-text);
 }
 
 .no-results-tips {
   font-size: 13px;
-  color: #909399;
+  color: var(--search-muted);
 }
 
 /* 底部提示 */
@@ -1321,22 +1342,23 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  border-top: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-top: 1px solid rgba(255, 232, 238, 0.08);
+  background: rgba(255, 232, 238, 0.04);
 }
 
 .footer-tip {
   font-size: 12px;
-  color: #909399;
+  color: var(--search-muted);
 }
 
 .footer-tip kbd {
   padding: 2px 6px;
   margin: 0 2px;
   font-size: 11px;
-  background: #fff;
-  border: 1px solid #ddd;
+  background: rgba(255, 232, 238, 0.06);
+  border: 1px solid rgba(255, 232, 238, 0.1);
   border-radius: 4px;
+  color: var(--search-text);
 }
 
 /* 语音识别遮罩 */
@@ -1354,7 +1376,9 @@ onUnmounted(() => {
 }
 
 .voice-modal {
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.18);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.45);
   padding: 40px 60px;
   border-radius: 20px;
   text-align: center;
@@ -1371,7 +1395,7 @@ onUnmounted(() => {
 
 .voice-animation span {
   width: 6px;
-  background: linear-gradient(135deg, #8B0000 0%, #f56c6c 100%);
+  background: linear-gradient(135deg, #16213e 0%, #c0392b 100%);
   border-radius: 3px;
   animation: voice-wave 1s ease-in-out infinite;
 }
@@ -1389,9 +1413,31 @@ onUnmounted(() => {
 
 .voice-text {
   font-size: 18px;
-  color: #303133;
+  color: var(--search-text);
   margin-bottom: 20px;
   min-height: 28px;
+}
+
+.search-panel :deep(.el-button.is-text),
+.search-panel :deep(.el-button--text) {
+  color: var(--search-muted);
+}
+
+.search-panel :deep(.el-button.is-text:hover),
+.search-panel :deep(.el-button--text:hover) {
+  color: #fff0f3;
+  background: rgba(255, 232, 238, 0.06);
+}
+
+.search-panel :deep(.el-tag) {
+  --el-tag-bg-color: rgba(255, 232, 238, 0.08);
+  --el-tag-border-color: rgba(255, 232, 238, 0.1);
+  --el-tag-text-color: #f6e9ec;
+}
+
+.search-panel :deep(.el-empty__description),
+.search-panel :deep(.el-empty__description p) {
+  color: var(--search-muted);
 }
 
 /* 过渡动画 */

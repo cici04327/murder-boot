@@ -312,8 +312,8 @@ onMounted(() => loadDetail())
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 10% 90%, rgba(139, 0, 0, 0.4) 0%, transparent 40%),
-    radial-gradient(circle at 90% 10%, rgba(139, 0, 0, 0.3) 0%, transparent 40%),
+    radial-gradient(circle at 10% 90%, rgba(192, 57, 43, 0.4) 0%, transparent 40%),
+    radial-gradient(circle at 90% 10%, rgba(192, 57, 43, 0.3) 0%, transparent 40%),
     radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
   animation: mysteryPulse 5s ease-in-out infinite;
 }
@@ -331,7 +331,7 @@ onMounted(() => loadDetail())
 
 .mystery-badge {
   display: inline-block;
-  background: rgba(139, 0, 0, 0.6);
+  background: rgba(192, 57, 43, 0.6);
   padding: 8px 20px;
   border-radius: 20px;
   color: #fff;
@@ -365,7 +365,7 @@ onMounted(() => loadDetail())
 }
 
 .meta-badge.difficulty {
-  background: rgba(139, 0, 0, 0.5);
+  background: rgba(192, 57, 43, 0.5);
 }
 
 .meta-badge.newbie {
@@ -394,7 +394,7 @@ onMounted(() => loadDetail())
   margin-bottom: 20px;
   overflow: hidden;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .card-header {
@@ -418,7 +418,7 @@ onMounted(() => loadDetail())
 
 .seats-count {
   margin-left: auto;
-  background: rgba(139, 0, 0, 0.6);
+  background: rgba(192, 57, 43, 0.6);
   padding: 4px 12px;
   border-radius: 12px;
   font-size: 13px;
@@ -434,7 +434,7 @@ onMounted(() => loadDetail())
   align-items: center;
   gap: 16px;
   padding: 14px 0;
-  border-bottom: 1px dashed rgba(139, 0, 0, 0.2);
+  border-bottom: 1px dashed rgba(192, 57, 43, 0.2);
 }
 
 .info-row:last-child {
@@ -447,7 +447,7 @@ onMounted(() => loadDetail())
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.2) 0%, rgba(139, 0, 0, 0.1) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.2) 0%, rgba(192, 57, 43, 0.1) 100%);
   border-radius: 12px;
   font-size: 22px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -485,9 +485,9 @@ onMounted(() => loadDetail())
 .mission-desc {
   margin-top: 16px;
   padding: 16px;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.15) 0%, rgba(139, 0, 0, 0.08) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.15) 0%, rgba(192, 57, 43, 0.08) 100%);
   border-radius: 12px;
-  border: 1px dashed rgba(139, 0, 0, 0.3);
+  border: 1px dashed rgba(192, 57, 43, 0.3);
 }
 
 .desc-header {
@@ -528,7 +528,7 @@ onMounted(() => loadDetail())
 
 .seat-item.empty {
   background: rgba(35, 35, 60, 0.6);
-  border: 2px dashed rgba(139, 0, 0, 0.3);
+  border: 2px dashed rgba(192, 57, 43, 0.3);
 }
 
 .seat-mask {
@@ -538,7 +538,7 @@ onMounted(() => loadDetail())
   align-items: center;
   justify-content: center;
   font-size: 28px;
-  background: rgba(139, 0, 0, 0.3);
+  background: rgba(192, 57, 43, 0.3);
   border-radius: 50%;
   margin-bottom: 10px;
 }
@@ -553,7 +553,7 @@ onMounted(() => loadDetail())
 }
 
 .empty-mask {
-  background: rgba(139, 0, 0, 0.2);
+  background: rgba(192, 57, 43, 0.2);
   font-size: 24px;
 }
 
@@ -572,7 +572,7 @@ onMounted(() => loadDetail())
   position: absolute;
   top: 8px;
   right: 8px;
-  background: #8B0000;
+  background: #16213e;
   color: #fff;
   font-size: 10px;
   padding: 2px 6px;
@@ -608,7 +608,7 @@ onMounted(() => loadDetail())
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   margin-bottom: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .status-banner {
@@ -622,7 +622,7 @@ onMounted(() => loadDetail())
 }
 
 .status-banner.active {
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
   color: #fff;
   animation: statusGlow 2s ease-in-out infinite;
 }
@@ -668,7 +668,7 @@ onMounted(() => loadDetail())
 
 .progress-bg {
   fill: none;
-  stroke: rgba(139, 0, 0, 0.2);
+  stroke: rgba(192, 57, 43, 0.2);
   stroke-width: 8;
 }
 
@@ -727,7 +727,7 @@ onMounted(() => loadDetail())
   margin: 0 20px 20px;
   height: 50px;
   font-size: 18px;
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
   border: none;
   border-radius: 25px;
   display: flex;
@@ -739,7 +739,7 @@ onMounted(() => loadDetail())
 .join-btn:hover:not(:disabled) {
   background: linear-gradient(135deg, #a00000 0%, #d42e4a 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4);
 }
 
 .join-btn:disabled {
@@ -765,7 +765,7 @@ onMounted(() => loadDetail())
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
   border-radius: 16px;
   padding: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .tips-header {

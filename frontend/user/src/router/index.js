@@ -21,7 +21,7 @@ const routes = [
   {
     path: '/',
     component: Layout,
-    redirect: '/home',
+    redirect: () => localStorage.getItem('user-default-page') || '/home',
     children: [
       {
         path: 'home',

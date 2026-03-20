@@ -155,7 +155,7 @@ const handleLogin = async () => {
         if (success) {
           ElMessage.success('登录成功')
           // 登录成功，跳转到之前的页面或首页
-          const redirect = route.query.redirect || '/home'
+          const redirect = route.query.redirect || localStorage.getItem('user-default-page') || '/home'
           router.push(redirect)
         } else {
           // 登录失败，重置验证码
@@ -216,7 +216,7 @@ const handleLogin = async () => {
   height: 200%;
   background: 
     radial-gradient(circle at 25% 25%, rgba(255, 215, 0, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(139, 0, 0, 0.05) 0%, transparent 50%);
+    radial-gradient(circle at 75% 75%, rgba(192, 57, 43, 0.05) 0%, transparent 50%);
   animation: mysteryGlow 15s ease-in-out infinite;
   pointer-events: none;
 }

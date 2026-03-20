@@ -65,10 +65,10 @@ defineProps({
 
 <style scoped>
 .skeleton-script-card {
-  border: 1px solid #f0f0f0;
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
   transition: all 0.3s ease;
 }
 
@@ -91,8 +91,8 @@ defineProps({
 /* 深色模式 */
 @media (prefers-color-scheme: dark) {
   .skeleton-script-card {
-    background: #1a1a1a;
-    border-color: #333;
+    background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+    border-color: rgba(192, 57, 43, 0.2);
   }
 }
 </style>

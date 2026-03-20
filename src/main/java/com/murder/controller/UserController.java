@@ -5,24 +5,35 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
+import com.murder.dto.BindEmailDTO;
+import com.murder.dto.BindPhoneDTO;
+import com.murder.dto.DeactivateAccountDTO;
+import com.murder.dto.RealNameVerifyDTO;
+import com.murder.dto.SendEmailCodeDTO;
+import com.murder.dto.SendPhoneCodeDTO;
 import com.murder.dto.UserLoginDTO;
 import com.murder.dto.UserRegisterDTO;
+import com.murder.dto.UpdatePasswordDTO;
 import com.murder.entity.Reservation;
 import com.murder.entity.User;
 import com.murder.mapper.ReservationMapper;
+import com.murder.service.UserAccountService;
 import com.murder.service.UserBrowseHistoryService;
 import com.murder.service.UserService;
 import com.murder.service.UserSettingsService;
 import com.murder.vo.BrowseHistoryVO;
+import com.murder.vo.UserLoginLogVO;
 import com.murder.vo.UserLoginVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -32,6 +43,7 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -56,6 +68,9 @@ public class UserController {
 
     @Autowired
     private UserSettingsService userSettingsService;
+
+    @Autowired
+    private UserAccountService userAccountService;
 
     // ==================== 用户设置接口 ====================
 
@@ -126,9 +141,15 @@ public class UserController {
      */
     @PostMapping("/login")
     @Operation(summary = "用户登录")
-    public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO) {
+    public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO, HttpServletRequest request) {
         log.info("用户登录: {}", userLoginDTO);
         UserLoginVO userLoginVO = userService.login(userLoginDTO);
+        userAccountService.recordLoginSuccess(
+                userLoginVO.getId(),
+                getClientIp(request),
+                resolveLocation(getClientIp(request)),
+                resolveDevice(request.getHeader("User-Agent"))
+        );
         return Result.success(userLoginVO);
     }
 
@@ -137,9 +158,15 @@ public class UserController {
      */
     @PostMapping("/admin/login")
     @Operation(summary = "管理员登录")
-    public Result<UserLoginVO> adminLogin(@RequestBody UserLoginDTO userLoginDTO) {
+    public Result<UserLoginVO> adminLogin(@RequestBody UserLoginDTO userLoginDTO, HttpServletRequest request) {
         log.info("管理员登录: {}", userLoginDTO);
         UserLoginVO userLoginVO = userService.adminLogin(userLoginDTO);
+        userAccountService.recordLoginSuccess(
+                userLoginVO.getId(),
+                getClientIp(request),
+                resolveLocation(getClientIp(request)),
+                resolveDevice(request.getHeader("User-Agent"))
+        );
         return Result.success(userLoginVO);
     }
 
@@ -214,6 +241,9 @@ public class UserController {
     public Result<User> getUserById(@PathVariable Long id) {
         log.info("获取用户信息: {}", id);
         User user = userService.getById(id);
+        if (user != null) {
+            user.setPassword(null);
+        }
         return Result.success(user);
     }
 
@@ -235,35 +265,30 @@ public class UserController {
     @Operation(summary = "更新用户")
     public Result<String> update(@RequestBody User user) {
         log.info("更新用户: {}", user);
-        
-        // 获取更新前的用户信息，检查是否首次完善资料
-        User oldUser = userService.getById(user.getId());
-        boolean shouldReward = false;
-        
-        if (oldUser != null) {
-            // 判断是否是首次完善资料（之前昵称或手机号为空，现在填写了）
-            boolean wasIncomplete = (oldUser.getNickname() == null || oldUser.getNickname().isEmpty()) 
-                                  || (oldUser.getPhone() == null || oldUser.getPhone().isEmpty());
-            boolean isNowComplete = (user.getNickname() != null && !user.getNickname().isEmpty()) 
-                                  && (user.getPhone() != null && !user.getPhone().isEmpty());
-            shouldReward = wasIncomplete && isNowComplete;
-        }
-        
-        // 更新用户信息
-        userService.updateById(user);
-        
-        // 如果是首次完善资料，奖励积分
-        if (shouldReward) {
-            try {
-                userService.addPointsForProfile(user.getId());
-                log.info("用户{}完善资料，获?0积分", user.getId());
-                return Result.success("更新成功，获?0积分奖励");
-            } catch (Exception e) {
-                log.error("完善资料积分发放失败", e);
-                return Result.success("更新成功");
+
+        Long currentUserId = BaseContext.getCurrentId();
+        String currentRole = BaseContext.getRole();
+        boolean isAdmin = "SUPER_ADMIN".equals(currentRole) || "STORE_ADMIN".equals(currentRole);
+
+        if (!isAdmin && currentUserId != null) {
+            boolean shouldReward = userAccountService.updateCurrentUserProfile(currentUserId, user);
+            if (shouldReward) {
+                try {
+                    userService.addPointsForProfile(currentUserId);
+                    log.info("用户{}完善资料，获得30积分奖励", currentUserId);
+                    return Result.success("更新成功，获得30积分奖励");
+                } catch (Exception e) {
+                    log.error("完善资料积分发放失败", e);
+                }
             }
+            return Result.success("更新成功");
         }
-        
+
+        if (user.getId() == null) {
+            return Result.error("用户ID不能为空");
+        }
+
+        userService.updateById(user);
         return Result.success("更新成功");
     }
 
@@ -295,10 +320,83 @@ public class UserController {
      */
     @PutMapping("/password")
     @Operation(summary = "修改密码")
-    public Result<String> updatePassword(@RequestBody User user) {
-        log.info("修改密码: userId={}", user.getId());
-        userService.updatePassword(user);
+    public Result<String> updatePassword(@RequestBody UpdatePasswordDTO dto) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+        log.info("修改密码: userId={}", userId);
+        userAccountService.updatePassword(userId, dto);
         return Result.success("密码修改成功");
+    }
+
+    @PostMapping("/phone/code")
+    @Operation(summary = "发送手机验证码")
+    public Result<Map<String, Object>> sendPhoneCode(@RequestBody SendPhoneCodeDTO dto) {
+        return Result.success("验证码已发送", userAccountService.sendPhoneCode(dto.getPhone()));
+    }
+
+    @PostMapping("/phone/bind")
+    @Operation(summary = "绑定手机号")
+    public Result<String> bindPhone(@RequestBody BindPhoneDTO dto) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+        userAccountService.bindPhone(userId, dto);
+        return Result.success("手机号绑定成功");
+    }
+
+    @PostMapping("/email/code")
+    @Operation(summary = "发送邮箱验证码")
+    public Result<Map<String, Object>> sendEmailCode(@RequestBody SendEmailCodeDTO dto) {
+        return Result.success("验证码已发送", userAccountService.sendEmailCode(dto.getEmail()));
+    }
+
+    @PostMapping("/email/bind")
+    @Operation(summary = "绑定邮箱")
+    public Result<String> bindEmail(@RequestBody BindEmailDTO dto) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+        userAccountService.bindEmail(userId, dto);
+        return Result.success("邮箱绑定成功");
+    }
+
+    @PostMapping("/real-name/verify")
+    @Operation(summary = "实名认证")
+    public Result<String> verifyRealName(@RequestBody RealNameVerifyDTO dto) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+        userAccountService.verifyRealName(userId, dto);
+        return Result.success("实名认证提交成功");
+    }
+
+    @GetMapping("/login-logs")
+    @Operation(summary = "获取登录日志")
+    public Result<PageResult<UserLoginLogVO>> getLoginLogs(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize
+    ) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+        return Result.success(userAccountService.getLoginLogs(userId, page, pageSize));
+    }
+
+    @PostMapping("/deactivate")
+    @Operation(summary = "注销账号")
+    public Result<String> deactivateAccount(@RequestBody(required = false) DeactivateAccountDTO dto) {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null) {
+            return Result.error("用户未登录");
+        }
+        userAccountService.deactivateAccount(userId, dto);
+        return Result.success("账号已注销");
     }
 
     /**
@@ -494,5 +592,62 @@ public class UserController {
         
         boolean success = browseHistoryService.deleteHistory(userId, id);
         return success ? Result.success("删除成功") : Result.error("删除失败");
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        if (request == null) {
+            return "127.0.0.1";
+        }
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (StringUtils.hasText(forwarded)) {
+            return forwarded.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (StringUtils.hasText(realIp)) {
+            return realIp.trim();
+        }
+        String remoteAddr = request.getRemoteAddr();
+        return StringUtils.hasText(remoteAddr) ? remoteAddr : "127.0.0.1";
+    }
+
+    private String resolveLocation(String ip) {
+        if (!StringUtils.hasText(ip)) {
+            return "未知";
+        }
+        if ("127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip) || ip.startsWith("192.168.") || ip.startsWith("10.") || ip.startsWith("172.")) {
+            return "本地网络";
+        }
+        return "未知";
+    }
+
+    private String resolveDevice(String userAgent) {
+        if (!StringUtils.hasText(userAgent)) {
+            return "未知设备";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        if (userAgent.contains("Windows")) {
+            builder.append("Windows");
+        } else if (userAgent.contains("Mac OS")) {
+            builder.append("macOS");
+        } else if (userAgent.contains("Android")) {
+            builder.append("Android");
+        } else if (userAgent.contains("iPhone") || userAgent.contains("iPad")) {
+            builder.append("iOS");
+        } else {
+            builder.append("其他系统");
+        }
+
+        if (userAgent.contains("Edg")) {
+            builder.append(" / Edge");
+        } else if (userAgent.contains("Chrome")) {
+            builder.append(" / Chrome");
+        } else if (userAgent.contains("Safari")) {
+            builder.append(" / Safari");
+        } else if (userAgent.contains("Firefox")) {
+            builder.append(" / Firefox");
+        }
+
+        return builder.toString();
     }
 }

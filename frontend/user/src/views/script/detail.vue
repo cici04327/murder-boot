@@ -60,14 +60,6 @@
               
               <div class="price-extra-info">
                 <div class="extra-row">
-                  <span>📅 周末加价</span>
-                  <span class="extra-price">+¥10/人</span>
-                </div>
-                <div class="extra-row">
-                  <span>🎉 节假日加价</span>
-                  <span class="extra-price">+¥20/人</span>
-                </div>
-                <div class="extra-row">
                   <span>⏱️ 游戏时长</span>
                   <span>约{{ script.duration }}小时</span>
                 </div>
@@ -638,6 +630,11 @@ const handleCollect = async () => {
   } catch (error) {
     console.error('收藏操作失败:', error)
     const errorMsg = error.response?.data?.msg || error.msg || '操作失败'
+    if (String(errorMsg).includes('已收藏该剧本')) {
+      isFavorited.value = true
+      ElMessage.success('已收藏该剧本')
+      return
+    }
     ElMessage.error(errorMsg)
   }
 }
@@ -988,7 +985,7 @@ onMounted(async () => {
 }
 
 .hero-tag.category {
-  background: rgba(139, 0, 0, 0.8);
+  background: rgba(192, 57, 43, 0.8);
 }
 
 .hero-tag.difficulty.diff-1 { background: rgba(46, 125, 50, 0.8); }
@@ -1070,7 +1067,7 @@ onMounted(async () => {
 /* 价格预约卡片 - 优化版 */
 .price-booking-card {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
-  border: 2px solid rgba(139, 0, 0, 0.3);
+  border: 2px solid rgba(192, 57, 43, 0.3);
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -1082,7 +1079,7 @@ onMounted(async () => {
   color: #ff6b6b;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px dashed rgba(139, 0, 0, 0.3);
+  border-bottom: 1px dashed rgba(192, 57, 43, 0.3);
 }
 
 .price-row {
@@ -1111,7 +1108,7 @@ onMounted(async () => {
 
 .price-extra-info {
   margin-bottom: 20px;
-  background: rgba(139, 0, 0, 0.15);
+  background: rgba(192, 57, 43, 0.15);
   border-radius: 10px;
   padding: 12px;
 }
@@ -1122,7 +1119,7 @@ onMounted(async () => {
   padding: 8px 0;
   color: rgba(255, 255, 255, 0.8);
   font-size: 13px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.15);
 }
 
 .extra-row:last-child {
@@ -1147,7 +1144,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 8px;
   width: 100%;
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   color: white;
   text-align: center;
   padding: 14px 24px;
@@ -1156,12 +1153,12 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 600;
   transition: all 0.3s;
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.3);
 }
 
 .booking-button:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(139, 0, 0, 0.4);
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.4);
 }
 
 .btn-icon {
@@ -1176,7 +1173,7 @@ onMounted(async () => {
   width: 100%;
   background: rgba(35, 35, 60, 0.8);
   color: #ff6b6b;
-  border: 2px solid rgba(139, 0, 0, 0.5);
+  border: 2px solid rgba(192, 57, 43, 0.5);
   text-align: center;
   padding: 12px 24px;
   border-radius: 10px;
@@ -1187,12 +1184,12 @@ onMounted(async () => {
 }
 
 .collect-button:hover {
-  background: rgba(139, 0, 0, 0.2);
-  border-color: #8B0000;
+  background: rgba(192, 57, 43, 0.2);
+  border-color: #16213e;
 }
 
 .collect-button.is-collected {
-  background: rgba(139, 0, 0, 0.3);
+  background: rgba(192, 57, 43, 0.3);
   border-color: #ff6b6b;
   color: #ff6b6b;
 }
@@ -1200,7 +1197,7 @@ onMounted(async () => {
 /* 可约场次余量卡片 */
 .schedule-availability-card {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
-  border: 2px solid rgba(139, 0, 0, 0.3);
+  border: 2px solid rgba(192, 57, 43, 0.3);
   border-radius: 16px;
   padding: 18px 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -1248,8 +1245,8 @@ onMounted(async () => {
 }
 
 .schedule-item:hover {
-  background: rgba(139,0,0,0.25);
-  border-color: rgba(139,0,0,0.5);
+  background: rgba(192, 57, 43,0.25);
+  border-color: rgba(192, 57, 43,0.5);
   transform: translateY(-1px);
 }
 
@@ -1293,7 +1290,7 @@ onMounted(async () => {
   justify-content: center;
   gap: 20px;
   padding-top: 12px;
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  border-top: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .guarantee-item {
@@ -1347,8 +1344,8 @@ onMounted(async () => {
 .diff-value-4 { color: #f5222d; }
 
 .item-value.tag-style {
-  background: rgba(139, 0, 0, 0.1);
-  color: #8B0000;
+  background: rgba(192, 57, 43, 0.1);
+  color: #16213e;
   padding: 2px 10px;
   border-radius: 12px;
 }
@@ -1391,8 +1388,8 @@ onMounted(async () => {
 }
 
 .tag-primary {
-  background: rgba(139, 0, 0, 0.1);
-  color: #8B0000;
+  background: rgba(192, 57, 43, 0.1);
+  color: #16213e;
 }
 
 .tag-secondary {
@@ -1447,7 +1444,7 @@ onMounted(async () => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 12px;
   padding: 20px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .column-title {
@@ -1467,7 +1464,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.15);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.15);
 }
 
 .info-item:last-child {
@@ -1501,7 +1498,7 @@ onMounted(async () => {
 .story-card {
   position: relative;
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 16px;
   padding: 28px;
   overflow: hidden;
@@ -1585,13 +1582,13 @@ onMounted(async () => {
   padding: 24px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .review-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(139, 0, 0, 0.25);
-  border-color: #8B0000;
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.25);
+  border-color: #16213e;
 }
 
 .review-quote {
@@ -1610,7 +1607,7 @@ onMounted(async () => {
   justify-content: space-between;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  border-top: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .review-date {
@@ -1654,7 +1651,7 @@ onMounted(async () => {
 
 .role-card-small {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
@@ -1663,8 +1660,8 @@ onMounted(async () => {
 
 .role-card-small:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(139, 0, 0, 0.25);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 6px 16px rgba(192, 57, 43, 0.25);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .role-avatar-small {
@@ -1731,7 +1728,7 @@ onMounted(async () => {
   padding: 24px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .review-item:hover {
@@ -1807,8 +1804,8 @@ onMounted(async () => {
 }
 
 .btn-more:hover {
-  background: rgba(139, 0, 0, 0.2);
-  border-color: #8B0000;
+  background: rgba(192, 57, 43, 0.2);
+  border-color: #16213e;
 }
 
 .btn-more :deep(.el-icon) {
@@ -1849,13 +1846,13 @@ onMounted(async () => {
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .related-script-card:hover {
   transform: translateY(-12px);
-  box-shadow: 0 20px 40px rgba(139, 0, 0, 0.3);
-  border-color: #8B0000;
+  box-shadow: 0 20px 40px rgba(192, 57, 43, 0.3);
+  border-color: #16213e;
 }
 
 .recommend-badge {
@@ -1915,7 +1912,7 @@ onMounted(async () => {
 
 .play-btn {
   padding: 12px 24px;
-  background: rgba(139, 0, 0, 0.9);
+  background: rgba(192, 57, 43, 0.9);
   color: white;
   border-radius: 25px;
   font-size: 14px;
@@ -1960,8 +1957,8 @@ onMounted(async () => {
   align-items: center;
   gap: 4px;
   padding: 5px 12px;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.1) 0%, rgba(139, 0, 0, 0.05) 100%);
-  color: #8B0000;
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.1) 0%, rgba(192, 57, 43, 0.05) 100%);
+  color: #16213e;
   border-radius: 15px;
   font-size: 12px;
   font-weight: 500;
@@ -2028,7 +2025,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding-top: 16px;
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  border-top: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .price-wrapper {
@@ -2059,19 +2056,19 @@ onMounted(async () => {
   align-items: center;
   gap: 6px;
   padding: 10px 18px;
-  background: linear-gradient(135deg, #8B0000 0%, #a01010 100%);
+  background: linear-gradient(135deg, #16213e 0%, #0f3460 100%);
   color: white;
   border-radius: 20px;
   text-decoration: none;
   font-size: 13px;
   font-weight: 500;
   transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(139, 0, 0, 0.3);
+  box-shadow: 0 4px 12px rgba(192, 57, 43, 0.3);
 }
 
 .related-script-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
+  box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4);
 }
 
 /* 更多推荐提示 */
@@ -2093,7 +2090,7 @@ onMounted(async () => {
 }
 
 .more-scripts-tip a {
-  color: #8B0000;
+  color: #16213e;
   font-weight: 500;
   text-decoration: underline;
 }
@@ -2101,13 +2098,13 @@ onMounted(async () => {
 /* 全部评价弹窗深色主题 */
 :deep(.all-reviews-dialog) {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
-  border: 1px solid rgba(102, 126, 234, 0.4) !important;
+  border: 1px solid rgba(192, 57, 43, 0.4) !important;
   border-radius: 20px !important;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7) !important;
 
   .el-dialog__header {
     background: transparent !important;
-    border-bottom: 1px solid rgba(102, 126, 234, 0.2);
+    border-bottom: 1px solid rgba(192, 57, 43, 0.2);
 
     .el-dialog__title {
       color: #fff !important;
@@ -2129,7 +2126,7 @@ onMounted(async () => {
 
   .el-dialog__footer {
     background: transparent !important;
-    border-top: 1px solid rgba(102, 126, 234, 0.2);
+    border-top: 1px solid rgba(192, 57, 43, 0.2);
 
     .el-button--default {
       background: rgba(255, 255, 255, 0.08) !important;

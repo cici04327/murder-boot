@@ -731,7 +731,7 @@ watch(showAvailableCoupons, (newVal) => {
 }
 
 .claim-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%) !important;
   border: none !important;
   font-size: 16px;
   padding: 12px 24px;
@@ -760,7 +760,7 @@ watch(showAvailableCoupons, (newVal) => {
 .mystery-stat-card {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
   border-radius: 16px !important;
-  border: 1px solid rgba(102, 126, 234, 0.2) !important;
+  border: 1px solid rgba(192, 57, 43, 0.2) !important;
   position: relative;
   overflow: hidden;
 }
@@ -800,7 +800,7 @@ watch(showAvailableCoupons, (newVal) => {
 }
 
 .stats-primary .stats-icon-wrapper {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
 }
 
 .stats-success .stats-icon-wrapper {
@@ -909,8 +909,8 @@ watch(showAvailableCoupons, (newVal) => {
   overflow: visible;
   margin-bottom: 15px;
   transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+  background: linear-gradient(135deg, #c0392b 0%, #7a1d1d 100%);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.3);
   position: relative;
   will-change: transform;
 }
@@ -921,7 +921,7 @@ watch(showAvailableCoupons, (newVal) => {
 
 .coupon-item:hover {
   transform: translateY(-3px) translateZ(0);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.4);
 }
 
 .coupon-item.expired,
@@ -1079,14 +1079,14 @@ watch(showAvailableCoupons, (newVal) => {
 /* 可领取优惠券对话框 */
 .coupon-dialog :deep(.el-dialog) {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.3) !important;
+  border: 1px solid rgba(192, 57, 43, 0.3) !important;
   --el-dialog-bg-color: transparent !important;
 }
 
 .coupon-dialog :deep(.el-dialog__header) {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.6) 0%, rgba(139, 0, 0, 0.4) 100%) !important;
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.6) 0%, rgba(192, 57, 43, 0.4) 100%) !important;
   padding: 25px 30px;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(192, 57, 43, 0.3);
 }
 
 .coupon-dialog :deep(.el-dialog__title) {
@@ -1120,17 +1120,17 @@ watch(showAvailableCoupons, (newVal) => {
   display: flex;
   border-radius: 12px;
   overflow: visible;
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.5) 0%, rgba(139, 0, 0, 0.3) 100%);
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.5) 0%, rgba(192, 57, 43, 0.3) 100%);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   position: relative;
   transition: all 0.3s ease;
-  border: 1px solid rgba(139, 0, 0, 0.3);
+  border: 1px solid rgba(192, 57, 43, 0.3);
 }
 
 .available-coupon-item:hover {
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(139, 0, 0, 0.4);
-  border-color: #8B0000;
+  box-shadow: 0 6px 20px rgba(192, 57, 43, 0.4);
+  border-color: #16213e;
 }
 
 .available-coupon-item .coupon-right {
@@ -1264,16 +1264,16 @@ watch(showAvailableCoupons, (newVal) => {
 .el-overlay-dialog .coupon-dialog.el-dialog,
 .coupon-dialog.el-dialog {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
-  border: 1px solid rgba(139, 0, 0, 0.3) !important;
+  border: 1px solid rgba(192, 57, 43, 0.3) !important;
   --el-dialog-bg-color: transparent !important;
 }
 
 .el-overlay-dialog .coupon-dialog .el-dialog__header,
 .coupon-dialog .el-dialog__header,
 .coupon-dialog.el-dialog .el-dialog__header {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.6) 0%, rgba(139, 0, 0, 0.4) 100%) !important;
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.6) 0%, rgba(192, 57, 43, 0.4) 100%) !important;
   padding: 25px 30px !important;
-  border-bottom: 1px solid rgba(139, 0, 0, 0.3) !important;
+  border-bottom: 1px solid rgba(192, 57, 43, 0.3) !important;
 }
 
 .el-overlay-dialog .coupon-dialog .el-dialog__title,

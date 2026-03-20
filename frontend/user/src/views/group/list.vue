@@ -353,8 +353,8 @@ onMounted(() => {
   right: 0;
   bottom: 0;
   background-image: 
-    radial-gradient(circle at 20% 80%, rgba(139, 0, 0, 0.3) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(139, 0, 0, 0.2) 0%, transparent 50%);
+    radial-gradient(circle at 20% 80%, rgba(192, 57, 43, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(192, 57, 43, 0.2) 0%, transparent 50%);
   animation: pulse 4s ease-in-out infinite;
 }
 
@@ -395,25 +395,25 @@ onMounted(() => {
 }
 
 .create-btn {
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
   border: none;
   padding: 12px 32px;
   font-size: 16px;
   border-radius: 25px;
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.4);
   transition: all 0.3s;
 }
 
 .create-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(139, 0, 0, 0.5);
+  box-shadow: 0 6px 20px rgba(192, 57, 43, 0.5);
   background: linear-gradient(135deg, #a00000 0%, #d42e4a 100%);
 }
 
 /* 筛选区域 */
 .filter-section {
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.98) 0%, rgba(22, 33, 62, 0.98) 100%);
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
   padding: 20px 24px;
   border-radius: 16px;
@@ -457,13 +457,13 @@ onMounted(() => {
 }
 
 .filter-tag:hover {
-  border-color: rgba(139, 0, 0, 0.5);
+  border-color: rgba(192, 57, 43, 0.5);
   color: rgba(255, 255, 255, 0.9);
-  background: rgba(139, 0, 0, 0.15);
+  background: rgba(192, 57, 43, 0.15);
 }
 
 .filter-tag.active {
-  background: linear-gradient(135deg, rgba(139, 0, 0, 0.8), rgba(180, 0, 0, 0.7));
+  background: linear-gradient(135deg, rgba(192, 57, 43, 0.8), rgba(180, 0, 0, 0.7));
   border-color: rgba(180, 0, 0, 0.6);
   color: #fff;
   font-weight: 500;
@@ -488,7 +488,7 @@ onMounted(() => {
 .group-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(139, 0, 0, 0.3);
+  border: 1px solid rgba(192, 57, 43, 0.3);
 }
 
 .group-header {
@@ -506,7 +506,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   font-size: 24px;
-  background: rgba(139, 0, 0, 0.3);
+  background: rgba(192, 57, 43, 0.3);
   border-radius: 50%;
   margin-right: 12px;
 }
@@ -537,14 +537,14 @@ onMounted(() => {
 }
 
 .status-active {
-  background: rgba(139, 0, 0, 0.8);
+  background: rgba(192, 57, 43, 0.8);
   color: #fff;
   animation: glow 2s ease-in-out infinite;
 }
 
 @keyframes glow {
-  0%, 100% { box-shadow: 0 0 5px rgba(139, 0, 0, 0.5); }
-  50% { box-shadow: 0 0 15px rgba(139, 0, 0, 0.8); }
+  0%, 100% { box-shadow: 0 0 5px rgba(192, 57, 43, 0.5); }
+  50% { box-shadow: 0 0 15px rgba(192, 57, 43, 0.8); }
 }
 
 .status-success {
@@ -590,7 +590,7 @@ onMounted(() => {
 }
 
 .group-info .info-item .el-icon {
-  color: #8B0000;
+  color: #16213e;
 }
 
 /* 座位可视化 */
@@ -627,8 +627,8 @@ onMounted(() => {
 }
 
 .seat-item.seat-taken {
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
-  box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
+  box-shadow: 0 2px 8px rgba(192, 57, 43, 0.3);
 }
 
 .seat-icon {
@@ -645,7 +645,7 @@ onMounted(() => {
 }
 
 .spots-left strong {
-  color: #8B0000;
+  color: #16213e;
   font-size: 16px;
 }
 
@@ -672,7 +672,7 @@ onMounted(() => {
 .group-price {
   font-size: 22px;
   font-weight: bold;
-  color: #8B0000;
+  color: #16213e;
 }
 
 .group-price small {
@@ -682,7 +682,7 @@ onMounted(() => {
 }
 
 .group-footer .el-button--primary {
-  background: linear-gradient(135deg, #8B0000 0%, #c41e3a 100%);
+  background: linear-gradient(135deg, #16213e 0%, #55141d 100%);
   border: none;
   border-radius: 20px;
   padding: 8px 20px;

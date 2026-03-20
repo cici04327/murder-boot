@@ -454,7 +454,7 @@ const handleServiceClick = (service) => {
   margin-bottom: 20px;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .card-header {
@@ -491,14 +491,14 @@ const handleServiceClick = (service) => {
   border-radius: 12px;
   text-align: center;
   transition: all 0.3s;
-  border: 2px solid rgba(139, 0, 0, 0.2);
+  border: 2px solid rgba(192, 57, 43, 0.2);
   cursor: pointer;
 }
 
 .service-item:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(139, 0, 0, 0.25);
-  border-color: #8B0000;
+  box-shadow: 0 8px 25px rgba(192, 57, 43, 0.25);
+  border-color: #16213e;
   background: linear-gradient(135deg, rgba(45, 45, 75, 0.98) 0%, rgba(40, 55, 90, 0.98) 100%);
 }
 
@@ -530,7 +530,7 @@ const handleServiceClick = (service) => {
   padding: 25px;
   background: linear-gradient(135deg, rgba(26, 26, 46, 0.95) 0%, rgba(22, 33, 62, 0.95) 100%);
   border-radius: 12px;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .info-section:last-child {
@@ -542,7 +542,7 @@ const handleServiceClick = (service) => {
   color: #fff;
   margin-bottom: 25px;
   padding-bottom: 12px;
-  border-bottom: 2px solid #8B0000;
+  border-bottom: 2px solid #16213e;
   display: inline-block;
 }
 
@@ -557,13 +557,13 @@ const handleServiceClick = (service) => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   transition: all 0.3s;
 }
 
 .faq-item:hover {
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .faq-question {
@@ -596,7 +596,7 @@ const handleServiceClick = (service) => {
   color: rgba(255, 255, 255, 0.85);
   font-size: 14px;
   line-height: 1.8;
-  border-top: 1px solid rgba(139, 0, 0, 0.2);
+  border-top: 1px solid rgba(192, 57, 43, 0.2);
   background: rgba(26, 26, 46, 0.5);
 }
 
@@ -619,12 +619,12 @@ const handleServiceClick = (service) => {
   background: linear-gradient(135deg, rgba(35, 35, 60, 0.95) 0%, rgba(30, 45, 80, 0.95) 100%);
   border-radius: 10px;
   transition: all 0.3s;
-  border: 1px solid rgba(139, 0, 0, 0.2);
+  border: 1px solid rgba(192, 57, 43, 0.2);
 }
 
 .contact-card:hover {
-  box-shadow: 0 4px 15px rgba(139, 0, 0, 0.2);
-  border-color: rgba(139, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(192, 57, 43, 0.2);
+  border-color: rgba(192, 57, 43, 0.4);
 }
 
 .contact-card .el-icon {
@@ -731,7 +731,7 @@ const handleServiceClick = (service) => {
 
 .help-page .info-card.el-card .el-card__header {
   background: transparent !important;
-  border-bottom-color: rgba(139, 0, 0, 0.2) !important;
+  border-bottom-color: rgba(192, 57, 43, 0.2) !important;
 }
 
 .help-page .info-card.el-card .el-card__body {
@@ -741,7 +741,7 @@ const handleServiceClick = (service) => {
 /* 覆盖搜索框样式 */
 .help-page .search-box-small .el-input__wrapper {
   background: rgba(35, 35, 60, 0.9) !important;
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.3) !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.3) !important;
 }
 
 .help-page .search-box-small .el-input__inner {
@@ -758,10 +758,10 @@ const handleServiceClick = (service) => {
 }
 
 .help-page .search-box-small .el-input__wrapper:hover {
-  box-shadow: 0 0 0 1px rgba(139, 0, 0, 0.5) !important;
+  box-shadow: 0 0 0 1px rgba(192, 57, 43, 0.5) !important;
 }
 
 .help-page .search-box-small .el-input__wrapper.is-focus {
-  box-shadow: 0 0 0 1px #8B0000 !important;
+  box-shadow: 0 0 0 1px #16213e !important;
 }
 </style>

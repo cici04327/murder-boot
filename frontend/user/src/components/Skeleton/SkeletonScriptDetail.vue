@@ -121,7 +121,7 @@ import SkeletonBase from './SkeletonBase.vue'
 
 <style scoped>
 .skeleton-script-detail {
-  background: #fff;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 55%, #0f3460 100%);
 }
 
 .skeleton-cover {
@@ -136,7 +136,8 @@ import SkeletonBase from './SkeletonBase.vue'
 }
 
 .skeleton-booking-card {
-  background: #f9f9f9;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.2);
   border-radius: 12px;
   padding: 24px;
   position: sticky;
@@ -146,7 +147,8 @@ import SkeletonBase from './SkeletonBase.vue'
 .skeleton-role-card {
   text-align: center;
   padding: 15px;
-  background: #f9f9f9;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.96) 0%, rgba(22, 33, 62, 0.94) 100%);
+  border: 1px solid rgba(192, 57, 43, 0.18);
   border-radius: 8px;
   margin-bottom: 15px;
 }

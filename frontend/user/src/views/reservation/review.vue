@@ -538,11 +538,11 @@ onMounted(() => {
 }
 
 .review-tabs :deep(.el-tabs__item.is-active) {
-  color: #8B0000;
+  color: #16213e;
 }
 
 .review-tabs :deep(.el-tabs__active-bar) {
-  background-color: #8B0000;
+  background-color: #16213e;
 }
 
 .tab-content {
@@ -561,11 +561,11 @@ onMounted(() => {
   padding: 12px 16px;
   background: #f9f9f9;
   border-radius: 8px;
-  border-left: 4px solid #8B0000;
+  border-left: 4px solid #16213e;
 }
 
 .review-section-title .el-icon {
-  color: #8B0000;
+  color: #16213e;
   font-size: 20px;
 }
 
@@ -647,8 +647,8 @@ onMounted(() => {
 }
 
 .submit-section .el-button--primary {
-  background-color: #8B0000;
-  border-color: #8B0000;
+  background-color: #16213e;
+  border-color: #16213e;
 }
 
 .submit-section .el-button--primary:hover {
@@ -679,8 +679,8 @@ onMounted(() => {
 }
 
 :deep(.el-checkbox-button.is-checked .el-checkbox-button__inner) {
-  background-color: #8B0000;
-  border-color: #8B0000;
+  background-color: #16213e;
+  border-color: #16213e;
 }
 
 :deep(.el-upload-list--picture-card .el-upload-list__item) {
