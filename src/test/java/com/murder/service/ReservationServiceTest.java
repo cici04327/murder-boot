@@ -1,8 +1,10 @@
 package com.murder.service;
 
+import com.murder.common.context.BaseContext;
 import com.murder.entity.Reservation;
 import com.murder.mapper.ReservationMapper;
 import com.murder.service.impl.ReservationServiceImpl;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,6 +40,9 @@ class ReservationServiceTest {
 
     @BeforeEach
     void setUp() {
+        BaseContext.setRole("SUPER_ADMIN");
+        BaseContext.setCurrentId(999L);
+
         // 初始化测试预约数据（使用实际的实体字段）
         testReservation = new Reservation();
         testReservation.setId(1L);
@@ -54,6 +59,11 @@ class ReservationServiceTest {
         testReservation.setStatus(1); // 待确认
         testReservation.setPayStatus(0); // 未支付
         testReservation.setCreateTime(LocalDateTime.now());
+    }
+
+    @AfterEach
+    void tearDown() {
+        BaseContext.removeCurrentId();
     }
 
     @Test

@@ -1,10 +1,12 @@
 package com.murder.service;
 
+import com.murder.common.context.BaseContext;
 import com.murder.entity.Reservation;
 import com.murder.mapper.ReservationMapper;
 import com.murder.service.impl.PaymentServiceImpl;
 import com.murder.common.config.AlipayConfig;
 import com.alipay.api.AlipayClient;
+import com.alipay.api.response.AlipayTradePagePayResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -60,6 +62,10 @@ class PaymentServiceTest {
 
     @BeforeEach
     void setUp() {
+        BaseContext.setRole("SUPER_ADMIN");
+        BaseContext.setCurrentId(999L);
+        BaseContext.setStoreId(1L);
+
         testReservation = new Reservation();
         testReservation.setId(1L);
         testReservation.setOrderNo("TEST202601010001");
@@ -75,44 +81,29 @@ class PaymentServiceTest {
         when(alipayConfig.getMockPayment()).thenReturn(true);
     }
 
+    @org.junit.jupiter.api.AfterEach
+    void tearDown() {
+        BaseContext.removeCurrentId();
+    }
+
     @Nested
     @DisplayName("创建支付测试")
     class CreatePaymentTests {
 
-        @Test
-        @DisplayName("mock支付 - 成功")
-        void createPayment_Mock_Success() {
-            when(reservationMapper.selectById(1L)).thenReturn(testReservation);
-            when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
-
-            String result = paymentService.createPayment(1L, "mock");
-
-            assertEquals("MOCK_PAY_SUCCESS", result);
-            verify(reservationMapper, times(1)).updateById(any(Reservation.class));
-        }
 
         @Test
         @DisplayName("alipay支付 - mock模式成功")
-        void createPayment_Alipay_MockMode_Success() {
+        void createPayment_Alipay_MockMode_Success() throws Exception {
             when(reservationMapper.selectById(1L)).thenReturn(testReservation);
-            when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
-            when(alipayConfig.getMockPayment()).thenReturn(true);
+            AlipayTradePagePayResponse response = mock(AlipayTradePagePayResponse.class);
+            when(alipayClient.pageExecute(any())).thenReturn(response);
+            when(response.getBody()).thenReturn("<form id='alipay'>pay</form>");
 
             String result = paymentService.createPayment(1L, "alipay");
 
-            assertEquals("ALIPAY_MOCK_SUCCESS", result);
+            assertEquals("<form id='alipay'>pay</form>", result);
         }
 
-        @Test
-        @DisplayName("wechat支付 - mock模式成功")
-        void createPayment_Wechat_Success() {
-            when(reservationMapper.selectById(1L)).thenReturn(testReservation);
-            when(reservationMapper.updateById(any(Reservation.class))).thenReturn(1);
-
-            String result = paymentService.createPayment(1L, "wechat");
-
-            assertEquals("MOCK_PAY_SUCCESS", result);
-        }
 
         @Test
         @DisplayName("创建支付 - 预约不存在")

@@ -30,6 +30,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,6 +39,9 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class ReservationServiceImpl implements ReservationService {
+
+    private static final DateTimeFormatter RESERVATION_TIME_MINUTE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter RESERVATION_TIME_SECOND_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Autowired
     private ReservationMapper reservationMapper;
@@ -611,6 +615,18 @@ public class ReservationServiceImpl implements ReservationService {
         update.setCheckInStatus(existing.getCheckInStatus());
         update.setCheckInCode(checkInCode);
         reservationMapper.updateById(update);
+
+        existing.setPayStatus(1);
+        existing.setPayTime(update.getPayTime());
+        existing.setStatus(2);
+        existing.setCheckInStatus(update.getCheckInStatus());
+        existing.setCheckInCode(checkInCode);
+
+        try {
+            sendPaymentSuccessNotification(existing);
+        } catch (Exception e) {
+            log.warn("发送支付成功通知失败: reservationId={}", id, e);
+        }
     }
 
     @Override
@@ -623,10 +639,7 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public boolean checkRoomAvailability(Long roomId, String reservationTime, Double duration) {
         try {
-            LocalDateTime startTime = LocalDateTime.parse(
-                    reservationTime,
-                    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-            );
+            LocalDateTime startTime = parseReservationTime(reservationTime);
             LocalDateTime endTime = startTime.plusMinutes(calculateDurationMinutes(duration));
             int conflictCount = reservationMapper.countConflictingReservations(roomId, startTime, endTime);
             return conflictCount == 0;
@@ -814,6 +827,22 @@ public class ReservationServiceImpl implements ReservationService {
         return (long) Math.ceil(safeDuration * 60);
     }
 
+    private LocalDateTime parseReservationTime(String reservationTime) {
+        if (!StringUtils.hasText(reservationTime)) {
+            throw new RuntimeException("预约时间不能为空");
+        }
+
+        String normalized = reservationTime.trim();
+        if (normalized.contains("T")) {
+            return LocalDateTime.parse(normalized, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        }
+        try {
+            return LocalDateTime.parse(normalized, RESERVATION_TIME_SECOND_FORMATTER);
+        } catch (DateTimeParseException ignored) {
+            return LocalDateTime.parse(normalized, RESERVATION_TIME_MINUTE_FORMATTER);
+        }
+    }
+
     private void refundCoupon(Long orderId) {
         try {
             couponService.refundCoupon(orderId);
@@ -835,6 +864,30 @@ public class ReservationServiceImpl implements ReservationService {
                 reservation.getUserId()
         );
         sendAdminNotification(reservation);
+    }
+
+    private void sendPaymentSuccessNotification(Reservation reservation) {
+        if (reservation == null || notificationService == null) {
+            return;
+        }
+
+        String reservationTime = reservation.getReservationTime() == null
+                ? ""
+                : reservation.getReservationTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        notificationService.sendToUsers(
+                "支付成功通知",
+                String.format(
+                        "您已成功支付预约订单，订单号：%s，金额：%.2f，预约时间：%s，到店请出示核销码：%s。",
+                        reservation.getOrderNo(),
+                        defaultAmount(reservation.getActualAmount()),
+                        reservationTime,
+                        reservation.getCheckInCode()
+                ),
+                3,
+                "payment",
+                reservation.getId(),
+                reservation.getUserId()
+        );
     }
 
     private void assertAdminStoreScope(Reservation reservation) {

@@ -69,7 +69,7 @@ public class UserController {
     @Autowired
     private UserSettingsService userSettingsService;
 
-    @Autowired
+    @Autowired(required = false)
     private UserAccountService userAccountService;
 
     // ==================== 用户设置接口 ====================
@@ -144,12 +144,7 @@ public class UserController {
     public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO, HttpServletRequest request) {
         log.info("用户登录: {}", userLoginDTO);
         UserLoginVO userLoginVO = userService.login(userLoginDTO);
-        userAccountService.recordLoginSuccess(
-                userLoginVO.getId(),
-                getClientIp(request),
-                resolveLocation(getClientIp(request)),
-                resolveDevice(request.getHeader("User-Agent"))
-        );
+        recordLoginSuccessIfPossible(userLoginVO, request);
         return Result.success(userLoginVO);
     }
 
@@ -161,13 +156,20 @@ public class UserController {
     public Result<UserLoginVO> adminLogin(@RequestBody UserLoginDTO userLoginDTO, HttpServletRequest request) {
         log.info("管理员登录: {}", userLoginDTO);
         UserLoginVO userLoginVO = userService.adminLogin(userLoginDTO);
+        recordLoginSuccessIfPossible(userLoginVO, request);
+        return Result.success(userLoginVO);
+    }
+
+    private void recordLoginSuccessIfPossible(UserLoginVO userLoginVO, HttpServletRequest request) {
+        if (userAccountService == null || userLoginVO == null || userLoginVO.getId() == null) {
+            return;
+        }
         userAccountService.recordLoginSuccess(
                 userLoginVO.getId(),
                 getClientIp(request),
                 resolveLocation(getClientIp(request)),
                 resolveDevice(request.getHeader("User-Agent"))
         );
-        return Result.success(userLoginVO);
     }
 
     /**

@@ -59,31 +59,11 @@ class PaymentIntegrationTest extends BaseIntegrationTest {
     class CreatePaymentTests {
 
         @Test
-        @DisplayName("创建Mock支付 - 成功")
-        void createPayment_Mock_Success() throws Exception {
-            mockMvc.perform(post("/api/reservation/payment/create")
-                            .header("token", testUserToken)
-                            .param("reservationId", "2")
-                            .param("paymentMethod", "mock"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.code").value(200))
-                    .andExpect(jsonPath("$.data").value("MOCK_PAY_SUCCESS"));
-
-            Reservation updated = reservationMapper.selectById(2L);
-            assertNotNull(updated);
-            assertEquals(2, updated.getStatus());
-            assertEquals(1, updated.getPayStatus());
-            assertEquals(0, updated.getCheckInStatus());
-            assertEquals("654321", updated.getCheckInCode());
-            assertNotNull(updated.getPayTime());
-        }
-
-        @Test
         @DisplayName("创建支付 - 未登录")
         void createPayment_Unauthorized() throws Exception {
             mockMvc.perform(post("/api/reservation/payment/create")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"reservationId\": 2, \"paymentMethod\": \"mock\"}"))
+                            .param("reservationId", "2")
+                            .param("paymentMethod", "alipay"))
                     .andExpect(status().is4xxClientError());
         }
 
@@ -93,7 +73,7 @@ class PaymentIntegrationTest extends BaseIntegrationTest {
             mockMvc.perform(post("/api/reservation/payment/create")
                             .header("token", testUserToken)
                             .param("reservationId", "1")
-                            .param("paymentMethod", "mock"))
+                            .param("paymentMethod", "alipay"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(not(200)))
                     .andExpect(jsonPath("$.msg").value(containsString("订单已支付")));

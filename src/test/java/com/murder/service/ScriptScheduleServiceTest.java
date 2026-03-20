@@ -2,8 +2,11 @@ package com.murder.service;
 
 import com.murder.entity.Dm;
 import com.murder.entity.ScriptSchedule;
+import com.murder.mapper.ScriptMapper;
 import com.murder.mapper.DmMapper;
 import com.murder.mapper.ScriptScheduleMapper;
+import com.murder.mapper.StoreMapper;
+import com.murder.mapper.StoreRoomMapper;
 import com.murder.service.impl.ScriptScheduleServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,6 +44,15 @@ class ScriptScheduleServiceTest {
     @Mock
     private DmMapper dmMapper;
 
+    @Mock
+    private ScriptMapper scriptMapper;
+
+    @Mock
+    private StoreMapper storeMapper;
+
+    @Mock
+    private StoreRoomMapper storeRoomMapper;
+
     @InjectMocks
     private ScriptScheduleServiceImpl scriptScheduleService;
 
@@ -64,6 +76,10 @@ class ScriptScheduleServiceTest {
                 .createTime(LocalDateTime.now())
                 .updateTime(LocalDateTime.now())
                 .build();
+
+        when(scriptMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
+        when(storeMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
+        when(storeRoomMapper.selectBatchIds(any())).thenReturn(Collections.emptyList());
     }
 
     @Test

@@ -1,5 +1,7 @@
 package com.murder.integration;
 
+import com.alipay.api.AlipayClient;
+import com.alipay.api.response.AlipayTradePagePayResponse;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.murder.dto.ReservationDTO;
@@ -11,6 +13,7 @@ import com.murder.mapper.ReservationMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -19,8 +22,12 @@ import java.time.LocalDateTime;
 import java.util.stream.StreamSupport;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,11 +43,15 @@ class FrontendSmokeIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private FeedbackMapper feedbackMapper;
 
+    @MockBean
+    private AlipayClient alipayClient;
+
     @Test
     @DisplayName("用户登录后可完成浏览-预约-支付-通知链路")
     void loginBrowseReservePayAndNotify_Success() throws Exception {
         String token = loginAsTestUser();
         long unreadBefore = getUnreadCount(token);
+        mockAlipayPageResponse();
 
         mockMvc.perform(get("/api/script/list/hot").header("token", token))
                 .andExpect(status().isOk())
@@ -59,7 +70,7 @@ class FrontendSmokeIntegrationTest extends BaseIntegrationTest {
         dto.setReservationTime(LocalDateTime.now().plusDays(5));
         dto.setDuration(new BigDecimal("4.0"));
         dto.setPlayerCount(6);
-        dto.setTotalPrice(new BigDecimal("198.00"));
+        dto.setTotalPrice(new BigDecimal("1188.00"));
 
         MvcResult createResult = mockMvc.perform(post("/api/reservation")
                         .header("token", token)
@@ -80,10 +91,16 @@ class FrontendSmokeIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(post("/api/reservation/payment/create")
                         .header("token", token)
                         .param("reservationId", String.valueOf(reservationId))
-                        .param("paymentMethod", "mock"))
+                        .param("paymentMethod", "alipay"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value("MOCK_PAY_SUCCESS"));
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.containsString("<form")));
+
+        mockMvc.perform(put("/api/reservation/" + reservationId + "/pay")
+                        .header("token", adminApiToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data").value("支付成功"));
 
         mockMvc.perform(get("/api/reservation/payment/status/" + reservationId)
                         .header("token", token))
@@ -205,5 +222,11 @@ class FrontendSmokeIntegrationTest extends BaseIntegrationTest {
                 .andReturn();
         JsonNode body = objectMapper.readTree(result.getResponse().getContentAsString());
         return body.path("data").asLong();
+    }
+
+    private void mockAlipayPageResponse() throws Exception {
+        AlipayTradePagePayResponse response = mock(AlipayTradePagePayResponse.class);
+        when(alipayClient.pageExecute(any())).thenReturn(response);
+        when(response.getBody()).thenReturn("<form id='alipay-page'>mock pay form</form>");
     }
 }

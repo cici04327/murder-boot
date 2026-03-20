@@ -407,6 +407,8 @@ public class PaymentServiceImpl implements PaymentService {
             return;
         }
 
+        boolean groupFailed = StringUtils.hasText(reason) && reason.contains("拼单未成团");
+        String title = groupFailed ? "拼单未成团自动退款通知" : "预约自动退款通知";
         String content = String.format(
                 "您的预约订单已自动退款，订单号：%s，原因：%s，退款金额：%.2f。",
                 reservation.getOrderNo(),
@@ -415,7 +417,7 @@ public class PaymentServiceImpl implements PaymentService {
         );
 
         notificationService.sendToUsers(
-                "预约自动退款通知",
+                title,
                 content,
                 5,
                 "group",

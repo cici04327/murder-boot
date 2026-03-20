@@ -123,7 +123,7 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
             dto.setReservationTime(reservationTime);
             dto.setDuration(new BigDecimal("4.0"));
             dto.setPlayerCount(6);
-            dto.setTotalPrice(new BigDecimal("198.00"));
+            dto.setTotalPrice(new BigDecimal("1188.00"));
 
             MvcResult result = mockMvc.perform(post("/api/reservation")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -146,7 +146,7 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
             assertEquals(1, created.getStatus());
             assertEquals(0, created.getPayStatus());
             assertEquals(2L, created.getRoomId());
-            assertNotNull(created.getCheckInCode());
+            assertNull(created.getCheckInCode());
         }
     }
 
@@ -159,7 +159,7 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
         void confirm_Success() throws Exception {
             // 确认待处理的预约（ID=2）
             mockMvc.perform(put("/api/reservation/2/confirm")
-                            .header("token", testUserToken))
+                            .header("token", adminApiToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").value("确认成功"));
@@ -188,7 +188,7 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
         @DisplayName("支付预约")
         void pay_Success() throws Exception {
             mockMvc.perform(put("/api/reservation/2/pay")
-                            .header("token", testUserToken))
+                            .header("token", adminApiToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").value("支付成功"));
@@ -204,7 +204,7 @@ class ReservationIntegrationTest extends BaseIntegrationTest {
         void complete_Success() throws Exception {
             // 完成已确认且已支付的预约（ID=1）
             mockMvc.perform(put("/api/reservation/1/complete")
-                            .header("token", testUserToken))
+                            .header("token", adminApiToken))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.code").value(200))
                     .andExpect(jsonPath("$.data").value("完成成功"));
