@@ -37,7 +37,7 @@
         <el-form-item>
           <el-button type="primary" @click="handleQuery">查询</el-button>
           <el-button @click="handleReset">重置</el-button>
-          <el-button type="success" @click="handleAdd">新增预约</el-button>
+          <el-button v-if="!isStaffLogin" type="success" @click="handleAdd">新增预约</el-button>
           <el-button type="warning" :loading="exporting" @click="handleExport">导出</el-button>
         </el-form-item>
       </el-form>
@@ -148,8 +148,18 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import * as XLSX from 'xlsx'
 import { saveAs } from 'file-saver'
 import request from '@/utils/request'
+import { hasPermissionCode } from '@/utils/permission'
 
 const router = useRouter()
+const loginType = localStorage.getItem('admin-login-type') || 'admin'
+const isStaffLogin = loginType === 'staff'
+const adminUser = JSON.parse(localStorage.getItem('admin-user') || '{}')
+const permissionCodes = new Set(
+  String(adminUser.permissionCodes || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+)
 
 const loading = ref(false)
 const exporting = ref(false)
@@ -194,11 +204,11 @@ const getPayStatusText = (status) => {
 
 const formatAmount = (amount) => `￥${Number(amount || 0).toFixed(2)}`
 
-const canCheckIn = (row) => row.status === 2 && row.payStatus === 1 && row.checkInStatus !== 1
+const canCheckIn = (row) => row.status === 2 && row.payStatus === 1 && row.checkInStatus !== 1 && (!isStaffLogin || hasPermissionCode('reservation:checkin'))
 
-const canComplete = (row) => row.status === 2 && row.checkInStatus === 1
+const canComplete = (row) => row.status === 2 && row.checkInStatus === 1 && (!isStaffLogin || permissionCodes.has('reservation:complete'))
 
-const canCancel = (row) => [1, 2].includes(row.status) && row.checkInStatus !== 1
+const canCancel = (row) => !isStaffLogin && [1, 2].includes(row.status) && row.checkInStatus !== 1
 
 const normalizeCheckInCode = (value) => String(value || '').replace(/\s+/g, '').replace(/[^\d]/g, '')
 

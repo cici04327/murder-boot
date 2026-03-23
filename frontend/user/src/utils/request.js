@@ -9,6 +9,16 @@ const request = axios.create({
   timeout: 30000  // AI对话可能需要较长时间，增加超时时间到30秒
 })
 
+const silentErrors = [
+  '/script/review/page',        // 评价列表可能为空
+  '/script/favorite/',          // 收藏状态检查
+  '/article/comments',          // 评论列表可能为空
+  '/user/points/info',          // 积分信息页会在页面内自行重试和提示
+  '/user/points/exchange-coupon' // 积分页会对兑换限制做业务提示
+]
+
+const isSilentRequest = (url = '') => silentErrors.some(path => url.includes(path))
+
 // 请求拦截器
 request.interceptors.request.use(
   config => {
@@ -37,6 +47,7 @@ request.interceptors.request.use(
 request.interceptors.response.use(
   response => {
     const res = response.data
+    const url = response.config?.url || ''
     
     // 如果返回的状态码为200，说明接口请求成功，可以正常拿到数据
     // 否则的话抛出错误
@@ -44,7 +55,9 @@ request.interceptors.response.use(
       return res
     } else {
       const errorMsg = res.msg || res.message || '请求失败'
-      ElMessage.error(errorMsg)
+      if (!isSilentRequest(url)) {
+        ElMessage.error(errorMsg)
+      }
       return Promise.reject(new Error(errorMsg))
     }
   },
@@ -55,13 +68,7 @@ request.interceptors.response.use(
     console.error(`响应错误: ${method} ${url}`, error)
 
     // 静默处理的错误（不显示错误消息）
-    const silentErrors = [
-      '/script/review/page',        // 评价列表可能为空
-      '/script/favorite/',           // 收藏状态检查
-      '/article/comments'            // 评论列表可能为空
-    ]
-    
-    const isSilent = silentErrors.some(path => url.includes(path))
+    const isSilent = isSilentRequest(url)
     
     if (error.response) {
       const { status, data } = error.response

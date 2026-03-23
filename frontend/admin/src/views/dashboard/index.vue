@@ -173,13 +173,9 @@ const roomUsage = ref([])
 
 const loginType = localStorage.getItem('admin-login-type') || 'admin'
 const storeAdminStoreId = localStorage.getItem('admin-store-id')
-const selectedStoreId = localStorage.getItem('admin-current-store-id')
 const effectiveStoreId = computed(() => {
   if (loginType === 'store') {
     return storeAdminStoreId || ''
-  }
-  if (selectedStoreId && selectedStoreId !== 'all') {
-    return selectedStoreId
   }
   return ''
 })

@@ -11,6 +11,7 @@ import './styles/animations.css'
 import './styles/background-themes.css'
 import './styles/info-enhanced.css'
 import './styles/element-dark.css'
+import './styles/paper-theme.css'
 // import './styles/no-gradients.css' // 已移除：该文件会强制全站纯白并禁用渐变
 
 // 创建应用实例

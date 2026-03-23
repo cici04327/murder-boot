@@ -10,4 +10,8 @@ public class JwtClaimsConstant {
     public static final String PHONE = "phone";
     public static final String ROLE = "role";
     public static final String STORE_ID = "storeId";
+    public static final String EMPLOYEE_ID = "employeeId";
+    public static final String STAFF_ROLE = "staffRole";
+    public static final String PERMISSION_CODES = "permissionCodes";
+    public static final String DM_ID = "dmId";
 }

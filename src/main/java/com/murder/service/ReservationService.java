@@ -20,6 +20,7 @@ public interface ReservationService {
             Integer pageSize,
             Long userId,
             Long storeId,
+            Long scheduleId,
             LocalDate reservationDate,
             Integer status,
             Integer payStatus,

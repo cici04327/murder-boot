@@ -22,6 +22,11 @@ public interface StoreService {
     PageResult<StoreVO> pageQuery(Integer page, Integer pageSize, String name);
 
     /**
+     * 分页查询门店列表（支持按门店ID限定范围）
+     */
+    PageResult<StoreVO> pageQuery(Integer page, Integer pageSize, String name, Long storeId);
+
+    /**
      * 多条件分页查询门店列�?
      */
     PageResult<StoreVO> pageQueryAdvanced(StoreQueryDTO queryDTO);
@@ -75,6 +80,11 @@ public interface StoreService {
      * 获取所有门店列表（不分页）
      */
     List<StoreVO> listAll();
+
+    /**
+     * 获取所有门店列表（支持按门店ID限定范围）
+     */
+    List<StoreVO> listAll(Long storeId);
     
     /**
      * 获取热门门店

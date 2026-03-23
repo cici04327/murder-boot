@@ -2,7 +2,9 @@ package com.murder.service;
 
 import com.murder.common.result.PageResult;
 import com.murder.dto.StoreEmployeeDTO;
+import com.murder.dto.StoreEmployeeLoginDTO;
 import com.murder.entity.StoreEmployee;
+import com.murder.vo.StoreEmployeeLoginVO;
 import com.murder.vo.StoreEmployeeVO;
 
 import java.util.List;
@@ -51,4 +53,14 @@ public interface StoreEmployeeService {
      * 更新员工状�?
      */
     void updateStatus(Long id, Integer status);
+
+    /**
+     * 重置员工登录密码
+     */
+    void resetPassword(Long id, String newPassword);
+
+    /**
+     * 员工后台登录
+     */
+    StoreEmployeeLoginVO login(StoreEmployeeLoginDTO loginDTO);
 }

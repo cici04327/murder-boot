@@ -32,25 +32,26 @@ public class StatisticsServiceImpl implements StatisticsService {
     public StatisticsOverviewVO getOverview() {
         LocalDateTime todayStart = LocalDateTime.of(LocalDate.now(), LocalTime.MIN);
         LocalDateTime yesterdayStart = todayStart.minusDays(1);
+        LocalDateTime tomorrowStart = todayStart.plusDays(1);
         
-        // 今日营业�?
+        // 今日营业额：仅统计今日创建且已支付订单
         String sql = "SELECT COALESCE(SUM(actual_amount), 0) FROM reservation_order " +
-                "WHERE create_time >= ? AND status IN (1,2,3) AND is_deleted = 0";
-        BigDecimal todayRevenue = jdbcTemplate.queryForObject(sql, BigDecimal.class, todayStart);
+                "WHERE create_time >= ? AND create_time < ? AND pay_status = 1 AND is_deleted = 0";
+        BigDecimal todayRevenue = jdbcTemplate.queryForObject(sql, BigDecimal.class, todayStart, tomorrowStart);
         
-        // 昨日营业�?
-        BigDecimal yesterdayRevenue = jdbcTemplate.queryForObject(sql, BigDecimal.class, yesterdayStart);
+        // 昨日营业额：严格限制在昨日自然日区间内
+        BigDecimal yesterdayRevenue = jdbcTemplate.queryForObject(sql, BigDecimal.class, yesterdayStart, todayStart);
         
-        // 今日预约�?
-        sql = "SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND is_deleted = 0";
-        Integer todayReservations = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+        // 今日预约数
+        sql = "SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND create_time < ? AND is_deleted = 0";
+        Integer todayReservations = jdbcTemplate.queryForObject(sql, Integer.class, todayStart, tomorrowStart);
         
-        // 昨日预约�?
-        Integer yesterdayReservations = jdbcTemplate.queryForObject(sql, Integer.class, yesterdayStart);
+        // 昨日预约数：严格限制在昨日自然日区间内
+        Integer yesterdayReservations = jdbcTemplate.queryForObject(sql, Integer.class, yesterdayStart, todayStart);
         
         // 今日新增用户
-        sql = "SELECT COUNT(*) FROM user WHERE create_time >= ? AND is_deleted = 0";
-        Integer todayNewUsers = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+        sql = "SELECT COUNT(*) FROM user WHERE create_time >= ? AND create_time < ? AND is_deleted = 0";
+        Integer todayNewUsers = jdbcTemplate.queryForObject(sql, Integer.class, todayStart, tomorrowStart);
         
         // 累计用户�?
         sql = "SELECT COUNT(*) FROM user WHERE is_deleted = 0";
@@ -67,8 +68,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         // 今日优惠券使用数（use_time 可能为 null，用 update_time 兜底）
         Integer todayCouponUsed;
         try {
-            sql = "SELECT COUNT(*) FROM user_coupon WHERE use_time >= ? AND status = 2";
-            todayCouponUsed = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+            sql = "SELECT COUNT(*) FROM user_coupon WHERE use_time >= ? AND use_time < ? AND status = 2";
+            todayCouponUsed = jdbcTemplate.queryForObject(sql, Integer.class, todayStart, tomorrowStart);
         } catch (Exception e) {
             log.warn("查询优惠券使用数失败（字段不存在），使用状态字段兜底: {}", e.getMessage());
             try {
@@ -82,8 +83,8 @@ public class StatisticsServiceImpl implements StatisticsService {
         // 优惠券使用率（今日领取数，字段名兼容 receive_time / create_time）
         Integer todayCouponReceived;
         try {
-            sql = "SELECT COUNT(*) FROM user_coupon WHERE create_time >= ?";
-            todayCouponReceived = jdbcTemplate.queryForObject(sql, Integer.class, todayStart);
+            sql = "SELECT COUNT(*) FROM user_coupon WHERE create_time >= ? AND create_time < ?";
+            todayCouponReceived = jdbcTemplate.queryForObject(sql, Integer.class, todayStart, tomorrowStart);
         } catch (Exception e) {
             log.warn("查询优惠券领取数失败: {}", e.getMessage());
             todayCouponReceived = 0;
@@ -366,7 +367,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         // 2. 取消率
         try {
             int total  = ((Number) result.getOrDefault("totalReservations", 0)).intValue();
-            int cancel = safeQueryInt("SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND status IN (3,4)" + storeWhere, start, end);
+            int cancel = safeQueryInt("SELECT COUNT(*) FROM reservation_order WHERE create_time >= ? AND create_time <= ? AND is_deleted=0 AND status = 4" + storeWhere, start, end);
             result.put("cancelReservations", cancel);
             result.put("cancelRate", total > 0 ? Math.round(cancel * 10000.0 / total) / 100.0 : 0);
         } catch (Exception e) { log.warn("取消率统计失败: {}", e.getMessage()); result.put("cancelRate", 0); }

@@ -64,6 +64,11 @@ public interface CouponService {
      * 使用优惠券（与订单关联）
      */
     void useCoupon(Long userCouponId, Long orderId);
+
+    /**
+     * 用户使用自己的优惠券（校验归属）
+     */
+    void useCoupon(Long userCouponId, Long orderId, Long userId);
     
     /**
      * 计算优惠金额
@@ -74,6 +79,11 @@ public interface CouponService {
      * 退还优惠券（订单取消时�?
      */
     void refundCoupon(Long orderId);
+
+    /**
+     * 用户退还自己的优惠券（校验归属）
+     */
+    void refundCoupon(Long orderId, Long userId);
     
     /**
      * 批量过期优惠券（定时任务�?

@@ -50,6 +50,7 @@ public class ReservationController {
             @RequestParam(defaultValue = "10") Integer pageSize,
             @RequestParam(required = false) Long userId,
             @RequestParam(required = false) Long storeId,
+            @RequestParam(required = false) Long scheduleId,
             @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate reservationDate,
             @RequestParam(required = false) Integer status,
             @RequestParam(required = false) Integer payStatus,
@@ -57,20 +58,23 @@ public class ReservationController {
             @RequestParam(required = false) Integer refundStatus,
             @RequestParam(required = false) Boolean hasRefund
     ) {
-        boolean adminOperator = isAdminOperator();
+        boolean operator = isBackofficeOperator();
+        if (operator && !canViewReservationOperator()) {
+            return Result.error(403, "没有查看预约权限");
+        }
 
-        if (!adminOperator) {
+        if (!operator) {
             userId = BaseContext.getCurrentId();
         }
 
-        if ("STORE_ADMIN".equals(BaseContext.getRole())) {
+        if ("STORE_ADMIN".equals(BaseContext.getRole()) || "STORE_STAFF".equals(BaseContext.getRole())) {
             storeId = BaseContext.getStoreId();
         }
 
-        log.info("分页查询预约列表: page={}, pageSize={}, userId={}, storeId={}, reservationDate={}, status={}, payStatus={}, checkInStatus={}, refundStatus={}, hasRefund={}, role={}",
-                page, pageSize, userId, storeId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund, BaseContext.getRole());
+        log.info("分页查询预约列表: page={}, pageSize={}, userId={}, storeId={}, scheduleId={}, reservationDate={}, status={}, payStatus={}, checkInStatus={}, refundStatus={}, hasRefund={}, role={}",
+                page, pageSize, userId, storeId, scheduleId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund, BaseContext.getRole());
         return Result.success(
-                reservationService.pageQueryWithDetails(page, pageSize, userId, storeId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund)
+                reservationService.pageQueryWithDetails(page, pageSize, userId, storeId, scheduleId, reservationDate, status, payStatus, checkInStatus, refundStatus, hasRefund)
         );
     }
 
@@ -80,7 +84,7 @@ public class ReservationController {
         log.info("查询预约详情: {}", id);
         ReservationVO vo = reservationService.getDetailById(id);
         // 用户端：校验预约归属
-        if (!isAdminOperator() && vo != null) {
+        if (!isBackofficeOperator() && vo != null) {
             Long currentUserId = BaseContext.getCurrentId();
             if (!Objects.equals(currentUserId, vo.getUserId())) {
                 log.warn("用户{}尝试查看不属于自己的预约{}", currentUserId, id);
@@ -96,7 +100,7 @@ public class ReservationController {
         log.info("查询预约详情: {}", id);
         ReservationVO vo = reservationService.getDetailById(id);
         // 用户端：校验预约归属
-        if (!isAdminOperator() && vo != null) {
+        if (!isBackofficeOperator() && vo != null) {
             Long currentUserId = BaseContext.getCurrentId();
             if (!Objects.equals(currentUserId, vo.getUserId())) {
                 log.warn("用户{}尝试查看不属于自己的预约{}", currentUserId, id);
@@ -135,7 +139,7 @@ public class ReservationController {
     @PutMapping("/{id}/check-in")
     @Operation(summary = "到店核销")
     public Result<String> checkIn(@PathVariable Long id, @RequestParam String checkInCode) {
-        if (!isAdminOperator()) {
+        if (!canCheckInOperator()) {
             return Result.error(403, "没有管理端访问权限");
         }
         log.info("到店核销: id={}, checkInCode={}", id, checkInCode);
@@ -146,7 +150,7 @@ public class ReservationController {
     @PutMapping("/{id}/complete")
     @Operation(summary = "完成预约")
     public Result<String> complete(@PathVariable Long id) {
-        if (!isAdminOperator()) {
+        if (!canCompleteOperator()) {
             return Result.error(403, "没有管理端访问权限");
         }
         log.info("完成预约: {}", id);
@@ -194,7 +198,7 @@ public class ReservationController {
     @PutMapping("/{id}/assign-dm")
     @Operation(summary = "分配预约主持 DM")
     public Result<String> assignDm(@PathVariable Long id, @RequestParam Long dmId) {
-        if (!isAdminOperator()) {
+        if (!canAssignDmOperator()) {
             return Result.error(403, "没有管理端访问权限");
         }
         log.info("分配预约主持 DM: reservationId={}, dmId={}", id, dmId);
@@ -205,5 +209,51 @@ public class ReservationController {
     private boolean isAdminOperator() {
         String role = BaseContext.getRole();
         return "SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role);
+    }
+
+    private boolean isBackofficeOperator() {
+        String role = BaseContext.getRole();
+        return "SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role) || "STORE_STAFF".equals(role);
+    }
+
+    private boolean canViewReservationOperator() {
+        if (isAdminOperator()) {
+            return true;
+        }
+        return "STORE_STAFF".equals(BaseContext.getRole()) && hasPermission("reservation:view");
+    }
+
+    private boolean canCheckInOperator() {
+        if (isAdminOperator()) {
+            return true;
+        }
+        return "STORE_STAFF".equals(BaseContext.getRole()) && hasPermission("reservation:checkin");
+    }
+
+    private boolean canCompleteOperator() {
+        if (isAdminOperator()) {
+            return true;
+        }
+        return "STORE_STAFF".equals(BaseContext.getRole()) && hasPermission("reservation:complete");
+    }
+
+    private boolean canAssignDmOperator() {
+        if (isAdminOperator()) {
+            return true;
+        }
+        return "STORE_STAFF".equals(BaseContext.getRole()) && hasPermission("reservation:assign_dm");
+    }
+
+    private boolean hasPermission(String permissionCode) {
+        String permissionCodes = BaseContext.getPermissionCodes();
+        if (permissionCodes == null || permissionCode == null) {
+            return false;
+        }
+        for (String code : permissionCodes.split(",")) {
+            if (permissionCode.equals(code != null ? code.trim() : null)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

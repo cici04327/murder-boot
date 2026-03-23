@@ -7,6 +7,7 @@ import com.murder.entity.Coupon;
 import com.murder.entity.UserCoupon;
 import com.murder.vo.CouponVO;
 import com.murder.vo.UserCouponVO;
+import com.murder.common.context.BaseContext;
 import com.murder.service.CouponService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -231,8 +232,9 @@ public class CouponController {
     public Result<String> useCoupon(
             @RequestParam Long userCouponId,
             @RequestParam Long orderId) {
-        log.info("使用优惠�? userCouponId={}, orderId={}", userCouponId, orderId);
-        couponService.useCoupon(userCouponId, orderId);
+        Long userId = BaseContext.getCurrentId();
+        log.info("使用优惠券 userId={}, userCouponId={}, orderId={}", userId, userCouponId, orderId);
+        couponService.useCoupon(userCouponId, orderId, userId);
         return Result.success("使用成功");
     }
     
@@ -242,8 +244,9 @@ public class CouponController {
     @PutMapping("/refund")
     @Operation(summary = "退还优惠券")
     public Result<String> refundCoupon(@RequestParam Long orderId) {
-        log.info("退还优惠券: orderId={}", orderId);
-        couponService.refundCoupon(orderId);
+        Long userId = BaseContext.getCurrentId();
+        log.info("退还优惠券: userId={}, orderId={}", userId, orderId);
+        couponService.refundCoupon(orderId, userId);
         return Result.success("退还成�?");
     }
     
@@ -253,6 +256,7 @@ public class CouponController {
     @PostMapping("/expire")
     @Operation(summary = "批量过期优惠�?")
     public Result<String> expireCoupons() {
+        requireSuperAdmin();
         log.info("批量过期优惠�?");
         couponService.expireCoupons();
         return Result.success("操作成功");

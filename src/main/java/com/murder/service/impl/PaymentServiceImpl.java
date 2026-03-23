@@ -15,6 +15,7 @@ import com.murder.mapper.ReservationMapper;
 import com.murder.service.CouponService;
 import com.murder.service.PaymentService;
 import com.murder.service.ScriptScheduleService;
+import com.murder.service.StoreEmployeeOperationLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -57,6 +58,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Autowired(required = false)
     private ScriptScheduleService scriptScheduleService;
+
+    @Autowired(required = false)
+    private StoreEmployeeOperationLogService storeEmployeeOperationLogService;
 
     @Override
     public String createPayment(Long reservationId, String paymentMethod) {
@@ -298,6 +302,8 @@ public class PaymentServiceImpl implements PaymentService {
             reservation.setPayStatus(1);
             reservationMapper.updateById(reservation);
         }
+        recordRefundOperation(reservation, Integer.valueOf(1).equals(approved) ? "REFUND_APPROVE" : "REFUND_REJECT",
+                Integer.valueOf(1).equals(approved) ? "同意退款" : "拒绝退款");
 
         try {
             sendRefundResultNotificationToUser(reservation, approved);
@@ -315,13 +321,23 @@ public class PaymentServiceImpl implements PaymentService {
         if ("SUPER_ADMIN".equals(role)) {
             return;
         }
-        if (!"STORE_ADMIN".equals(role)) {
+        if ("STORE_ADMIN".equals(role)) {
+            Long currentStoreId = BaseContext.getStoreId();
+            if (currentStoreId == null) {
+                throw new SecurityException("门店管理员未绑定门店");
+            }
+            if (reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
+                throw new SecurityException("没有权限处理该门店的退款申请");
+            }
+            return;
+        }
+        if (!"STORE_STAFF".equals(role) || !hasPermission("refund:process")) {
             throw new SecurityException("没有权限处理该退款申请");
         }
 
         Long currentStoreId = BaseContext.getStoreId();
         if (currentStoreId == null) {
-            throw new SecurityException("门店管理员未绑定门店");
+            throw new SecurityException("当前员工账号未绑定门店");
         }
         if (reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
             throw new SecurityException("没有权限处理该门店的退款申请");
@@ -424,6 +440,37 @@ public class PaymentServiceImpl implements PaymentService {
                 reservation.getGroupId() != null ? reservation.getGroupId() : reservation.getId(),
                 reservation.getUserId()
         );
+    }
+
+    private boolean hasPermission(String permissionCode) {
+        String permissionCodes = BaseContext.getPermissionCodes();
+        if (!StringUtils.hasText(permissionCodes) || !StringUtils.hasText(permissionCode)) {
+            return false;
+        }
+        for (String permission : permissionCodes.split(",")) {
+            if (permissionCode.equals(permission != null ? permission.trim() : null)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void recordRefundOperation(Reservation reservation, String actionType, String detail) {
+        if (storeEmployeeOperationLogService == null || reservation == null) {
+            return;
+        }
+        try {
+            storeEmployeeOperationLogService.record(
+                    reservation.getStoreId(),
+                    actionType,
+                    "RESERVATION",
+                    reservation.getId(),
+                    reservation.getOrderNo(),
+                    detail
+            );
+        } catch (Exception ignored) {
+            // ignore
+        }
     }
 
     private void sendPaymentSuccessNotification(Reservation reservation) {

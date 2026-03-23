@@ -2,6 +2,7 @@ package com.murder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.common.context.BaseContext;
+import com.murder.common.exception.BaseException;
 import com.murder.dto.ArticleCommentDTO;
 import com.murder.entity.Article;
 import com.murder.entity.ArticleComment;
@@ -110,7 +111,7 @@ public class ArticleCommentServiceImpl implements ArticleCommentService {
 
         Long userId = BaseContext.getCurrentId();
         if (userId == null) {
-            throw new RuntimeException("用户未登?");
+            throw new BaseException("请先登录后再发表评论");
         }
 
         // 获取用户信息
@@ -147,7 +148,7 @@ public class ArticleCommentServiceImpl implements ArticleCommentService {
 
         ArticleComment comment = commentMapper.selectById(id);
         if (comment == null) {
-            throw new RuntimeException("评论不存在");
+            throw new BaseException("评论不存在");
         }
 
         // 软删?
@@ -165,7 +166,7 @@ public class ArticleCommentServiceImpl implements ArticleCommentService {
 
         Long userId = BaseContext.getCurrentId();
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BaseException("请先登录后再点赞");
         }
 
         // 检查是否已点赞
@@ -175,7 +176,7 @@ public class ArticleCommentServiceImpl implements ArticleCommentService {
         
         ArticleCommentLike existingLike = commentLikeMapper.selectOne(queryWrapper);
         if (existingLike != null) {
-            throw new RuntimeException("已经点赞过了");
+            throw new BaseException("已经点赞过了");
         }
 
         // 添加点赞记录
@@ -195,7 +196,7 @@ public class ArticleCommentServiceImpl implements ArticleCommentService {
 
         Long userId = BaseContext.getCurrentId();
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BaseException("请先登录后再操作");
         }
 
         // 删除点赞记录

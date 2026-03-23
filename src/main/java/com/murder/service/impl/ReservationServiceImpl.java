@@ -15,6 +15,7 @@ import com.murder.service.NotificationService;
 import com.murder.service.PaymentService;
 import com.murder.service.ReservationService;
 import com.murder.service.ScriptScheduleService;
+import com.murder.service.StoreEmployeeOperationLogService;
 import com.murder.service.StoreRoomService;
 import com.murder.vo.ReservationVO;
 import lombok.extern.slf4j.Slf4j;
@@ -86,7 +87,13 @@ public class ReservationServiceImpl implements ReservationService {
     private com.murder.mapper.GroupMemberMapper groupMemberMapper;
 
     @Autowired(required = false)
+    private com.murder.mapper.ScriptScheduleMapper scriptScheduleMapper;
+
+    @Autowired(required = false)
     private PaymentService paymentService;
+
+    @Autowired(required = false)
+    private StoreEmployeeOperationLogService storeEmployeeOperationLogService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -315,6 +322,7 @@ public class ReservationServiceImpl implements ReservationService {
             Integer pageSize,
             Long userId,
             Long storeId,
+            Long scheduleId,
             LocalDate reservationDate,
             Integer status,
             Integer payStatus,
@@ -331,6 +339,10 @@ public class ReservationServiceImpl implements ReservationService {
         if (storeId != null) {
             wrapper.eq(Reservation::getStoreId, storeId);
         }
+        if (scheduleId != null) {
+            wrapper.eq(Reservation::getScheduleId, scheduleId);
+        }
+        applyStaffReservationScope(wrapper);
         if (reservationDate != null) {
             LocalDateTime startOfDay = reservationDate.atStartOfDay();
             LocalDateTime endOfDay = reservationDate.plusDays(1).atStartOfDay();
@@ -398,7 +410,7 @@ public class ReservationServiceImpl implements ReservationService {
             return null;
         }
 
-        assertOwnerOrAdminScope(reservation);
+        assertOwnerOrViewScope(reservation);
         ensureCheckInFields(reservation);
 
         ReservationVO vo = new ReservationVO();
@@ -511,7 +523,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
         }
-        assertAdminStoreScope(reservation);
+        assertCompleteScope(reservation);
         ensureCheckInFields(reservation);
 
         if (!Integer.valueOf(2).equals(reservation.getStatus())) {
@@ -527,6 +539,7 @@ public class ReservationServiceImpl implements ReservationService {
         update.setCheckInStatus(1);
         update.setCheckInTime(reservation.getCheckInTime() != null ? reservation.getCheckInTime() : LocalDateTime.now());
         reservationMapper.updateById(update);
+        recordReservationOperation("RESERVATION_COMPLETE", reservation, "完成预约");
 
         log.info("预约已完成: id={}, orderNo={}", reservation.getId(), reservation.getOrderNo());
     }
@@ -537,7 +550,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
         }
-        assertAdminStoreScope(reservation);
+        assertCheckInScope(reservation);
         ensureCheckInFields(reservation);
 
         if (!Integer.valueOf(2).equals(reservation.getStatus())) {
@@ -561,6 +574,7 @@ public class ReservationServiceImpl implements ReservationService {
         update.setCheckInStatus(1);
         update.setCheckInTime(LocalDateTime.now());
         reservationMapper.updateById(update);
+        recordReservationOperation("RESERVATION_CHECKIN", reservation, "到店核销");
     }
 
     @Override
@@ -912,6 +926,61 @@ public class ReservationServiceImpl implements ReservationService {
         }
     }
 
+    private void assertCheckInScope(Reservation reservation) {
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        String role = BaseContext.getRole();
+        if ("SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role)) {
+            assertAdminStoreScope(reservation);
+            return;
+        }
+
+        if (!"STORE_STAFF".equals(role)) {
+            throw new SecurityException("没有权限核销该预约");
+        }
+
+        Long currentStoreId = BaseContext.getStoreId();
+        if (currentStoreId == null || reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
+            throw new SecurityException("没有权限核销该门店的预约");
+        }
+
+        if (!hasReservationPermission("reservation:checkin")) {
+            throw new SecurityException("当前员工账号没有核销权限");
+        }
+        assertDmAssignedScopeIfNeeded(reservation);
+    }
+
+    private void assertCompleteScope(Reservation reservation) {
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        String role = BaseContext.getRole();
+        if ("SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role)) {
+            assertAdminStoreScope(reservation);
+            return;
+        }
+
+        if (!"STORE_STAFF".equals(role)) {
+            throw new SecurityException("没有权限完成该预约");
+        }
+
+        Long currentStoreId = BaseContext.getStoreId();
+        if (currentStoreId == null || reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
+            throw new SecurityException("没有权限操作该门店的预约");
+        }
+
+        if (!hasReservationPermission("reservation:complete")) {
+            throw new SecurityException("当前员工账号没有完成预约权限");
+        }
+        assertDmAssignedScopeIfNeeded(reservation);
+        if ("DM".equals(BaseContext.getStaffRole()) && !Integer.valueOf(1).equals(reservation.getCheckInStatus())) {
+            throw new SecurityException("DM 仅可完成自己已核销的场次");
+        }
+    }
+
     private void assertOwnerOrAdminScope(Reservation reservation) {
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
@@ -923,6 +992,113 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         assertAdminStoreScope(reservation);
+    }
+
+    private void assertOwnerOrViewScope(Reservation reservation) {
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId != null && currentUserId.equals(reservation.getUserId())) {
+            return;
+        }
+
+        String role = BaseContext.getRole();
+        if ("STORE_STAFF".equals(role)) {
+            Long currentStoreId = BaseContext.getStoreId();
+            if (currentStoreId == null || reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
+                throw new SecurityException("没有权限查看该门店的预约");
+            }
+            if (!hasReservationPermission("reservation:view")) {
+                throw new SecurityException("当前员工账号没有查看预约权限");
+            }
+            assertDmAssignedScopeIfNeeded(reservation);
+            return;
+        }
+
+        assertAdminStoreScope(reservation);
+    }
+
+    private boolean hasReservationPermission(String permissionCode) {
+        String permissionCodes = BaseContext.getPermissionCodes();
+        if (!StringUtils.hasText(permissionCodes) || !StringUtils.hasText(permissionCode)) {
+            return false;
+        }
+        String[] permissions = permissionCodes.split(",");
+        for (String permission : permissions) {
+            if (permissionCode.equals(permission != null ? permission.trim() : null)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void applyStaffReservationScope(LambdaQueryWrapper<Reservation> wrapper) {
+        if (wrapper == null || !"STORE_STAFF".equals(BaseContext.getRole())) {
+            return;
+        }
+        if (!"DM".equals(BaseContext.getStaffRole())) {
+            return;
+        }
+
+        Long currentDmId = BaseContext.getDmId();
+        if (currentDmId == null) {
+            wrapper.eq(Reservation::getId, -1L);
+            return;
+        }
+
+        List<Long> scheduleIds = findScheduleIdsByDmId(currentDmId, BaseContext.getStoreId());
+        if (scheduleIds == null || scheduleIds.isEmpty()) {
+            wrapper.and(w -> w.eq(Reservation::getDmId, currentDmId));
+            return;
+        }
+
+        wrapper.and(w -> w.eq(Reservation::getDmId, currentDmId)
+                .or()
+                .in(Reservation::getScheduleId, scheduleIds));
+    }
+
+    private List<Long> findScheduleIdsByDmId(Long dmId, Long storeId) {
+        if (dmId == null || scriptScheduleMapper == null) {
+            return java.util.Collections.emptyList();
+        }
+        LambdaQueryWrapper<ScriptSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ScriptSchedule::getDmId, dmId)
+                .eq(ScriptSchedule::getIsDeleted, 0);
+        if (storeId != null) {
+            wrapper.eq(ScriptSchedule::getStoreId, storeId);
+        }
+        List<ScriptSchedule> schedules = scriptScheduleMapper.selectList(wrapper);
+        if (schedules == null || schedules.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return schedules.stream().map(ScriptSchedule::getId).collect(Collectors.toList());
+    }
+
+    private void assertDmAssignedScopeIfNeeded(Reservation reservation) {
+        if (!"STORE_STAFF".equals(BaseContext.getRole()) || !"DM".equals(BaseContext.getStaffRole())) {
+            return;
+        }
+        Long currentDmId = BaseContext.getDmId();
+        if (currentDmId == null) {
+            throw new SecurityException("当前 DM 账号未绑定主持人");
+        }
+        Long reservationDmId = resolveReservationDmId(reservation);
+        if (reservationDmId == null || !currentDmId.equals(reservationDmId)) {
+            throw new SecurityException("DM 只能操作分配给自己的预约");
+        }
+    }
+
+    private Long resolveReservationDmId(Reservation reservation) {
+        if (reservation == null) {
+            return null;
+        }
+        if (reservation.getDmId() != null) {
+            return reservation.getDmId();
+        }
+        ScriptSchedule schedule = getScheduleForReservation(reservation);
+        return schedule != null ? schedule.getDmId() : null;
     }
 
     private void sendAdminNotification(Reservation reservation) {
@@ -1258,7 +1434,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (reservation == null) {
             throw new RuntimeException("预约不存在");
         }
-        assertAdminStoreScope(reservation);
+        assertAssignDmScope(reservation);
 
         if (dmMapper == null) {
             throw new RuntimeException("DM 模块未启用");
@@ -1299,6 +1475,29 @@ public class ReservationServiceImpl implements ReservationService {
         }
 
         log.info("预约分配 DM 成功: reservationId={}, dmId={}", id, dmId);
+        recordReservationOperation("RESERVATION_ASSIGN_DM", reservation, "分配主持DM为#" + dmId);
+    }
+
+    private void assertAssignDmScope(Reservation reservation) {
+        if (reservation == null) {
+            throw new RuntimeException("预约不存在");
+        }
+
+        String role = BaseContext.getRole();
+        if ("SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role)) {
+            assertAdminStoreScope(reservation);
+            return;
+        }
+        if (!"STORE_STAFF".equals(role)) {
+            throw new SecurityException("没有权限分配该预约的 DM");
+        }
+        Long currentStoreId = BaseContext.getStoreId();
+        if (currentStoreId == null || reservation.getStoreId() == null || !currentStoreId.equals(reservation.getStoreId())) {
+            throw new SecurityException("没有权限操作该门店的预约");
+        }
+        if (!hasReservationPermission("reservation:assign_dm")) {
+            throw new SecurityException("当前员工账号没有分配 DM 权限");
+        }
     }
 
     private void populateDmAssignmentState(Reservation reservation, ReservationVO vo) {
@@ -1358,6 +1557,24 @@ public class ReservationServiceImpl implements ReservationService {
         } catch (Exception e) {
             log.debug("查询剧本开场人数失败: scriptId={}", scriptId, e);
             return null;
+        }
+    }
+
+    private void recordReservationOperation(String actionType, Reservation reservation, String detail) {
+        if (storeEmployeeOperationLogService == null || reservation == null) {
+            return;
+        }
+        try {
+            storeEmployeeOperationLogService.record(
+                    reservation.getStoreId(),
+                    actionType,
+                    "RESERVATION",
+                    reservation.getId(),
+                    reservation.getOrderNo(),
+                    detail
+            );
+        } catch (Exception ignored) {
+            // ignore
         }
     }
 

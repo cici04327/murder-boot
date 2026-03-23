@@ -6,12 +6,14 @@ import com.murder.common.result.Result;
 import com.murder.entity.UserVip;
 import com.murder.vo.VipPackageVO;
 import com.murder.service.VipService;
+import jakarta.servlet.http.HttpServletResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -71,6 +73,26 @@ public class VipController {
             log.error("购买VIP失败", e);
             return Result.error(e.getMessage());
         }
+    }
+
+    /**
+     * VIP支付宝异步通知
+     */
+    @PostMapping("/payment/notify")
+    @Operation(summary = "VIP支付宝异步通知")
+    public String alipayNotify(@RequestParam Map<String, String> params) {
+        log.info("收到VIP支付宝异步通知: {}", params);
+        return vipService.handleAlipayNotify(params);
+    }
+
+    /**
+     * VIP支付宝同步回跳
+     */
+    @GetMapping("/payment/return")
+    @Operation(summary = "VIP支付宝同步回跳")
+    public void alipayReturn(@RequestParam Map<String, String> params, HttpServletResponse response) throws IOException {
+        log.info("收到VIP支付宝同步回跳: {}", params);
+        response.sendRedirect(vipService.handleAlipayReturn(params));
     }
 
     /**

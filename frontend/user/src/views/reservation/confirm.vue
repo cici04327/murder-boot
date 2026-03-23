@@ -112,10 +112,13 @@ onMounted(() => {
 
 .reservation-info {
   margin-top: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(160deg, rgba(11, 20, 38, 0.94), rgba(15, 27, 48, 0.9));
+  box-shadow: 0 24px 48px rgba(3, 8, 20, 0.32);
 }
 
 .amount-highlight {
-  color: #f56c6c;
+  color: #ff8f8f;
   font-size: 22px;
   font-weight: bold;
 }
@@ -124,19 +127,19 @@ onMounted(() => {
   margin-top: 20px;
   padding: 24px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #fff4e6 0%, #fffaf2 100%);
-  border: 1px solid #f7d8a8;
+  background: linear-gradient(135deg, rgba(27, 41, 66, 0.94), rgba(18, 29, 49, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.08);
   text-align: center;
 }
 
 .check-in-title {
-  color: #8c6a2a;
+  color: #9fb3d9;
   font-size: 14px;
 }
 
 .check-in-code {
   margin-top: 12px;
-  color: #2c3e50;
+  color: #f4f7ff;
   font-size: 32px;
   font-weight: 700;
   letter-spacing: 6px;
@@ -144,7 +147,7 @@ onMounted(() => {
 
 .check-in-desc {
   margin-top: 12px;
-  color: #8c6a2a;
+  color: #9fb3d9;
   font-size: 13px;
 }
 
@@ -152,20 +155,20 @@ onMounted(() => {
   margin-top: 20px;
   padding: 20px 24px;
   border-radius: 16px;
-  background: linear-gradient(135deg, #fff8e8 0%, #fff3d6 100%);
-  border: 1px solid #f1cf85;
+  background: linear-gradient(135deg, rgba(31, 45, 73, 0.94), rgba(20, 31, 52, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.08);
   text-align: left;
 }
 
 .group-panel-title {
-  color: #8c6a2a;
+  color: #f1f5ff;
   font-size: 16px;
   font-weight: 700;
 }
 
 .group-panel-desc {
   margin: 10px 0 16px;
-  color: #8c6a2a;
+  color: #a8b7d4;
   font-size: 13px;
   line-height: 1.7;
 }
@@ -175,5 +178,55 @@ onMounted(() => {
   gap: 15px;
   justify-content: center;
   margin-top: 30px;
+}
+
+.confirm-container :deep(.el-result) {
+  padding: 36px 28px;
+  border-radius: 28px;
+  background: linear-gradient(180deg, rgba(7, 15, 30, 0.94), rgba(10, 20, 37, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px rgba(2, 8, 18, 0.35);
+}
+
+.confirm-container :deep(.el-result__title p) {
+  color: #f2f6ff;
+}
+
+.confirm-container :deep(.el-result__subtitle p) {
+  color: #9fb3d9;
+}
+
+.confirm-container :deep(.el-card__body) {
+  background: transparent;
+}
+
+.confirm-container :deep(.el-descriptions) {
+  --el-descriptions-table-border: rgba(255, 255, 255, 0.08);
+}
+
+.confirm-container :deep(.el-descriptions__title) {
+  color: #f2f6ff;
+}
+
+.confirm-container :deep(.el-descriptions__label.el-descriptions__cell.is-bordered-label) {
+  background: rgba(18, 30, 51, 0.92);
+  color: #9fb3d9;
+}
+
+.confirm-container :deep(.el-descriptions__content.el-descriptions__cell.is-bordered-content) {
+  background: rgba(11, 20, 38, 0.88);
+  color: #f2f6ff;
+}
+
+.confirm-container :deep(.el-button:not(.el-button--primary):not(.is-plain)) {
+  background: rgba(18, 30, 51, 0.88);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #dbe5fb;
+}
+
+.confirm-container :deep(.el-button.is-plain) {
+  background: rgba(18, 30, 51, 0.4);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #f2f6ff;
 }
 </style>

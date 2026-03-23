@@ -1,5 +1,7 @@
 package com.murder.controller;
 
+import com.murder.common.context.BaseContext;
+import com.murder.common.exception.BaseException;
 import com.murder.common.result.Result;
 import com.murder.vo.StatisticsChartsVO;
 import com.murder.vo.StatisticsOverviewVO;
@@ -76,8 +78,9 @@ public class StatisticsController {
     public Result<java.util.Map<String, Object>> getOperationBoard(
             @RequestParam(defaultValue = "30") Integer days,
             @RequestParam(required = false) Long storeId) {
-        log.info("获取经营看板数据: days={}, storeId={}", days, storeId);
-        return Result.success(statisticsService.getOperationBoard(days, storeId));
+        Long scopedStoreId = resolveAdminScopedStoreId(storeId);
+        log.info("获取经营看板数据: days={}, storeId={}, scopedStoreId={}, role={}", days, storeId, scopedStoreId, BaseContext.getRole());
+        return Result.success(statisticsService.getOperationBoard(days, scopedStoreId));
     }
 
     /**
@@ -88,7 +91,39 @@ public class StatisticsController {
     @Operation(summary = "门店营收日报", description = "门店端专用，返回今日/昨日/本周/本月多维度营收数据")
     public Result<java.util.Map<String, Object>> getStoreDailyReport(
             @RequestParam(required = false) Long storeId) {
-        log.info("获取门店营收日报: storeId={}", storeId);
-        return Result.success(statisticsService.getStoreDailyReport(storeId));
+        Long scopedStoreId = resolveAdminScopedStoreId(storeId);
+        log.info("获取门店营收日报: storeId={}, scopedStoreId={}, role={}", storeId, scopedStoreId, BaseContext.getRole());
+        return Result.success(statisticsService.getStoreDailyReport(scopedStoreId));
+    }
+
+    private Long resolveAdminScopedStoreId(Long requestedStoreId) {
+        String role = BaseContext.getRole();
+        if ("SUPER_ADMIN".equals(role)) {
+            return requestedStoreId;
+        }
+        if ("STORE_ADMIN".equals(role)) {
+            return BaseContext.getStoreId();
+        }
+        if ("STORE_STAFF".equals(role) && hasPermission("report:view")) {
+            Long storeId = BaseContext.getStoreId();
+            if (storeId == null) {
+                throw new BaseException("当前员工账号未绑定门店");
+            }
+            return storeId;
+        }
+        throw new BaseException("无权限访问经营统计数据");
+    }
+
+    private boolean hasPermission(String permissionCode) {
+        String permissionCodes = BaseContext.getPermissionCodes();
+        if (permissionCodes == null || permissionCode == null) {
+            return false;
+        }
+        for (String code : permissionCodes.split(",")) {
+            if (permissionCode.equals(code != null ? code.trim() : null)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

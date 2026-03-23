@@ -274,6 +274,7 @@ const loadArticle = async () => {
     const res = await getArticleDetail(route.params.id)
     if (res.code === 1 || res.code === 200) {
       article.value = res.data
+      liked.value = Boolean(res.data?.userLiked)
       // 加载评论
       loadComments()
     }

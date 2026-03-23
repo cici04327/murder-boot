@@ -523,8 +523,10 @@ onMounted(() => {
 .order-info {
   margin-bottom: 30px;
   padding: 20px;
-  background: #f5f7fa;
+  background: rgba(15, 23, 42, 0.68);
+  border: 1px solid rgba(192, 57, 43, 0.18);
   border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
 }
 
 /* Tab样式 */
@@ -556,16 +558,16 @@ onMounted(() => {
   gap: 10px;
   font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: #fff;
   margin-bottom: 24px;
   padding: 12px 16px;
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 8px;
-  border-left: 4px solid #16213e;
+  border-left: 4px solid rgba(192, 57, 43, 0.8);
 }
 
 .review-section-title .el-icon {
-  color: #16213e;
+  color: #ff8a7a;
   font-size: 20px;
 }
 
@@ -575,7 +577,8 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: #f5f7fa;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   margin-bottom: 16px;
 }
@@ -584,6 +587,7 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 6px;
+  color: #fff;
 }
 
 .dm-tags {
@@ -600,7 +604,7 @@ onMounted(() => {
 
 .rating-desc {
   margin-left: 10px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.65);
   font-size: 14px;
 }
 
@@ -608,19 +612,20 @@ onMounted(() => {
 .upload-section {
   margin-top: 30px;
   padding: 20px;
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
 }
 
 .upload-section h4 {
   margin: 0 0 16px;
   font-size: 16px;
-  color: #333;
+  color: #fff;
 }
 
 .upload-tip {
   margin-top: 8px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.6);
   font-size: 12px;
 }
 
@@ -631,7 +636,8 @@ onMounted(() => {
   gap: 10px;
   margin-top: 20px;
   padding: 16px;
-  background: #f9f9f9;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 8px;
 }
 
@@ -701,7 +707,7 @@ onMounted(() => {
   }
   
   .order-info :deep(.el-descriptions) {
-    --el-descriptions-item-bordered-label-background: #fafafa;
+    --el-descriptions-item-bordered-label-background: rgba(255, 255, 255, 0.08);
   }
   
   .review-section-title {

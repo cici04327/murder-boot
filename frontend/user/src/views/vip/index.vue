@@ -342,7 +342,7 @@
     <!-- 支付方式对话框 -->
     <el-dialog
       v-model="showPaymentDialog"
-      title="选择支付方式"
+      title="确认支付宝支付"
       width="500px"
       :close-on-click-modal="false"
       class="vip-payment-dialog"
@@ -374,26 +374,6 @@
             <span>支付宝支付</span>
             <el-icon v-if="paymentMethod === 'ALIPAY'" class="check"><CircleCheck /></el-icon>
           </div>
-          <div 
-            class="payment-method"
-            :class="{ 'active': paymentMethod === 'WECHAT' }"
-            @click="paymentMethod = 'WECHAT'"
-          >
-            <img src="https://res.wx.qq.com/a/wx_fed/assets/res/NTI4MWU5.ico" alt="微信">
-            <span>微信支付</span>
-            <el-icon v-if="paymentMethod === 'WECHAT'" class="check"><CircleCheck /></el-icon>
-          </div>
-          <div 
-            class="payment-method"
-            :class="{ 'active': paymentMethod === 'POINTS' }"
-            @click="paymentMethod = 'POINTS'"
-            v-if="userInfo && userInfo.points >= selectedPackage?.currentPrice * 100"
-          >
-            <el-icon :size="32"><StarFilled /></el-icon>
-            <span>积分支付</span>
-            <span class="points-info">（需{{ selectedPackage?.currentPrice * 100 }}积分）</span>
-            <el-icon v-if="paymentMethod === 'POINTS'" class="check"><CircleCheck /></el-icon>
-          </div>
         </div>
       </div>
 
@@ -424,8 +404,9 @@ import {
 } from '@element-plus/icons-vue'
 import { getVipPackages, getUserVipInfo, purchaseVip, getMonthlyCouponStatus } from '@/api/vip'
 import { useUserStore } from '@/store/user'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
+const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 const userInfo = computed(() => userStore.userInfo)
@@ -436,7 +417,7 @@ const packages = ref([])
 const userVipInfo = ref(null)
 const selectedPackage = ref(null)
 const showPaymentDialog = ref(false)
-const paymentMethod = ref('')
+const paymentMethod = ref('ALIPAY')
 const purchasing = ref(false)
 
 // 月度体验券状态
@@ -565,6 +546,14 @@ const loadData = async () => {
         startCountdown(couponStatusRes.data.secondsUntilNext)
       }
     }
+
+    const routePackageId = Number(route.query.packageId)
+    if (routePackageId && !selectedPackage.value) {
+      const matchedPackage = packages.value.find(item => Number(item.id) === routePackageId)
+      if (matchedPackage) {
+        selectedPackage.value = matchedPackage
+      }
+    }
   } catch (error) {
     console.error('加载VIP数据失败:', error)
     ElMessage.error('加载数据失败')
@@ -588,25 +577,20 @@ const selectPackage = (pkg) => {
 
 // 处理购买
 const handlePurchase = async () => {
-  if (!paymentMethod.value) {
-    ElMessage.warning('请选择支付方式')
-    return
-  }
-
   try {
     purchasing.value = true
-    const res = await purchaseVip(selectedPackage.value.id, paymentMethod.value)
+    const res = await purchaseVip({
+      packageId: selectedPackage.value.id,
+      paymentMethod: 'ALIPAY'
+    })
     
     if (res.code === 200 || res.code === 1) {
-      ElMessage.success('开通成功！')
+      const payForm = res.data
+      if (!payForm || !payForm.includes('<form')) {
+        throw new Error('未获取到有效的支付宝支付表单')
+      }
       showPaymentDialog.value = false
-      // 刷新用户信息
-      await userStore.loadUserInfo()
-      // 重新加载VIP信息
-      await loadData()
-      // 清空选择
-      selectedPackage.value = null
-      paymentMethod.value = ''
+      submitPaymentForm(payForm)
     } else {
       ElMessage.error(res.msg || '开通失败')
     }
@@ -616,6 +600,45 @@ const handlePurchase = async () => {
   } finally {
     purchasing.value = false
   }
+}
+
+const submitPaymentForm = (payForm) => {
+  const div = document.createElement('div')
+  div.style.display = 'none'
+  div.innerHTML = payForm
+  document.body.appendChild(div)
+  setTimeout(() => {
+    const form = div.querySelector('form')
+    if (!form) {
+      div.remove()
+      ElMessage.error('未获取到有效的支付表单')
+      return
+    }
+    form.submit()
+  }, 50)
+}
+
+const handlePayResult = async () => {
+  const payStatus = route.query.vipPay
+  if (!payStatus) {
+    return
+  }
+
+  const message = route.query.message ? decodeURIComponent(route.query.message) : ''
+  if (payStatus === 'success') {
+    ElMessage.success(message || 'VIP支付成功，会员状态已更新')
+  } else {
+    ElMessage.error(message || 'VIP支付未完成，请稍后重试')
+  }
+
+  await userStore.loadUserInfo()
+  await loadData()
+
+  const nextQuery = { ...route.query }
+  delete nextQuery.vipPay
+  delete nextQuery.vipOrderNo
+  delete nextQuery.message
+  router.replace({ path: route.path, query: nextQuery })
 }
 
 // 获取等级名称 - 剧本杀主题
@@ -701,7 +724,7 @@ const scrollToPackages = () => {
 }
 
 onMounted(() => {
-  loadData()
+  loadData().then(handlePayResult)
 })
 </script>
 

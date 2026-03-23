@@ -26,10 +26,28 @@ export const getScheduleList = (storeId, date) => {
   })
 }
 
+// 查询当前 DM 某日期的排期列表
+export const getMyScheduleList = (storeId, date) => {
+  return request({
+    url: '/script/schedule/mine',
+    method: 'get',
+    params: { storeId, date }
+  })
+}
+
 // 查询门店日期范围排期列表
 export const getScheduleRange = (storeId, startDate, endDate) => {
   return request({
     url: '/script/schedule/range',
+    method: 'get',
+    params: { storeId, startDate, endDate }
+  })
+}
+
+// 查询当前 DM 日期范围排期列表
+export const getMyScheduleRange = (storeId, startDate, endDate) => {
+  return request({
+    url: '/script/schedule/mine/range',
     method: 'get',
     params: { storeId, startDate, endDate }
   })

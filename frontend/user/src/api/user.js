@@ -148,11 +148,11 @@ export const getPointsTrend = (period = 'week') => {
 }
 
 // 兑换优惠券
-export const exchangeCoupon = (couponId, points) => {
+export const exchangeCoupon = (couponId) => {
   return request({
     url: '/user/points/exchange-coupon',
     method: 'post',
-    params: { couponId, points }
+    params: { couponId }
   })
 }
 

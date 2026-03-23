@@ -43,9 +43,9 @@ public interface UserPointsService {
 
 
     /**
-     * 积分兑换优惠�?
+     * 积分兑换优惠券
      */
-    void exchangeCoupon(Long userId, Long couponId, Integer points);
+    void exchangeCoupon(Long userId, Long couponId);
     
     /**
      * 获取任务完成状�?

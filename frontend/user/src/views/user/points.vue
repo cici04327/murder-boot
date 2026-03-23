@@ -125,32 +125,41 @@
       title="兑换优惠券" 
       width="800px"
       :close-on-click-modal="false"
-    >
+      >
       <div class="exchange-content">
         <div class="current-points-tip">
           当前可用积分：<span class="highlight">{{ currentPoints }}</span>
+          <span class="exchange-limit-tip">
+            每张优惠券每天限兑一次，可兑换多张不同优惠券{{ todayExchangedCouponIds.length ? `（今日已兑${todayExchangedCouponIds.length}张）` : '' }}
+          </span>
         </div>
-        <el-row :gutter="20">
+        <div v-if="coupons.length === 0" class="exchange-empty">
+          <span class="empty-icon">🎫</span>
+          <p>当前暂无可兑换优惠券</p>
+          <span>管理端新建并上架可积分兑换的优惠券后，这里会自动显示</span>
+        </div>
+        <el-row v-else :gutter="20">
           <el-col :span="12" v-for="coupon in coupons" :key="coupon.id">
             <div class="coupon-card">
               <div class="coupon-amount">
-                <span class="symbol">¥</span>
+                <span v-if="coupon.amountPrefix" class="symbol">{{ coupon.amountPrefix }}</span>
                 <span class="value">{{ coupon.amount }}</span>
+                <span v-if="coupon.amountSuffix" class="suffix">{{ coupon.amountSuffix }}</span>
               </div>
               <div class="coupon-info">
                 <div class="coupon-title">{{ coupon.title }}</div>
                 <div class="coupon-desc">{{ coupon.description }}</div>
-                <div class="coupon-expire">有效期：{{ coupon.validText || `${coupon.validDays}天` }}</div>
+                <div class="coupon-expire">有效期：{{ coupon.validText }}</div>
               </div>
               <div class="coupon-footer">
                 <el-tag type="warning" size="small">{{ coupon.points }} 积分</el-tag>
                 <el-button 
                   type="primary" 
                   size="small"
-                  :disabled="currentPoints < coupon.points"
+                  :disabled="currentPoints < coupon.points || isCouponExchangedToday(coupon.id)"
                   @click="handleExchange(coupon)"
                 >
-                  立即兑换
+                  {{ isCouponExchangedToday(coupon.id) ? '今日已兑' : '立即兑换' }}
                 </el-button>
               </div>
             </div>
@@ -276,6 +285,7 @@ import {
   exchangeCoupon,
   getTasksStatus
 } from '@/api/user'
+import { getAvailableCoupons } from '@/api/coupon'
 
 const router = useRouter()
 
@@ -285,6 +295,7 @@ const currentPoints = ref(0)
 const totalEarned = ref(0)
 const totalUsed = ref(0)
 const expiringSoon = ref(0)
+const todayExchangedCouponIds = ref([])
 
 const recordType = ref('all')
 const records = ref([])
@@ -297,40 +308,112 @@ const hasSignedToday = ref(false)
 const showExchangeDialog = ref(false)
 
 // 可兑换优惠券
-const coupons = ref([
-  {
-    id: 1,
-    title: '满100减10',
-    description: '订单满100元可用',
-    amount: 10,
-    points: 100,
-    validText: '长期有效'
-  },
-  {
-    id: 2,
-    title: '满200减25',
-    description: '订单满200元可用',
-    amount: 25,
-    points: 250,
-    validText: '长期有效'
-  },
-  {
-    id: 3,
-    title: '满300减40',
-    description: '订单满300元可用',
-    amount: 40,
-    points: 400,
-    validText: '长期有效'
-  },
-  {
-    id: 4,
-    title: '满500减80',
-    description: '订单满500元可用',
-    amount: 80,
-    points: 800,
-    validText: '长期有效'
+const coupons = ref([])
+
+const isCouponExchangedToday = (couponId) => {
+  return todayExchangedCouponIds.value.includes(Number(couponId))
+}
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+const formatCouponNumber = (value, digits = 2) => {
+  const number = Number(value ?? 0)
+  if (!Number.isFinite(number)) {
+    return '0'
   }
-])
+  return Number.isInteger(number) ? String(number) : String(Number(number.toFixed(digits)))
+}
+
+const formatCouponAmountInfo = (coupon) => {
+  const discountValue = Number(coupon.discountValue ?? 0)
+
+  if (coupon.type === 2) {
+    const displayDiscount = discountValue > 0 && discountValue < 1
+      ? 10 - discountValue * 10
+      : discountValue
+    return {
+      amountPrefix: '',
+      amount: formatCouponNumber(displayDiscount, 1),
+      amountSuffix: '折'
+    }
+  }
+
+  return {
+    amountPrefix: '¥',
+    amount: formatCouponNumber(discountValue),
+    amountSuffix: ''
+  }
+}
+
+const formatCouponDescription = (coupon) => {
+  if (coupon.description && coupon.description.trim()) {
+    return coupon.description.trim()
+  }
+
+  const minAmount = Number(coupon.minAmount ?? 0)
+  const minAmountText = minAmount > 0 ? formatCouponNumber(minAmount) : ''
+
+  if (coupon.type === 1) {
+    return minAmount > 0 ? `订单满${minAmountText}元可用` : '下单即可使用'
+  }
+  if (coupon.type === 2) {
+    return minAmount > 0 ? `订单满${minAmountText}元可享折扣` : '下单可享折扣优惠'
+  }
+  if (coupon.type === 3) {
+    return minAmount > 0 ? `订单满${minAmountText}元可抵扣` : '可直接抵扣订单金额'
+  }
+  return '可用于预约订单优惠'
+}
+
+const formatCouponValidText = (coupon) => {
+  if (!coupon.validEndTime) {
+    return '长期有效'
+  }
+
+  const endDate = String(coupon.validEndTime).slice(0, 10)
+  if (!coupon.validStartTime) {
+    return `截至 ${endDate}`
+  }
+
+  const startDate = String(coupon.validStartTime).slice(0, 10)
+  return `${startDate} 至 ${endDate}`
+}
+
+const loadExchangeCoupons = async () => {
+  try {
+    const res = await getAvailableCoupons()
+    if (res.code !== 1 && res.code !== 200) {
+      coupons.value = []
+      return
+    }
+
+    const couponList = Array.isArray(res.data?.records)
+      ? res.data.records
+      : Array.isArray(res.data)
+        ? res.data
+        : []
+
+    coupons.value = couponList
+      .filter(coupon => Number(coupon.exchangePoints || 0) > 0)
+      .filter(coupon => coupon.canReceive !== false)
+      .map(coupon => {
+        const amountInfo = formatCouponAmountInfo(coupon)
+        return {
+          id: coupon.id,
+          title: coupon.name || '积分兑换优惠券',
+          description: formatCouponDescription(coupon),
+          points: Number(coupon.exchangePoints || 0),
+          validText: formatCouponValidText(coupon),
+          amountPrefix: amountInfo.amountPrefix,
+          amount: amountInfo.amount,
+          amountSuffix: amountInfo.amountSuffix
+        }
+      })
+  } catch (error) {
+    console.error('加载可兑换优惠券失败:', error)
+    coupons.value = []
+  }
+}
 
 // 记录筛选选项
 const recordFilters = [
@@ -414,7 +497,7 @@ const tasks = ref([
 ])
 
 // 加载积分信息
-const loadPoints = async () => {
+const loadPoints = async (attempt = 1) => {
   try {
     console.log('开始加载积分信息...')
     const res = await getUserPoints()
@@ -426,12 +509,20 @@ const loadPoints = async () => {
       totalEarned.value = res.data.totalEarned || 0
       totalUsed.value = res.data.totalUsed || 0
       expiringSoon.value = res.data.expiringSoon || 0
+      todayExchangedCouponIds.value = Array.isArray(res.data.todayExchangedCouponIds)
+        ? res.data.todayExchangedCouponIds.map(id => Number(id))
+        : []
     } else {
       console.error('获取积分失败:', res)
     }
   } catch (error) {
     console.error('加载积分信息失败:', error)
-    ElMessage.error('加载积分信息失败')
+    if (attempt < 3) {
+      await sleep(300 * attempt)
+      return loadPoints(attempt + 1)
+    }
+    const errorMsg = error.response?.data?.msg || error.message || '加载积分信息失败，请刷新重试'
+    ElMessage.error(errorMsg)
   }
 }
 
@@ -710,24 +801,43 @@ const handleInviteFriend = async () => {
 
 // 兑换优惠券
 const handleExchange = async (coupon) => {
+  if (isCouponExchangedToday(coupon.id)) {
+    ElMessage.warning('今日已兑换过这张优惠券，请明天再试')
+    return
+  }
+
   if (currentPoints.value < coupon.points) {
     ElMessage.warning('积分不足，无法兑换')
     return
   }
   
   try {
-    const res = await exchangeCoupon(coupon.id, coupon.points)
-    if (res.code === 1) {
+    const res = await exchangeCoupon(coupon.id)
+    if (res.code === 1 || res.code === 200) {
       ElMessage.success(`成功兑换${coupon.title}！消耗${coupon.points}积分`)
+      if (!isCouponExchangedToday(coupon.id)) {
+        todayExchangedCouponIds.value = [...todayExchangedCouponIds.value, Number(coupon.id)]
+      }
       showExchangeDialog.value = false
       loadPoints()
       loadRecords()
+      loadExchangeCoupons()
     } else {
       ElMessage.error(res.msg || '兑换失败')
     }
   } catch (error) {
     console.error('兑换失败:', error)
-    ElMessage.error(error.response?.data?.msg || '兑换失败，请重试')
+    const errorMsg = error.response?.data?.msg || error.message || '兑换失败，请重试'
+    if (errorMsg.includes('今日已兑换过该优惠券') && !isCouponExchangedToday(coupon.id)) {
+      todayExchangedCouponIds.value = [...todayExchangedCouponIds.value, Number(coupon.id)]
+      ElMessage.warning('今日已兑换过这张优惠券，请明天再试')
+      return
+    }
+    if (errorMsg.includes('积分不足')) {
+      ElMessage.warning(errorMsg)
+      return
+    }
+    ElMessage.error(errorMsg)
   }
 }
 
@@ -801,6 +911,7 @@ const checkSignInStatusFromRecords = async () => {
 // 初始化
 onMounted(async () => {
   await loadPoints()
+  await loadExchangeCoupons()
   await loadRecords()
   await checkAllTasksStatus()
 })
@@ -1125,9 +1236,16 @@ onMounted(async () => {
   color: #fff;
 }
 
-.exchange-btn:hover {
+.exchange-btn:hover:not(:disabled) {
   transform: translateY(-3px);
   box-shadow: 0 8px 25px rgba(245, 87, 108, 0.4);
+}
+
+.exchange-btn:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+  box-shadow: none;
 }
 
 .btn-icon {
@@ -1317,13 +1435,47 @@ onMounted(async () => {
   text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
 }
 
+.exchange-limit-tip {
+  display: block;
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.exchange-empty {
+  text-align: center;
+  padding: 28px 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 8px;
+}
+
+.exchange-empty .empty-icon {
+  display: block;
+  font-size: 36px;
+  margin-bottom: 10px;
+}
+
+.exchange-empty p {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.exchange-empty span:last-child {
+  font-size: 13px;
+}
+
 .coupon-card {
-  border: 2px solid #e4e7ed;
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
   transition: all 0.3s;
-  background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+  background: linear-gradient(135deg, rgba(20, 28, 48, 0.96) 0%, rgba(14, 21, 38, 0.92) 100%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
 }
 
 .coupon-card:hover {
@@ -1348,6 +1500,12 @@ onMounted(async () => {
   font-weight: bold;
 }
 
+.coupon-amount .suffix {
+  font-size: 20px;
+  font-weight: bold;
+  margin-left: 4px;
+}
+
 .coupon-info {
   text-align: center;
   margin-bottom: 15px;
@@ -1356,19 +1514,19 @@ onMounted(async () => {
 .coupon-title {
   font-size: 18px;
   font-weight: bold;
-  color: #303133;
+  color: #fff;
   margin-bottom: 8px;
 }
 
 .coupon-desc {
   font-size: 13px;
-  color: #606266;
+  color: rgba(255, 255, 255, 0.68);
   margin-bottom: 5px;
 }
 
 .coupon-expire {
   font-size: 12px;
-  color: #909399;
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .coupon-footer {
@@ -1376,7 +1534,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding-top: 15px;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
 
 /* ========== 线索获取规则 ========== */

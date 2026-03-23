@@ -26,11 +26,14 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     "/api/user/register",
                     "/api/user/admin/login",
                     "/api/store/login",
+                    "/api/store/employee/login",
                     "/api/auth/**",
                     
                     // ========== 第三方支付回调（公开） ==========
                     "/api/reservation/payment/notify",
                     "/api/reservation/payment/return",
+                    "/api/vip/payment/notify",
+                    "/api/vip/payment/return",
                     
                     // ========== 剧本相关（公开） ==========
                     "/api/script/page",
@@ -54,11 +57,8 @@ public class WebMvcConfig implements WebMvcConfigurer {
                     // ========== 文章相关（公开） ==========
                     "/api/article/page",
                     "/api/article/list/**",
-                    "/api/article/*/detail",
-                    "/api/article/*/comments",
                     "/api/article/hot",
                     "/api/article/recommended",
-                    "/api/article/*/favorite/status",
                     
                     // ========== 统计相关（公开） ==========
                     "/api/statistics/overview",

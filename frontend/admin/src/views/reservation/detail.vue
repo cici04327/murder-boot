@@ -132,9 +132,19 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+import { hasPermissionCode } from '@/utils/permission'
 
 const route = useRoute()
 const router = useRouter()
+const loginType = localStorage.getItem('admin-login-type') || 'admin'
+const isStaffLogin = loginType === 'staff'
+const adminUser = JSON.parse(localStorage.getItem('admin-user') || '{}')
+const permissionCodes = new Set(
+  String(adminUser.permissionCodes || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean)
+)
 
 const loading = ref(false)
 const reservation = ref({})
@@ -168,13 +178,21 @@ const getPayStatusText = (status) => {
 
 const formatAmount = (amount) => `￥${Number(amount || 0).toFixed(2)}`
 
-const canCheckIn = computed(() => reservation.value.status === 2 && reservation.value.payStatus === 1 && reservation.value.checkInStatus !== 1)
+const canCheckIn = computed(() => reservation.value.status === 2 && reservation.value.payStatus === 1 && reservation.value.checkInStatus !== 1 && (!isStaffLogin || hasPermissionCode('reservation:checkin')))
 
-const canComplete = computed(() => reservation.value.status === 2 && reservation.value.checkInStatus === 1)
+const canComplete = computed(() => reservation.value.status === 2 && reservation.value.checkInStatus === 1 && (!isStaffLogin || permissionCodes.has('reservation:complete')))
 
-const canCancel = computed(() => [1, 2].includes(reservation.value.status) && reservation.value.checkInStatus !== 1)
+const canCancel = computed(() => !isStaffLogin && [1, 2].includes(reservation.value.status) && reservation.value.checkInStatus !== 1)
 
-const showDmAction = computed(() => [1, 2].includes(reservation.value.status))
+const showDmAction = computed(() => {
+  if (![1, 2].includes(reservation.value.status)) {
+    return false
+  }
+  if (!isStaffLogin) {
+    return true
+  }
+  return permissionCodes.has('reservation:assign_dm')
+})
 
 const normalizeCheckInCode = (value) => String(value || '').replace(/\s+/g, '').replace(/[^\d]/g, '')
 

@@ -1,6 +1,21 @@
 <template>
   <div class="payment-container" v-loading="loading">
-    <el-card>
+    <el-result
+      v-if="loadError"
+      icon="error"
+      title="订单加载失败"
+      :sub-title="loadErrorMessage"
+      class="payment-error-result"
+    >
+      <template #extra>
+        <el-space>
+          <el-button type="primary" @click="loadReservation">重新加载</el-button>
+          <el-button @click="router.push('/user/reservations')">返回我的预约</el-button>
+        </el-space>
+      </template>
+    </el-result>
+
+    <el-card v-else-if="reservation">
       <template #header>
         <h2>订单支付</h2>
       </template>
@@ -72,6 +87,8 @@ const router = useRouter()
 const loading = ref(false)
 const paying = ref(false)
 const reservation = ref(null)
+const loadError = ref(false)
+const loadErrorMessage = ref('')
 const paymentMethod = ref('alipay')
 
 // 优惠券折扣金额
@@ -101,22 +118,21 @@ const loadReservation = async () => {
     return
   }
   loading.value = true
+  loadError.value = false
+  loadErrorMessage.value = ''
+  reservation.value = null
   try {
     const res = await getReservationDetail(route.params.id)
-    if (res.data) {
+    if ((res.code === 1 || res.code === 200) && res.data) {
       reservation.value = res.data
+    } else {
+      throw new Error(res.msg || '未获取到预约信息')
     }
   } catch (error) {
     console.error('加载预约信息失败:', error)
-    // 模拟数据
-    reservation.value = {
-      id: route.params.id,
-      scriptName: '迷雾庄园',
-      storeName: '探案密室',
-      reservationTime: '2024-01-15 14:00',
-      playerCount: 6,
-      totalPrice: 528
-    }
+    loadError.value = true
+    loadErrorMessage.value = error?.message || '当前订单无法加载，可能已失效、无权限访问或登录状态已过期'
+    ElMessage.error(loadErrorMessage.value)
   } finally {
     loading.value = false
   }
@@ -125,6 +141,10 @@ const loadReservation = async () => {
 const handlePay = async () => {
   // 防重复提交：正在支付中则直接返回
   if (paying.value) return
+  if (!reservation.value) {
+    ElMessage.warning('订单信息加载失败，暂时无法发起支付')
+    return
+  }
 
   try {
     await ElMessageBox.confirm(
@@ -180,14 +200,19 @@ onMounted(() => {
   padding: 0 20px;
 }
 
+.payment-error-result {
+  padding: 60px 20px;
+}
+
 .order-info {
   margin-bottom: 20px;
 }
 
 .price-detail {
-  background: #f9f9f9;
+  background: linear-gradient(160deg, rgba(11, 20, 38, 0.94), rgba(15, 27, 48, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
   padding: 20px;
-  border-radius: 8px;
+  border-radius: 18px;
   margin-bottom: 20px;
 }
 
@@ -196,6 +221,7 @@ onMounted(() => {
   justify-content: space-between;
   margin-bottom: 10px;
   font-size: 16px;
+  color: #dbe5fb;
 }
 
 .price-item.total {
@@ -204,34 +230,45 @@ onMounted(() => {
 }
 
 .discount {
-  color: #f56c6c;
+  color: #ff8f8f;
 }
 
 .price {
-  color: #f56c6c;
+  color: #ff8f8f;
   font-size: 24px;
 }
 
 .payment-method-card {
   margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(160deg, rgba(11, 20, 38, 0.94), rgba(15, 27, 48, 0.9));
 }
 
 .payment-methods {
   width: 100%;
 }
 
-.payment-methods .el-radio {
+.payment-methods :deep(.el-radio) {
   display: block;
   margin-bottom: 15px;
   padding: 15px;
-  border: 1px solid #dcdfe6;
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
   transition: all 0.3s;
+  background: rgba(15, 25, 44, 0.88);
 }
 
-.payment-methods .el-radio:hover {
-  border-color: #409eff;
-  background: #f0f9ff;
+.payment-methods :deep(.el-radio:hover) {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(20, 33, 58, 0.94);
+}
+
+.payment-methods :deep(.el-radio__label) {
+  color: #e8eefc;
+}
+
+.payment-methods :deep(.el-radio__input.is-checked + .el-radio__label) {
+  color: #f4f7ff;
 }
 
 .method-item {
@@ -244,5 +281,49 @@ onMounted(() => {
   display: flex;
   gap: 15px;
   justify-content: flex-end;
+}
+
+.payment-container :deep(.el-card) {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(7, 15, 30, 0.94), rgba(10, 20, 37, 0.9));
+  box-shadow: 0 30px 60px rgba(2, 8, 18, 0.35);
+}
+
+.payment-container :deep(.el-card__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 25, 44, 0.72);
+}
+
+.payment-container :deep(.el-card__header h2),
+.payment-container :deep(.el-card__header span) {
+  color: #f2f6ff;
+}
+
+.payment-container :deep(.el-card__body) {
+  background: transparent;
+}
+
+.payment-container :deep(.el-descriptions) {
+  --el-descriptions-table-border: rgba(255, 255, 255, 0.08);
+}
+
+.payment-container :deep(.el-descriptions__label.el-descriptions__cell.is-bordered-label) {
+  background: rgba(18, 30, 51, 0.92);
+  color: #9fb3d9;
+}
+
+.payment-container :deep(.el-descriptions__content.el-descriptions__cell.is-bordered-content) {
+  background: rgba(11, 20, 38, 0.88);
+  color: #f2f6ff;
+}
+
+.payment-container :deep(.el-divider) {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.payment-container :deep(.el-button:not(.el-button--primary)) {
+  background: rgba(18, 30, 51, 0.88);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #dbe5fb;
 }
 </style>

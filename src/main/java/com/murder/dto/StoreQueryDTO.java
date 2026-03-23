@@ -41,4 +41,7 @@ public class StoreQueryDTO implements Serializable {
     
     @Schema(description = "每页数量")
     private Integer pageSize = 10;
+
+    @Schema(description = "门店ID（管理端范围过滤）")
+    private Long storeId;
 }

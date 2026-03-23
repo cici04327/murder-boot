@@ -51,6 +51,25 @@ public class StoreEmployeeVO implements Serializable {
     
     @Schema(description = "状态：1在职，0离职")
     private Integer status;
+
+    @Schema(description = "登录账号")
+    private String loginAccount;
+
+    @Schema(description = "员工后台角色：MANAGER / CLERK / DM")
+    private String staffRole;
+
+    @Schema(description = "权限编码，逗号分隔")
+    private String permissionCodes;
+
+    @Schema(description = "绑定DM ID")
+    private Long dmId;
+
+    @Schema(description = "绑定DM姓名")
+    private String dmName;
+
+    @Schema(description = "最后登录时间")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime lastLoginTime;
     
     @Schema(description = "创建时间")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")

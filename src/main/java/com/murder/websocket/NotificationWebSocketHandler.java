@@ -80,7 +80,11 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
      */
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        log.error("WebSocket浼犺緭寮傚父: sessionId={}", session.getId(), exception);
+        if (isConnectionClosed(exception)) {
+            log.warn("WebSocket连接已断开: sessionId={}, msg={}", session.getId(), exception.getMessage());
+        } else {
+            log.error("WebSocket浼犺緭寮傚父: sessionId={}", session.getId(), exception);
+        }
         if (session.isOpen()) {
             session.close();
         }
@@ -128,5 +132,23 @@ public class NotificationWebSocketHandler extends TextWebSocketHandler {
      */
     public int getOnlineUserCount() {
         return USER_SESSIONS.size();
+    }
+
+    private boolean isConnectionClosed(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof java.nio.channels.ClosedChannelException
+                    || current instanceof java.io.EOFException) {
+                return true;
+            }
+            if (current instanceof IOException && current.getMessage() != null
+                    && (current.getMessage().contains("Broken pipe")
+                    || current.getMessage().contains("Connection reset")
+                    || current.getMessage().contains("ClosedChannelException"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

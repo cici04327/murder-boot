@@ -835,21 +835,21 @@ watch(showAvailableCoupons, (newVal) => {
 .stats-value {
   font-size: 28px;
   font-weight: bold;
-  color: #303133;
+  color: #f2f6ff;
   line-height: 1.2;
   margin-bottom: 4px;
 }
 
 .stats-label {
   font-size: 13px;
-  color: #909399;
+  color: #b4c4de;
   margin-bottom: 2px;
   font-weight: 500;
 }
 
 .stats-desc {
   font-size: 12px;
-  color: #c0c4cc;
+  color: rgba(255, 255, 255, 0.56);
   margin-top: 2px;
 }
 
@@ -880,6 +880,30 @@ watch(showAvailableCoupons, (newVal) => {
 
 .coupon-tabs {
   flex: 1;
+}
+
+.coupon-list-card :deep(.el-tabs__nav-wrap::after) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.coupon-list-card :deep(.el-tabs__item) {
+  color: rgba(255, 255, 255, 0.68);
+  transition: color 0.25s ease;
+}
+
+.coupon-list-card :deep(.el-tabs__item:hover) {
+  color: #ffd4cd;
+}
+
+.coupon-list-card :deep(.el-tabs__item.is-active) {
+  color: #ff9b88;
+  font-weight: 600;
+}
+
+.coupon-list-card :deep(.el-tabs__active-bar) {
+  background: linear-gradient(90deg, #c0392b 0%, #ff8a7a 100%);
+  height: 3px;
+  border-radius: 999px;
 }
 
 .tab-label {

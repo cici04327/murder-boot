@@ -1,6 +1,6 @@
 <template>
   <div class="reservation-detail-container" v-loading="loading">
-    <el-card v-if="reservation">
+    <el-card v-if="reservation" class="detail-card">
       <template #header>
         <div class="header">
           <h2>预约详情</h2>
@@ -50,7 +50,7 @@
               </div>
             </div>
           </div>
-          <span v-else style="color:#999">暂未分配主持 DM</span>
+          <span v-else class="muted-text">暂未分配主持 DM</span>
         </el-descriptions-item>
         <el-descriptions-item label="预约时间" :span="2">
           <span class="time-highlight">{{ reservation.reservationTime }}</span>
@@ -163,7 +163,7 @@
         <el-button size="large" @click="router.back()">返回</el-button>
       </div>
 
-      <el-card v-if="timeline.length > 0" style="margin-top: 20px">
+      <el-card v-if="timeline.length > 0" class="timeline-card" style="margin-top: 20px">
         <template #header>
           <span>订单进度</span>
         </template>
@@ -647,6 +647,7 @@ onBeforeUnmount(() => {
 
 .header h2 {
   margin: 0;
+  color: #f2f6ff;
 }
 
 .time-highlight {
@@ -677,6 +678,7 @@ onBeforeUnmount(() => {
 .dm-info-name {
   font-size: 15px;
   font-weight: 600;
+  color: #f2f6ff;
 }
 
 .dm-info-tags {
@@ -732,7 +734,7 @@ onBeforeUnmount(() => {
 }
 
 .check-in-tip {
-  color: #909399;
+  color: #9fb3d9;
   font-size: 13px;
 }
 
@@ -750,7 +752,7 @@ onBeforeUnmount(() => {
 }
 
 .qrcode-label {
-  color: #909399;
+  color: #9fb3d9;
   font-size: 13px;
 }
 
@@ -760,13 +762,13 @@ onBeforeUnmount(() => {
   justify-content: center;
   margin-top: 30px;
   padding-top: 20px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* 改期规则样式 */
 .reschedule-rules {
-  background: rgba(64, 158, 255, 0.05);
-  border: 1px solid rgba(64, 158, 255, 0.2);
+  background: linear-gradient(135deg, rgba(17, 27, 47, 0.95), rgba(12, 19, 35, 0.92));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 12px 16px;
   width: 100%;
@@ -775,7 +777,7 @@ onBeforeUnmount(() => {
 .rule-title {
   font-size: 13px;
   font-weight: 600;
-  color: #606266;
+  color: #f2f6ff;
   margin-bottom: 10px;
 }
 
@@ -784,7 +786,7 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  color: #606266;
+  color: #b8c7e2;
   margin-bottom: 6px;
   line-height: 1.5;
 }
@@ -794,7 +796,7 @@ onBeforeUnmount(() => {
 }
 
 .rule-item strong {
-  color: #303133;
+  color: #f2f6ff;
 }
 
 .rule-icon {
@@ -805,5 +807,117 @@ onBeforeUnmount(() => {
 
 .rule-warn {
   color: #f56c6c;
+}
+
+.muted-text {
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.detail-card,
+.timeline-card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(7, 15, 30, 0.94), rgba(10, 20, 37, 0.9));
+  box-shadow: 0 30px 60px rgba(2, 8, 18, 0.35);
+}
+
+.reservation-detail-container :deep(.el-card) {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(7, 15, 30, 0.94), rgba(10, 20, 37, 0.9));
+  box-shadow: 0 30px 60px rgba(2, 8, 18, 0.35);
+}
+
+.reservation-detail-container :deep(.el-card__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 25, 44, 0.72);
+}
+
+.reservation-detail-container :deep(.el-card__body) {
+  background: transparent;
+}
+
+.reservation-detail-container :deep(.el-descriptions) {
+  --el-descriptions-table-border: rgba(255, 255, 255, 0.08);
+}
+
+.reservation-detail-container :deep(.el-descriptions__title) {
+  color: #f2f6ff;
+}
+
+.reservation-detail-container :deep(.el-descriptions__label.el-descriptions__cell.is-bordered-label) {
+  background: rgba(18, 30, 51, 0.92);
+  color: #9fb3d9;
+}
+
+.reservation-detail-container :deep(.el-descriptions__content.el-descriptions__cell.is-bordered-content) {
+  background: rgba(11, 20, 38, 0.88);
+  color: #f2f6ff;
+}
+
+.reservation-detail-container :deep(.el-link) {
+  color: #ff9b88;
+}
+
+.reservation-detail-container :deep(.el-link:hover) {
+  color: #ffb1a2;
+}
+
+.reservation-detail-container :deep(.el-rate__text) {
+  color: #d8e4fb;
+}
+
+.reservation-detail-container :deep(.el-timeline-item__timestamp) {
+  color: #9fb3d9;
+}
+
+.reservation-detail-container :deep(.el-timeline-item__content) {
+  color: #f2f6ff;
+}
+
+.reservation-detail-container :deep(.el-dialog) {
+  background: linear-gradient(180deg, rgba(7, 15, 30, 0.97), rgba(10, 20, 37, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 30px 60px rgba(2, 8, 18, 0.42);
+}
+
+.reservation-detail-container :deep(.el-dialog__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 25, 44, 0.72);
+}
+
+.reservation-detail-container :deep(.el-dialog__title) {
+  color: #f2f6ff;
+}
+
+.reservation-detail-container :deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.reservation-detail-container :deep(.el-dialog__headerbtn .el-dialog__close:hover) {
+  color: #fff;
+}
+
+.reservation-detail-container :deep(.el-dialog__body),
+.reservation-detail-container :deep(.el-dialog__footer) {
+  background: transparent;
+}
+
+.reservation-detail-container :deep(.el-form-item__label) {
+  color: #dbe5fb;
+}
+
+.reservation-detail-container :deep(.el-alert) {
+  background: rgba(245, 108, 108, 0.12);
+  border: 1px solid rgba(245, 108, 108, 0.2);
+}
+
+.reservation-detail-container :deep(.el-alert__title),
+.reservation-detail-container :deep(.el-alert__description) {
+  color: #f8d5d5;
+}
+
+.reservation-detail-container :deep(.el-button:not(.el-button--primary):not(.el-button--danger):not(.el-button--warning)) {
+  background: rgba(18, 30, 51, 0.88);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #dbe5fb;
 }
 </style>

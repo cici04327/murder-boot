@@ -2078,11 +2078,11 @@ onMounted(async () => {
   justify-content: center;
   gap: 8px;
   padding: 16px 24px;
-  background: #fffbe6;
-  border: 1px solid #ffe58f;
+  background: linear-gradient(135deg, rgba(255, 215, 64, 0.12) 0%, rgba(31, 37, 56, 0.92) 100%);
+  border: 1px solid rgba(255, 215, 64, 0.28);
   border-radius: 12px;
   font-size: 14px;
-  color: #ad8b00;
+  color: #ffe08a;
 }
 
 .more-scripts-tip .tip-icon {
@@ -2090,7 +2090,7 @@ onMounted(async () => {
 }
 
 .more-scripts-tip a {
-  color: #16213e;
+  color: #ff9b88;
   font-weight: 500;
   text-decoration: underline;
 }

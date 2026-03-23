@@ -109,7 +109,11 @@ public class ServiceWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
-        log.error("客服WebSocket传输异常: sessionId={}", session.getId(), exception);
+        if (isConnectionClosed(exception)) {
+            log.warn("客服WebSocket连接已断开: sessionId={}, msg={}", session.getId(), exception.getMessage());
+        } else {
+            log.error("客服WebSocket传输异常: sessionId={}", session.getId(), exception);
+        }
         if (session.isOpen()) session.close();
         USER_SESSIONS.entrySet().removeIf(e -> e.getValue().getId().equals(session.getId()));
         ADMIN_SESSIONS.entrySet().removeIf(e -> e.getValue().getId().equals(session.getId()));
@@ -140,7 +144,11 @@ public class ServiceWebSocketHandler extends TextWebSocketHandler {
         try {
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(msg)));
         } catch (Exception e) {
-            log.error("客服WebSocket发送失败: {}", e.getMessage());
+            if (isConnectionClosed(e)) {
+                log.warn("客服WebSocket发送时连接已断开: {}", e.getMessage());
+            } else {
+                log.error("客服WebSocket发送失败: {}", e.getMessage(), e);
+            }
         }
     }
 
@@ -150,5 +158,23 @@ public class ServiceWebSocketHandler extends TextWebSocketHandler {
             if (kv.length == 2 && kv[0].equals(key)) return kv[1];
         }
         return null;
+    }
+
+    private boolean isConnectionClosed(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof java.nio.channels.ClosedChannelException
+                    || current instanceof java.io.EOFException) {
+                return true;
+            }
+            if (current instanceof java.io.IOException && current.getMessage() != null
+                    && (current.getMessage().contains("Broken pipe")
+                    || current.getMessage().contains("Connection reset")
+                    || current.getMessage().contains("ClosedChannelException"))) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

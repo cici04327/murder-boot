@@ -150,6 +150,7 @@ public class NotificationTask {
 
             LambdaQueryWrapper<UserVip> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(UserVip::getStatus, 1)
+                   .and(w -> w.isNull(UserVip::getStartTime).or().le(UserVip::getStartTime, now))
                    .gt(UserVip::getEndTime, now)
                    .le(UserVip::getEndTime, threeDaysLater);
 

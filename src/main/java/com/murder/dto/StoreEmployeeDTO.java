@@ -36,4 +36,19 @@ public class StoreEmployeeDTO implements Serializable {
     
     @Schema(description = "状态：1在职，0离职")
     private Integer status;
+
+    @Schema(description = "登录账号")
+    private String loginAccount;
+
+    @Schema(description = "登录密码，留空则沿用原密码；新增时留空则默认123456")
+    private String loginPassword;
+
+    @Schema(description = "员工后台角色：MANAGER / CLERK / DM")
+    private String staffRole;
+
+    @Schema(description = "权限编码，逗号分隔")
+    private String permissionCodes;
+
+    @Schema(description = "绑定DM ID")
+    private Long dmId;
 }

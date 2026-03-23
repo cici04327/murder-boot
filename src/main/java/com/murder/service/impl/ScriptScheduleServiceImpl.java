@@ -1,6 +1,7 @@
 package com.murder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.murder.common.context.BaseContext;
 import com.murder.entity.Dm;
 import com.murder.entity.Script;
 import com.murder.entity.ScriptSchedule;
@@ -22,9 +23,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +55,7 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
     @Override
     public List<ScriptSchedule> listByStoreAndDate(Long storeId, LocalDate scheduleDate) {
         List<ScriptSchedule> list = scriptScheduleMapper.listByStoreAndDate(storeId, scheduleDate);
+        list = applyDmScheduleScope(list);
         fillScheduleDisplayInfo(list);
         return list;
     }
@@ -59,6 +63,23 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
     @Override
     public List<ScriptSchedule> listByStoreAndDateRange(Long storeId, LocalDate startDate, LocalDate endDate) {
         List<ScriptSchedule> list = scriptScheduleMapper.listByStoreAndDateRange(storeId, startDate, endDate);
+        list = applyDmScheduleScope(list);
+        fillScheduleDisplayInfo(list);
+        return list;
+    }
+
+    @Override
+    public List<ScriptSchedule> listMySchedulesByDate(Long storeId, LocalDate scheduleDate) {
+        List<ScriptSchedule> list = scriptScheduleMapper.listByStoreAndDate(storeId, scheduleDate);
+        list = applyDmScheduleScope(list, true);
+        fillScheduleDisplayInfo(list);
+        return list;
+    }
+
+    @Override
+    public List<ScriptSchedule> listMySchedulesByDateRange(Long storeId, LocalDate startDate, LocalDate endDate) {
+        List<ScriptSchedule> list = scriptScheduleMapper.listByStoreAndDateRange(storeId, startDate, endDate);
+        list = applyDmScheduleScope(list, true);
         fillScheduleDisplayInfo(list);
         return list;
     }
@@ -240,7 +261,15 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
 
     @Override
     public ScriptSchedule getById(Long id) {
-        return scriptScheduleMapper.selectById(id);
+        ScriptSchedule schedule = scriptScheduleMapper.selectById(id);
+        if (schedule == null) {
+            return null;
+        }
+        if (isDmStaff() && !Objects.equals(schedule.getDmId(), BaseContext.getDmId())) {
+            throw new SecurityException("没有权限查看该场次");
+        }
+        fillScheduleDisplayInfo(Collections.singletonList(schedule));
+        return schedule;
     }
 
     @Override
@@ -406,6 +435,30 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
             return currentRemark;
         }
         return currentRemark + "；" + expiredRemark;
+    }
+
+    private List<ScriptSchedule> applyDmScheduleScope(List<ScriptSchedule> list) {
+        return applyDmScheduleScope(list, false);
+    }
+
+    private List<ScriptSchedule> applyDmScheduleScope(List<ScriptSchedule> list, boolean forceDmScope) {
+        if (list == null || list.isEmpty()) {
+            return list;
+        }
+        if (!forceDmScope && !isDmStaff()) {
+            return list;
+        }
+        Long dmId = BaseContext.getDmId();
+        if (dmId == null) {
+            return new ArrayList<>();
+        }
+        return list.stream()
+                .filter(schedule -> Objects.equals(schedule.getDmId(), dmId))
+                .collect(Collectors.toList());
+    }
+
+    private boolean isDmStaff() {
+        return "STORE_STAFF".equals(BaseContext.getRole()) && "DM".equals(BaseContext.getStaffRole());
     }
 
     /**

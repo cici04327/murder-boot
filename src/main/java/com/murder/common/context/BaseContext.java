@@ -8,6 +8,10 @@ public class BaseContext {
     private static ThreadLocal<Long> threadLocal = new ThreadLocal<>();
     private static ThreadLocal<String> roleThreadLocal = new ThreadLocal<>();
     private static ThreadLocal<Long> storeIdThreadLocal = new ThreadLocal<>();
+    private static ThreadLocal<Long> employeeIdThreadLocal = new ThreadLocal<>();
+    private static ThreadLocal<String> staffRoleThreadLocal = new ThreadLocal<>();
+    private static ThreadLocal<String> permissionCodesThreadLocal = new ThreadLocal<>();
+    private static ThreadLocal<Long> dmIdThreadLocal = new ThreadLocal<>();
 
     /**
      * 设置当前用户ID
@@ -42,9 +46,45 @@ public class BaseContext {
         return storeIdThreadLocal.get();
     }
 
+    public static void setEmployeeId(Long employeeId) {
+        employeeIdThreadLocal.set(employeeId);
+    }
+
+    public static Long getEmployeeId() {
+        return employeeIdThreadLocal.get();
+    }
+
+    public static void setStaffRole(String staffRole) {
+        staffRoleThreadLocal.set(staffRole);
+    }
+
+    public static String getStaffRole() {
+        return staffRoleThreadLocal.get();
+    }
+
+    public static void setPermissionCodes(String permissionCodes) {
+        permissionCodesThreadLocal.set(permissionCodes);
+    }
+
+    public static String getPermissionCodes() {
+        return permissionCodesThreadLocal.get();
+    }
+
+    public static void setDmId(Long dmId) {
+        dmIdThreadLocal.set(dmId);
+    }
+
+    public static Long getDmId() {
+        return dmIdThreadLocal.get();
+    }
+
     public static void removeCurrentId() {
         threadLocal.remove();
         roleThreadLocal.remove();
         storeIdThreadLocal.remove();
+        employeeIdThreadLocal.remove();
+        staffRoleThreadLocal.remove();
+        permissionCodesThreadLocal.remove();
+        dmIdThreadLocal.remove();
     }
 }

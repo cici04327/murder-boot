@@ -3,10 +3,13 @@ package com.murder.common.handler;
 import com.murder.common.exception.BaseException;
 import com.murder.common.result.Result;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.catalina.connector.ClientAbortException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.sql.SQLIntegrityConstraintViolationException;
 
@@ -36,6 +39,15 @@ public class GlobalExceptionHandler {
     public Result<String> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         log.warn("请求方法不支持: {}", ex.getMessage());
         return Result.error("请求方法不支持: " + ex.getMethod());
+    }
+
+    /**
+     * 捕获资源不存在异常
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public Result<String> handleNoResourceFound(NoResourceFoundException ex) {
+        log.warn("请求资源不存在: {}", ex.getMessage());
+        return Result.error(404, "请求地址不存在");
     }
 
     /**
@@ -70,6 +82,28 @@ public class GlobalExceptionHandler {
         } else {
             return Result.error("数据库操作失败");
         }
+    }
+
+    /**
+     * 捕获数据完整性异常
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public Result<String> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        log.error("数据完整性异常: {}", ex.getMessage(), ex);
+        String message = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
+        if (message != null && message.contains("doesn't have a default value")) {
+            return Result.error("保存数据失败，缺少必要字段");
+        }
+        return Result.error("数据库操作失败");
+    }
+
+    /**
+     * 捕获客户端主动断开连接异常
+     */
+    @ExceptionHandler(ClientAbortException.class)
+    public Result<String> handleClientAbort(ClientAbortException ex) {
+        log.warn("客户端已断开连接: {}", ex.getMessage());
+        return Result.error(499, "客户端已断开连接");
     }
 
     /**

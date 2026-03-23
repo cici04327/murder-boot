@@ -182,7 +182,7 @@ public class UserPointsController {
             userPointsService.signIn(userId);
             return Result.success("签到成功！获�?0积分");
         } catch (Exception e) {
-            log.error("签到失败: {}", e.getMessage());
+            log.warn("签到失败: {}", e.getMessage());
             return Result.error(e.getMessage());
         }
     }
@@ -195,18 +195,18 @@ public class UserPointsController {
     @Operation(summary = "积分兑换优惠券")
     public Result<String> exchangeCoupon(
             @RequestParam Long couponId,
-            @RequestParam Integer points) {
+            @RequestParam(required = false) Integer points) {
         Long userId = BaseContext.getCurrentId();
         if (userId == null) {
             return Result.error("请先登录");
         }
-        log.info("兑换优惠�? userId={}, couponId={}, points={}", userId, couponId, points);
+        log.info("兑换优惠券: userId={}, couponId={}, requestedPoints={}", userId, couponId, points);
         
         try {
-            userPointsService.exchangeCoupon(userId, couponId, points);
+            userPointsService.exchangeCoupon(userId, couponId);
             return Result.success("兑换成功");
         } catch (Exception e) {
-            log.error("兑换失败: {}", e.getMessage());
+            log.warn("兑换失败: {}", e.getMessage());
             return Result.error(e.getMessage());
         }
     }
@@ -323,7 +323,7 @@ public class UserPointsController {
             userPointsService.rewardForFavorite(userId);
             return Result.success("奖励成功");
         } catch (Exception e) {
-            log.error("收藏剧本奖励失败: {}", e.getMessage());
+            log.warn("收藏剧本奖励失败: {}", e.getMessage());
             return Result.error(e.getMessage());
         }
     }

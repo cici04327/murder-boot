@@ -1,6 +1,7 @@
 package com.murder.task;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.murder.common.context.BaseContext;
 import com.murder.entity.GroupOrder;
 import com.murder.entity.Reservation;
 import com.murder.entity.User;
@@ -61,15 +62,25 @@ public class ReservationTask {
 
             int successCount = 0;
             int failCount = 0;
-            for (Reservation reservation : reservations) {
-                try {
-                    reservationService.complete(reservation.getId());
-                    successCount++;
-                    log.info("自动完成预约订单: id={}, orderNo={}", reservation.getId(), reservation.getOrderNo());
-                } catch (Exception e) {
-                    failCount++;
-                    log.error("自动完成预约订单失败: id={}", reservation.getId(), e);
+            Long previousId = BaseContext.getCurrentId();
+            String previousRole = BaseContext.getRole();
+            Long previousStoreId = BaseContext.getStoreId();
+            try {
+                BaseContext.setCurrentId(0L);
+                BaseContext.setRole("SUPER_ADMIN");
+                BaseContext.setStoreId(null);
+                for (Reservation reservation : reservations) {
+                    try {
+                        reservationService.complete(reservation.getId());
+                        successCount++;
+                        log.info("自动完成预约订单: id={}, orderNo={}", reservation.getId(), reservation.getOrderNo());
+                    } catch (Exception e) {
+                        failCount++;
+                        log.error("自动完成预约订单失败: id={}", reservation.getId(), e);
+                    }
                 }
+            } finally {
+                restoreContext(previousId, previousRole, previousStoreId);
             }
 
             log.info("自动完成预约任务结束: success={}, fail={}, total={}", successCount, failCount, reservations.size());
@@ -97,20 +108,30 @@ public class ReservationTask {
             int successCount = 0;
             int skipCount = 0;
             int failCount = 0;
-            for (Reservation reservation : reservations) {
-                try {
-                    if (shouldSkipAutoCancel(reservation, timeoutTime)) {
-                        skipCount++;
-                        continue;
-                    }
+            Long previousId = BaseContext.getCurrentId();
+            String previousRole = BaseContext.getRole();
+            Long previousStoreId = BaseContext.getStoreId();
+            try {
+                BaseContext.setCurrentId(0L);
+                BaseContext.setRole("SUPER_ADMIN");
+                BaseContext.setStoreId(null);
+                for (Reservation reservation : reservations) {
+                    try {
+                        if (shouldSkipAutoCancel(reservation, timeoutTime)) {
+                            skipCount++;
+                            continue;
+                        }
 
-                    reservationService.cancel(reservation.getId(), "系统自动取消：超时未支付");
-                    successCount++;
-                    log.info("自动取消超时未支付预约: id={}, orderNo={}", reservation.getId(), reservation.getOrderNo());
-                } catch (Exception e) {
-                    failCount++;
-                    log.error("自动取消预约失败: id={}", reservation.getId(), e);
+                        reservationService.cancel(reservation.getId(), "系统自动取消：超时未支付");
+                        successCount++;
+                        log.info("自动取消超时未支付预约: id={}, orderNo={}", reservation.getId(), reservation.getOrderNo());
+                    } catch (Exception e) {
+                        failCount++;
+                        log.error("自动取消预约失败: id={}", reservation.getId(), e);
+                    }
                 }
+            } finally {
+                restoreContext(previousId, previousRole, previousStoreId);
             }
 
             log.info("自动取消未支付预约任务结束: success={}, skip={}, fail={}, total={}",
@@ -129,6 +150,7 @@ public class ReservationTask {
         try {
             LambdaQueryWrapper<UserVip> wrapper = new LambdaQueryWrapper<>();
             wrapper.eq(UserVip::getStatus, 1)
+                   .and(w -> w.isNull(UserVip::getStartTime).or().le(UserVip::getStartTime, LocalDateTime.now()))
                    .gt(UserVip::getEndTime, LocalDateTime.now());
             List<UserVip> activeVips = userVipMapper.selectList(wrapper);
             int success = 0;
@@ -207,5 +229,18 @@ public class ReservationTask {
         }
 
         return false;
+    }
+
+    private void restoreContext(Long previousId, String previousRole, Long previousStoreId) {
+        BaseContext.removeCurrentId();
+        if (previousId != null) {
+            BaseContext.setCurrentId(previousId);
+        }
+        if (previousRole != null) {
+            BaseContext.setRole(previousRole);
+        }
+        if (previousStoreId != null) {
+            BaseContext.setStoreId(previousStoreId);
+        }
     }
 }

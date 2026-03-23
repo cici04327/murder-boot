@@ -38,9 +38,11 @@ public class StoreController {
     public Result<PageResult<StoreVO>> page(
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String name) {
-        log.info("分页查询门店列表: page={}, pageSize={}, name={}", page, pageSize, name);
-        PageResult<StoreVO> pageResult = storeService.pageQuery(page, pageSize, name);
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) Long storeId) {
+        Long scopedStoreId = resolveStoreScope(storeId);
+        log.info("分页查询门店列表: page={}, pageSize={}, name={}, storeId={}, scopedStoreId={}", page, pageSize, name, storeId, scopedStoreId);
+        PageResult<StoreVO> pageResult = storeService.pageQuery(page, pageSize, name, scopedStoreId);
         return Result.success(pageResult);
     }
 
@@ -50,6 +52,8 @@ public class StoreController {
     @PostMapping("/page/advanced")
     @Operation(summary = "多条件分页查询门店列表")
     public Result<PageResult<StoreVO>> pageAdvanced(@RequestBody StoreQueryDTO queryDTO) {
+        Long scopedStoreId = resolveStoreScope(queryDTO.getStoreId());
+        queryDTO.setStoreId(scopedStoreId);
         log.info("多条件分页查询门店列表: {}", queryDTO);
         PageResult<StoreVO> pageResult = storeService.pageQueryAdvanced(queryDTO);
         return Result.success(pageResult);
@@ -60,9 +64,10 @@ public class StoreController {
      */
     @GetMapping("/list")
     @Operation(summary = "获取所有门店列表")
-    public Result<List<StoreVO>> list() {
-        log.info("获取所有门店列表");
-        List<StoreVO> storeList = storeService.listAll();
+    public Result<List<StoreVO>> list(@RequestParam(required = false) Long storeId) {
+        Long scopedStoreId = resolveStoreScope(storeId);
+        log.info("获取所有门店列表: storeId={}, scopedStoreId={}", storeId, scopedStoreId);
+        List<StoreVO> storeList = storeService.listAll(scopedStoreId);
         return Result.success(storeList);
     }
 
@@ -285,5 +290,13 @@ public class StoreController {
         if (!"SUPER_ADMIN".equals(role)) {
             throw new com.murder.common.exception.BaseException("无权限，仅超级管理员可执行此操作");
         }
+    }
+
+    private Long resolveStoreScope(Long requestedStoreId) {
+        String role = com.murder.common.context.BaseContext.getRole();
+        if ("STORE_ADMIN".equals(role)) {
+            return com.murder.common.context.BaseContext.getStoreId();
+        }
+        return requestedStoreId;
     }
 }

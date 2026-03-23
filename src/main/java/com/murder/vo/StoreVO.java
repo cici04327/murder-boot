@@ -55,6 +55,9 @@ public class StoreVO implements Serializable {
     
     @Schema(description = "状态")
     private Integer status;
+
+    @Schema(description = "门店登录账号")
+    private String loginAccount;
     
     @Schema(description = "距离（公里）")
     private Double distance;

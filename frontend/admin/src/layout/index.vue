@@ -58,24 +58,7 @@
           </el-breadcrumb>
         </div>
         <div class="header-right">
-          <el-select
-            v-if="isSuperAdmin"
-            v-model="selectedStoreId"
-            size="default"
-            style="width: 180px"
-            placeholder="选择门店"
-            @change="handleStoreChange"
-          >
-            <el-option label="全部门店" value="all" />
-            <el-option
-              v-for="s in storeList"
-              :key="s.id"
-              :label="s.name"
-              :value="String(s.id)"
-            />
-          </el-select>
-
-          <NotificationBell />
+          <NotificationBell v-if="showNotificationBell" />
 
           <el-dropdown @command="handleCommand">
             <span class="user-dropdown">
@@ -104,9 +87,9 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElNotification } from 'element-plus'
 import NotificationBell from '@/components/NotificationBell.vue'
-import { userService } from '@/utils/request'
 import notificationWS from '@/utils/websocket'
 import { playNotificationSound } from '@/utils/notification'
+import { canViewNotifications, hasRoutePermission } from '@/utils/permission'
 
 const router = useRouter()
 const route = useRoute()
@@ -121,11 +104,15 @@ const adminUser = computed(() => {
 
 const loginType = computed(() => localStorage.getItem('admin-login-type') || 'admin')
 const isStoreLogin = computed(() => loginType.value === 'store')
-const isSuperAdmin = computed(() => adminUser.value?.role === 'SUPER_ADMIN' && !isStoreLogin.value)
+const isStaffLogin = computed(() => loginType.value === 'staff')
+const isSuperAdmin = computed(() => adminUser.value?.role === 'SUPER_ADMIN' && !isStoreLogin.value && !isStaffLogin.value)
 
 const adminDisplayName = computed(() => {
   if (isStoreLogin.value) {
     return localStorage.getItem('admin-store-name') || '门店管理员'
+  }
+  if (isStaffLogin.value) {
+    return adminUser.value?.name || adminUser.value?.loginAccount || '门店员工'
   }
   return adminUser.value?.nickname || adminUser.value?.username || '管理员'
 })
@@ -136,26 +123,6 @@ const currentStoreName = computed(() => {
   }
   return ''
 })
-
-const storeList = ref([])
-const selectedStoreId = ref(localStorage.getItem('admin-current-store-id') || 'all')
-
-const loadStores = async () => {
-  if (!isSuperAdmin.value) return
-  try {
-    const res = await userService.get('/store/list')
-    if (res.code === 200 || res.code === 1) {
-      storeList.value = res.data || []
-    }
-  } catch (e) {
-    console.warn('加载门店列表失败:', e)
-  }
-}
-
-const handleStoreChange = (val) => {
-  localStorage.setItem('admin-current-store-id', val)
-  window.location.reload()
-}
 
 // ========== 客服WebSocket（全局监听新会话通知）==========
 let serviceWs = null
@@ -216,9 +183,9 @@ onUnmounted(() => {
 })
 
 onMounted(() => {
-  loadStores()
+  localStorage.removeItem('admin-current-store-id')
   const userInfo = JSON.parse(localStorage.getItem('admin-user') || '{}')
-  if (userInfo.id) {
+  if (userInfo.id && !isStaffLogin.value) {
     notificationWS.connect(userInfo.id)
     // 同时连接客服WebSocket，监听新客服会话请求
     connectServiceWs(userInfo.id)
@@ -226,13 +193,18 @@ onMounted(() => {
 })
 
 const currentRole = computed(() => {
-  return isStoreLogin.value ? 'store' : 'admin'
+  if (isStoreLogin.value) return 'store'
+  if (isStaffLogin.value) return 'staff'
+  return 'admin'
 })
 
-const hasPermission = (route) => {
-  if (!route.meta?.roles) return true
-  return route.meta.roles.includes(currentRole.value)
-}
+const showNotificationBell = computed(() => {
+  if (isStoreLogin.value) return true
+  if (isStaffLogin.value) return canViewNotifications()
+  return true
+})
+
+const hasPermission = (route) => hasRoutePermission(route)
 
 const menuRoutes = computed(() => {
   return router.options.routes

@@ -1,29 +1,36 @@
 package com.murder.service.impl;
 
+import com.alipay.api.AlipayApiException;
+import com.alipay.api.AlipayClient;
+import com.alipay.api.domain.AlipayTradePagePayModel;
+import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.murder.common.config.AlipayConfig;
 import com.murder.common.result.PageResult;
 import com.murder.dto.VipPackageDTO;
 import com.murder.entity.User;
 import com.murder.entity.UserVip;
 import com.murder.entity.VipPackage;
-import com.murder.vo.VipPackageVO;
-import com.murder.mapper.UserMapper;
-import com.murder.mapper.UserVipMapper;
-import com.murder.mapper.VipPackageMapper;
 import com.murder.entity.Coupon;
 import com.murder.entity.UserCoupon;
 import com.murder.mapper.CouponMapper;
+import com.murder.mapper.UserMapper;
 import com.murder.mapper.UserCouponMapper;
+import com.murder.mapper.UserVipMapper;
+import com.murder.mapper.VipPackageMapper;
 import com.murder.service.CouponService;
 import com.murder.service.VipService;
+import com.murder.vo.VipPackageVO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -57,6 +64,12 @@ public class VipServiceImpl implements VipService {
     @Autowired
     private UserCouponMapper userCouponMapper;
 
+    @Autowired
+    private AlipayClient alipayClient;
+
+    @Autowired
+    private AlipayConfig alipayConfig;
+
     @Autowired(required = false)
     private com.murder.service.NotificationService notificationService;
 
@@ -86,60 +99,291 @@ public class VipServiceImpl implements VipService {
     @Override
     @Transactional
     public String purchaseVip(Long userId, Long packageId, String paymentMethod) {
-        // 查询套餐信息
         VipPackage vipPackage = vipPackageMapper.selectById(packageId);
         if (vipPackage == null || vipPackage.getStatus() != 1) {
             throw new RuntimeException("VIP套餐不存在或已下架");
         }
 
-        // 查询用户信息
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
 
-        // 生成订单号
-        String orderNo = generateOrderNo(userId);
-
-        // 计算VIP开始和结束时间
-        LocalDateTime startTime = LocalDateTime.now();
-        LocalDateTime endTime;
-
-        // 如果用户已有VIP，从当前VIP结束时间开始计?
-        UserVip currentVip = userVipMapper.getCurrentVip(userId);
-        if (currentVip != null && currentVip.getEndTime().isAfter(startTime)) {
-            startTime = currentVip.getEndTime();
+        String normalizedMethod = normalizePaymentMethod(paymentMethod);
+        if (!"ALIPAY".equals(normalizedMethod)) {
+            throw new RuntimeException("VIP当前仅支持支付宝支付");
         }
-        endTime = startTime.plusDays(vipPackage.getDurationDays());
 
-        // 创建VIP记录
+        LocalDateTime provisionalStartTime = LocalDateTime.now();
+        UserVip currentVip = userVipMapper.getCurrentVip(userId);
+        if (currentVip != null && currentVip.getEndTime() != null && currentVip.getEndTime().isAfter(provisionalStartTime)) {
+            provisionalStartTime = currentVip.getEndTime();
+        }
+        LocalDateTime provisionalEndTime = provisionalStartTime.plusDays(vipPackage.getDurationDays());
+
         UserVip userVip = UserVip.builder()
                 .userId(userId)
                 .packageId(packageId)
                 .level(vipPackage.getLevel())
-                .startTime(startTime)
-                .endTime(endTime)
+                .startTime(provisionalStartTime)
+                .endTime(provisionalEndTime)
                 .originalPrice(vipPackage.getOriginalPrice())
                 .actualPrice(vipPackage.getCurrentPrice())
-                .paymentMethod(paymentMethod)
-                .orderNo(orderNo)
-                .status(1) // 生效?
+                .paymentMethod(normalizedMethod)
+                .orderNo(generateOrderNo(userId))
+                .status(0)
                 .autoRenew(0)
                 .build();
 
         userVipMapper.insert(userVip);
 
-        // 更新用户VIP等级和到期时?
-        user.setVipLevel(vipPackage.getLevel());
-        user.setVipExpireTime(endTime);
+        log.info("用户 {} 创建VIP待支付订单成功，套餐：{}，订单号：{}", userId, vipPackage.getName(), userVip.getOrderNo());
+        return createAlipayPayment(userVip, vipPackage);
+    }
+
+    @Override
+    @Transactional
+    public String handleAlipayNotify(Map<String, String> params) {
+        try {
+            UserVip vipOrder = verifyAndLoadVipOrder(params);
+            if (!isAlipayTradeSuccess(params.get("trade_status"))) {
+                return "success";
+            }
+
+            if (vipOrder != null && Integer.valueOf(0).equals(vipOrder.getStatus())) {
+                activateVipOrder(vipOrder, params.get("trade_no"));
+            }
+            return "success";
+        } catch (Exception e) {
+            log.error("处理VIP支付宝异步通知失败", e);
+            return "fail";
+        }
+    }
+
+    @Override
+    @Transactional
+    public String handleAlipayReturn(Map<String, String> params) {
+        try {
+            UserVip vipOrder = verifyAndLoadVipOrder(params);
+            if (vipOrder == null) {
+                return buildVipResultRedirect(null, false, "未找到对应VIP订单");
+            }
+            if (!isAlipayReturnSuccess(params, vipOrder)) {
+                return buildVipResultRedirect(vipOrder, false, "支付宝支付结果确认中，请稍后查看会员状态");
+            }
+
+            if (Integer.valueOf(0).equals(vipOrder.getStatus())) {
+                activateVipOrder(vipOrder, params.get("trade_no"));
+            }
+            return buildVipResultRedirect(vipOrder, true, null);
+        } catch (Exception e) {
+            log.error("处理VIP支付宝同步回跳失败", e);
+            return buildVipResultRedirect(null, false, e.getMessage());
+        }
+    }
+
+    private String createAlipayPayment(UserVip userVip, VipPackage vipPackage) {
+        try {
+            AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
+            request.setNotifyUrl(getVipNotifyUrl());
+            request.setReturnUrl(getVipReturnUrl());
+
+            AlipayTradePagePayModel model = new AlipayTradePagePayModel();
+            model.setOutTradeNo(userVip.getOrderNo());
+            model.setTotalAmount(defaultAmount(userVip.getActualPrice()).toString());
+            model.setSubject("VIP会员购买 - " + vipPackage.getName());
+            model.setBody("VIP套餐：" + vipPackage.getName() + "，有效期" + vipPackage.getDurationDays() + "天");
+            model.setProductCode("FAST_INSTANT_TRADE_PAY");
+            request.setBizModel(model);
+
+            return alipayClient.pageExecute(request).getBody();
+        } catch (AlipayApiException e) {
+            log.error("创建VIP支付宝支付订单失败", e);
+            throw new RuntimeException("创建VIP支付订单失败: " + e.getMessage(), e);
+        }
+    }
+
+    private UserVip verifyAndLoadVipOrder(Map<String, String> params) {
+        try {
+            boolean signVerified = com.alipay.api.internal.util.AlipaySignature.rsaCheckV1(
+                    params,
+                    alipayConfig.getPublicKey(),
+                    alipayConfig.getCharset(),
+                    alipayConfig.getSignType()
+            );
+            if (!signVerified) {
+                throw new RuntimeException("支付宝验签失败");
+            }
+
+            String outTradeNo = params.get("out_trade_no");
+            if (!StringUtils.hasText(outTradeNo)) {
+                throw new RuntimeException("支付宝回调缺少商户订单号");
+            }
+
+            UserVip vipOrder = userVipMapper.selectOne(
+                    new LambdaQueryWrapper<UserVip>().eq(UserVip::getOrderNo, outTradeNo)
+            );
+            if (vipOrder == null) {
+                throw new RuntimeException("未找到对应VIP订单");
+            }
+
+            String callbackAppId = params.get("app_id");
+            if (StringUtils.hasText(callbackAppId) && StringUtils.hasText(alipayConfig.getAppId())
+                    && !callbackAppId.equals(alipayConfig.getAppId())) {
+                throw new RuntimeException("支付宝回调应用ID不匹配");
+            }
+
+            String totalAmount = params.get("total_amount");
+            if (StringUtils.hasText(totalAmount)) {
+                BigDecimal callbackAmount = new BigDecimal(totalAmount);
+                BigDecimal orderAmount = defaultAmount(vipOrder.getActualPrice());
+                if (callbackAmount.compareTo(orderAmount) != 0) {
+                    throw new RuntimeException("支付宝回调金额与VIP订单金额不一致");
+                }
+            }
+
+            return vipOrder;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("支付宝验签失败", e);
+        }
+    }
+
+    private void activateVipOrder(UserVip vipOrder, String tradeNo) {
+        if (vipOrder == null) {
+            throw new RuntimeException("VIP订单不存在");
+        }
+        if (Integer.valueOf(1).equals(vipOrder.getStatus())) {
+            return;
+        }
+        if (!Integer.valueOf(0).equals(vipOrder.getStatus())) {
+            throw new RuntimeException("当前VIP订单状态不支持激活");
+        }
+
+        VipPackage vipPackage = vipPackageMapper.selectById(vipOrder.getPackageId());
+        if (vipPackage == null || vipPackage.getStatus() != 1) {
+            throw new RuntimeException("VIP套餐不存在或已下架");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        UserVip currentVip = userVipMapper.getCurrentVip(vipOrder.getUserId());
+        LocalDateTime startTime = now;
+        if (currentVip != null && currentVip.getEndTime() != null && currentVip.getEndTime().isAfter(now)) {
+            startTime = currentVip.getEndTime();
+        }
+        LocalDateTime endTime = startTime.plusDays(vipPackage.getDurationDays());
+
+        vipOrder.setStartTime(startTime);
+        vipOrder.setEndTime(endTime);
+        vipOrder.setStatus(1);
+        vipOrder.setTransactionId(tradeNo);
+        userVipMapper.updateById(vipOrder);
+
+        refreshUserVipState(vipOrder.getUserId());
+        if (!startTime.isAfter(now)) {
+            grantMonthlyCoupons(vipOrder.getUserId());
+        }
+
+        log.info("VIP订单支付成功并激活：userId={}, orderNo={}, startTime={}, endTime={}",
+                vipOrder.getUserId(), vipOrder.getOrderNo(), startTime, endTime);
+    }
+
+    private boolean isAlipayTradeSuccess(String tradeStatus) {
+        return "TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus);
+    }
+
+    private boolean isAlipayReturnSuccess(Map<String, String> params, UserVip vipOrder) {
+        if (isAlipayTradeSuccess(params.get("trade_status"))) {
+            return true;
+        }
+        if (vipOrder != null && Integer.valueOf(1).equals(vipOrder.getStatus())) {
+            return true;
+        }
+        return StringUtils.hasText(params.get("trade_no"));
+    }
+
+    private String buildVipResultRedirect(UserVip vipOrder, boolean success, String message) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(getVipResultUrl())
+                .queryParam("vipPay", success ? "success" : "fail");
+        if (vipOrder != null) {
+            builder.queryParam("vipOrderNo", vipOrder.getOrderNo());
+            builder.queryParam("packageId", vipOrder.getPackageId());
+        }
+        if (StringUtils.hasText(message)) {
+            builder.queryParam("message", message);
+        }
+        return builder.build().encode().toUriString();
+    }
+
+    private String getVipNotifyUrl() {
+        return replacePath(alipayConfig.getNotifyUrl(), "/api/vip/payment/notify");
+    }
+
+    private String getVipReturnUrl() {
+        return replacePath(alipayConfig.getReturnUrl(), "/api/vip/payment/return");
+    }
+
+    private String getVipResultUrl() {
+        String resultUrl = alipayConfig.getResultUrl();
+        if (!StringUtils.hasText(resultUrl)) {
+            return "http://localhost:3001/vip";
+        }
+        try {
+            return UriComponentsBuilder.fromUriString(resultUrl)
+                    .replacePath("/vip")
+                    .build()
+                    .toUriString();
+        } catch (Exception e) {
+            log.warn("构建VIP支付结果跳转地址失败，使用默认地址: {}", resultUrl, e);
+            return "http://localhost:3001/vip";
+        }
+    }
+
+    private String replacePath(String sourceUrl, String targetPath) {
+        if (!StringUtils.hasText(sourceUrl)) {
+            return "http://localhost:8080" + targetPath;
+        }
+        try {
+            return UriComponentsBuilder.fromUriString(sourceUrl)
+                    .replacePath(targetPath)
+                    .build()
+                    .toUriString();
+        } catch (Exception e) {
+            log.warn("替换VIP支付回调地址失败，sourceUrl={}, targetPath={}", sourceUrl, targetPath, e);
+            return "http://localhost:8080" + targetPath;
+        }
+    }
+
+    private BigDecimal defaultAmount(BigDecimal amount) {
+        BigDecimal normalized = amount == null ? BigDecimal.ZERO : amount.max(BigDecimal.ZERO);
+        return normalized.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private String normalizePaymentMethod(String paymentMethod) {
+        if (!StringUtils.hasText(paymentMethod)) {
+            return "ALIPAY";
+        }
+        return paymentMethod.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private void refreshUserVipState(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            return;
+        }
+
+        UserVip currentVip = userVipMapper.getCurrentVip(userId);
+        UserVip latestVip = getLatestPaidVip(userId);
+        if (latestVip == null) {
+            user.setVipLevel(0);
+            user.setVipExpireTime(null);
+        } else {
+            UserVip effectiveVip = currentVip != null ? currentVip : latestVip;
+            user.setVipLevel(effectiveVip.getLevel());
+            user.setVipExpireTime(latestVip.getEndTime());
+        }
         userMapper.updateById(user);
-
-        // 发放首月月度体验券（按VIP等级固定发放，见习2张×10元、银章5张×20元、金章10张×50元、传奇15张×100元）
-        grantMonthlyCoupons(userId);
-
-        log.info("用户 {} 购买VIP成功，套餐：{}，订单号：{}", userId, vipPackage.getName(), orderNo);
-
-        return orderNo;
     }
 
     @Override
@@ -147,9 +391,10 @@ public class VipServiceImpl implements VipService {
         Map<String, Object> result = new HashMap<>();
 
         UserVip currentVip = userVipMapper.getCurrentVip(userId);
+        UserVip latestVip = getLatestPaidVip(userId);
         User user = userMapper.selectById(userId);
 
-        if (currentVip == null || LocalDateTime.now().isAfter(currentVip.getEndTime())) {
+        if (latestVip == null || LocalDateTime.now().isAfter(latestVip.getEndTime())) {
             // 非VIP或已过期
             result.put("isVip", false);
             result.put("level", 0);
@@ -159,17 +404,17 @@ public class VipServiceImpl implements VipService {
             return result;
         }
 
-        // 获取套餐信息
-        VipPackage vipPackage = vipPackageMapper.selectById(currentVip.getPackageId());
+        UserVip displayVip = currentVip != null ? currentVip : latestVip;
+        VipPackage vipPackage = vipPackageMapper.selectById(displayVip.getPackageId());
 
-        long daysLeft = calculateDaysRemaining(currentVip.getEndTime());
+        long daysLeft = calculateDaysRemaining(latestVip.getEndTime());
         
         result.put("isVip", true);
-        result.put("level", currentVip.getLevel());
-        result.put("levelName", getLevelName(currentVip.getLevel()));
-        result.put("startTime", currentVip.getStartTime());
-        result.put("endTime", currentVip.getEndTime());
-        result.put("expireTime", currentVip.getEndTime()); // 前端使用expireTime
+        result.put("level", displayVip.getLevel());
+        result.put("levelName", getLevelName(displayVip.getLevel()));
+        result.put("startTime", displayVip.getStartTime());
+        result.put("endTime", latestVip.getEndTime());
+        result.put("expireTime", latestVip.getEndTime()); // 前端展示续费后的最晚到期时间
         result.put("daysLeft", daysLeft); // 前端使用daysLeft
         result.put("daysRemaining", daysLeft); // 保留兼容
 
@@ -179,7 +424,7 @@ public class VipServiceImpl implements VipService {
             result.put("priorityBooking", vipPackage.getPriorityBooking() == 1);
             result.put("exclusiveService", vipPackage.getExclusiveService() == 1);
             // 按等级返回固定折扣，不再依赖数据库字段
-            result.put("specialDiscount", LEVEL_DISCOUNT_MAP.get(currentVip.getLevel()));
+            result.put("specialDiscount", LEVEL_DISCOUNT_MAP.get(displayVip.getLevel()));
 
             // 解析权益列表
             try {
@@ -191,10 +436,24 @@ public class VipServiceImpl implements VipService {
             }
         }
 
-        log.info("返回用户 {} 的VIP信息：level={}, daysLeft={}, expireTime={}", 
-                userId, currentVip.getLevel(), daysLeft, currentVip.getEndTime());
+        log.info("返回用户 {} 的VIP信息：level={}, daysLeft={}, expireTime={}",
+                userId, displayVip.getLevel(), daysLeft, latestVip.getEndTime());
 
         return result;
+    }
+
+    private UserVip getLatestPaidVip(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        LambdaQueryWrapper<UserVip> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(UserVip::getUserId, userId)
+                .eq(UserVip::getStatus, 1)
+                .gt(UserVip::getEndTime, now)
+                .orderByDesc(UserVip::getEndTime)
+                .last("LIMIT 1");
+        return userVipMapper.selectOne(wrapper);
     }
 
     @Override
@@ -205,14 +464,11 @@ public class VipServiceImpl implements VipService {
 
     @Override
     public Integer getUserVipLevel(Long userId) {
-        User user = userMapper.selectById(userId);
-        if (user == null || user.getVipExpireTime() == null) {
+        UserVip currentVip = userVipMapper.getCurrentVip(userId);
+        if (currentVip == null) {
             return 0;
         }
-        if (LocalDateTime.now().isAfter(user.getVipExpireTime())) {
-            return 0;
-        }
-        return user.getVipLevel() != null ? user.getVipLevel() : 0;
+        return currentVip.getLevel() != null ? currentVip.getLevel() : 0;
     }
 
     @Override
@@ -549,7 +805,7 @@ public class VipServiceImpl implements VipService {
 
     @Override
     public String renewVip(Long userId, Long packageId) {
-        return purchaseVip(userId, packageId, "RENEW");
+        return purchaseVip(userId, packageId, "ALIPAY");
     }
 
     @Override
@@ -564,21 +820,16 @@ public class VipServiceImpl implements VipService {
 
         List<UserVip> expiredVips = userVipMapper.selectList(wrapper);
 
+        Set<Long> affectedUserIds = new HashSet<>();
         for (UserVip userVip : expiredVips) {
             // 更新VIP记录状态为已过?
             userVip.setStatus(2);
             userVipMapper.updateById(userVip);
-
-            // 更新用户?
-            User user = userMapper.selectById(userVip.getUserId());
-            if (user != null) {
-                user.setVipLevel(0);
-                user.setVipExpireTime(null);
-                userMapper.updateById(user);
-            }
+            affectedUserIds.add(userVip.getUserId());
 
             log.info("用户 {} 的VIP已过期", userVip.getUserId());
         }
+        affectedUserIds.forEach(this::refreshUserVipState);
     }
 
     @Override
@@ -780,7 +1031,10 @@ public class VipServiceImpl implements VipService {
 
         // 总VIP用户数（当前生效的VIP?
         LambdaQueryWrapper<UserVip> activeWrapper = new LambdaQueryWrapper<>();
-        activeWrapper.eq(UserVip::getStatus, 1);
+        LocalDateTime now = LocalDateTime.now();
+        activeWrapper.eq(UserVip::getStatus, 1)
+                .and(wrapper -> wrapper.isNull(UserVip::getStartTime).or().le(UserVip::getStartTime, now))
+                .gt(UserVip::getEndTime, now);
         Long totalVipUsers = userVipMapper.selectCount(activeWrapper);
         stats.put("totalVipUsers", totalVipUsers);
 
@@ -790,15 +1044,30 @@ public class VipServiceImpl implements VipService {
         stats.put("totalPackages", totalPackages);
 
         // 本月收入（统计本月所有VIP购买的实付金额）
-        LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime nextMonthStart = monthStart.plusMonths(1);
+        LocalDateTime lastMonthStart = monthStart.minusMonths(1);
         LambdaQueryWrapper<UserVip> monthRevenueWrapper = new LambdaQueryWrapper<>();
-        monthRevenueWrapper.ge(UserVip::getCreateTime, monthStart);
+        monthRevenueWrapper.ge(UserVip::getCreateTime, monthStart)
+                .lt(UserVip::getCreateTime, nextMonthStart)
+                .ne(UserVip::getStatus, 0);
         List<UserVip> monthlyVips = userVipMapper.selectList(monthRevenueWrapper);
         BigDecimal monthlyRevenue = monthlyVips.stream()
                 .filter(vip -> vip.getActualPrice() != null)
                 .map(UserVip::getActualPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         stats.put("monthlyRevenue", monthlyRevenue);
+
+        LambdaQueryWrapper<UserVip> lastMonthRevenueWrapper = new LambdaQueryWrapper<>();
+        lastMonthRevenueWrapper.ge(UserVip::getCreateTime, lastMonthStart)
+                .lt(UserVip::getCreateTime, monthStart)
+                .ne(UserVip::getStatus, 0);
+        List<UserVip> lastMonthVips = userVipMapper.selectList(lastMonthRevenueWrapper);
+        BigDecimal lastMonthRevenue = lastMonthVips.stream()
+                .filter(vip -> vip.getActualPrice() != null)
+                .map(UserVip::getActualPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        stats.put("growthRate", calculateVipGrowthRate(monthlyRevenue, lastMonthRevenue));
 
         // 本月新增VIP用户?
         Long newVipUsers = userVipMapper.selectCount(monthRevenueWrapper);
@@ -821,6 +1090,18 @@ public class VipServiceImpl implements VipService {
         return stats;
     }
 
+    private BigDecimal calculateVipGrowthRate(BigDecimal current, BigDecimal previous) {
+        BigDecimal safeCurrent = current != null ? current : BigDecimal.ZERO;
+        BigDecimal safePrevious = previous != null ? previous : BigDecimal.ZERO;
+        if (safePrevious.compareTo(BigDecimal.ZERO) == 0) {
+            return safeCurrent.compareTo(BigDecimal.ZERO) > 0 ? BigDecimal.valueOf(100) : BigDecimal.ZERO;
+        }
+        return safeCurrent.subtract(safePrevious)
+                .divide(safePrevious, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
     @Override
     public PageResult<Map<String, Object>> pageQueryVipUsers(Integer page, Integer pageSize, Integer level, Integer status) {
         Page<UserVip> pageInfo = new Page<>(page, pageSize);
@@ -836,27 +1117,34 @@ public class VipServiceImpl implements VipService {
 
         userVipMapper.selectPage(pageInfo, wrapper);
 
-        List<Map<String, Object>> resultList = pageInfo.getRecords().stream().map(userVip -> {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", userVip.getId());
-            map.put("userId", userVip.getUserId());
-            map.put("level", userVip.getLevel());
-            map.put("levelName", getLevelName(userVip.getLevel()));
-            map.put("startTime", userVip.getStartTime());
-            map.put("endTime", userVip.getEndTime());
-            map.put("status", userVip.getStatus());
-            map.put("daysRemaining", calculateDaysRemaining(userVip.getEndTime()));
+        List<Map<String, Object>> resultList = new ArrayList<>();
+        for (UserVip userVip : pageInfo.getRecords()) {
+            try {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", userVip.getId());
+                map.put("userId", userVip.getUserId());
+                map.put("level", userVip.getLevel());
+                map.put("levelName", getLevelName(userVip.getLevel()));
+                map.put("startTime", userVip.getStartTime());
+                map.put("endTime", userVip.getEndTime());
+                map.put("status", userVip.getStatus());
+                map.put("daysRemaining", calculateDaysRemaining(userVip.getEndTime()));
 
-            // 获取用户信息
-            User user = userMapper.selectById(userVip.getUserId());
-            if (user != null) {
-                map.put("username", user.getUsername());
-                map.put("nickname", user.getNickname());
-                map.put("phone", user.getPhone());
+                User user = userVip.getUserId() != null ? userMapper.selectById(userVip.getUserId()) : null;
+                if (user != null) {
+                    map.put("username", user.getUsername());
+                    map.put("nickname", user.getNickname());
+                    map.put("phone", user.getPhone());
+                } else {
+                    map.put("username", null);
+                    map.put("nickname", null);
+                    map.put("phone", null);
+                }
+                resultList.add(map);
+            } catch (Exception e) {
+                log.error("组装VIP用户列表项失败，已跳过异常数据: userVipId={}", userVip != null ? userVip.getId() : null, e);
             }
-
-            return map;
-        }).collect(Collectors.toList());
+        }
 
         return new PageResult<>(pageInfo.getTotal(), resultList);
     }
@@ -912,6 +1200,9 @@ public class VipServiceImpl implements VipService {
      * 获取等级名称
      */
     private String getLevelName(Integer level) {
+        if (level == null) {
+            return "未知等级";
+        }
         switch (level) {
             case 1:
                 return "见习侦探";
@@ -964,7 +1255,8 @@ public class VipServiceImpl implements VipService {
     private String generateOrderNo(Long userId) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
         String timestamp = LocalDateTime.now().format(formatter);
-        return "VIP" + timestamp + userId;
+        int randomSuffix = 1000 + new Random().nextInt(9000);
+        return "VIP" + timestamp + userId + randomSuffix;
     }
 }
 

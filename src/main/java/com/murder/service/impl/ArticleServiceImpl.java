@@ -3,6 +3,7 @@ package com.murder.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.murder.common.context.BaseContext;
+import com.murder.common.exception.BaseException;
 import com.murder.common.result.PageResult;
 import com.murder.dto.ArticleDTO;
 import com.murder.entity.Article;
@@ -106,7 +107,10 @@ public class ArticleServiceImpl implements ArticleService {
         if (article == null) {
             return null;
         }
-        return convertToVO(article);
+        ArticleVO vo = convertToVO(article);
+        Long currentUserId = BaseContext.getCurrentId();
+        vo.setUserLiked(currentUserId != null && isLiked(id, currentUserId));
+        return vo;
     }
 
     @Override
@@ -192,10 +196,10 @@ public class ArticleServiceImpl implements ArticleService {
         log.info("点赞文章: id={}", id);
         Long userId = BaseContext.getCurrentId();
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BaseException("请先登录后再点赞");
         }
         if (isLiked(id, userId)) {
-            throw new RuntimeException("已经点赞过了");
+            throw new BaseException("已经点赞过了");
         }
         ArticleLike articleLike = new ArticleLike();
         articleLike.setArticleId(id);
@@ -209,7 +213,7 @@ public class ArticleServiceImpl implements ArticleService {
         log.info("取消点赞文章: id={}", id);
         Long userId = BaseContext.getCurrentId();
         if (userId == null) {
-            throw new RuntimeException("用户未登录");
+            throw new BaseException("请先登录后再操作");
         }
         LambdaQueryWrapper<ArticleLike> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ArticleLike::getArticleId, id)
@@ -233,6 +237,7 @@ public class ArticleServiceImpl implements ArticleService {
         ArticleVO vo = new ArticleVO();
         BeanUtils.copyProperties(article, vo);
         vo.setCategoryName(CATEGORY_MAP.get(article.getCategory()));
+        vo.setUserLiked(Boolean.FALSE);
         return vo;
     }
 }

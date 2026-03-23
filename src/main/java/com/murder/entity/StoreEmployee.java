@@ -57,6 +57,36 @@ public class StoreEmployee implements Serializable {
      * 状态：1在职�?离职
      */
     private Integer status;
+
+    /**
+     * 登录账号
+     */
+    private String loginAccount;
+
+    /**
+     * 登录密码（MD5）
+     */
+    private String loginPassword;
+
+    /**
+     * 员工后台角色：MANAGER / CLERK / DM
+     */
+    private String staffRole;
+
+    /**
+     * 权限编码，逗号分隔
+     */
+    private String permissionCodes;
+
+    /**
+     * 绑定DM ID（主持人账号可选）
+     */
+    private Long dmId;
+
+    /**
+     * 最后登录时间
+     */
+    private LocalDateTime lastLoginTime;
     
     /**
      * 逻辑删除�?删除�?未删�?

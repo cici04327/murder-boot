@@ -2,6 +2,7 @@ package com.murder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.murder.common.exception.BaseException;
 import com.murder.common.result.PageResult;
 import com.murder.entity.Script;
 import com.murder.entity.ScriptFavorite;
@@ -48,7 +49,7 @@ public class ScriptFavoriteServiceImpl implements ScriptFavoriteService {
         
         Long count = scriptFavoriteMapper.selectCount(wrapper);
         if (count > 0) {
-            throw new RuntimeException("已收藏该剧本");
+            throw new BaseException("已收藏该剧本");
         }
         
         // 创建收藏记录

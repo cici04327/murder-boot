@@ -123,7 +123,7 @@ public class PaymentController {
             @RequestParam Long reservationId,
             @RequestParam Integer approved,
             @RequestParam(required = false) String adminRemark) {
-        if (!isAdminOperator()) {
+        if (!canProcessRefundOperator()) {
             return Result.error(403, "没有管理端访问权限");
         }
         log.info("处理退款: reservationId={}, approved={}, adminRemark={}", 
@@ -141,6 +141,26 @@ public class PaymentController {
     private boolean isAdminOperator() {
         String role = BaseContext.getRole();
         return "SUPER_ADMIN".equals(role) || "STORE_ADMIN".equals(role);
+    }
+
+    private boolean canProcessRefundOperator() {
+        if (isAdminOperator()) {
+            return true;
+        }
+        return "STORE_STAFF".equals(BaseContext.getRole()) && hasPermission("refund:process");
+    }
+
+    private boolean hasPermission(String permissionCode) {
+        String permissionCodes = BaseContext.getPermissionCodes();
+        if (permissionCodes == null || permissionCode == null) {
+            return false;
+        }
+        for (String code : permissionCodes.split(",")) {
+            if (permissionCode.equals(code != null ? code.trim() : null)) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 

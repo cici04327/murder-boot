@@ -73,7 +73,7 @@ public class UserVip implements Serializable {
     private String transactionId;
     
     /**
-     * 状态：1生效中，2已过期，3已取�?
+     * 状态：0待支付，1生效中，2已过期，3已取消
      */
     private Integer status;
     

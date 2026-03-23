@@ -188,6 +188,9 @@ onMounted(() => {
 
 .refund-card {
   margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(7, 15, 30, 0.94), rgba(10, 20, 37, 0.9));
+  box-shadow: 0 30px 60px rgba(2, 8, 18, 0.35);
 }
 
 .card-header {
@@ -196,9 +199,84 @@ onMounted(() => {
   align-items: center;
   font-size: 18px;
   font-weight: bold;
+  color: #f2f6ff;
 }
 
 :deep(.el-form-item__label) {
   font-weight: 500;
+  color: #dbe5fb;
+}
+
+.refund-container :deep(.el-card__header) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 25, 44, 0.72);
+}
+
+.refund-container :deep(.el-card__body) {
+  background: transparent;
+}
+
+.refund-container :deep(.el-input__wrapper),
+.refund-container :deep(.el-textarea__inner) {
+  background: rgba(18, 30, 51, 0.92) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08) inset !important;
+  color: #f2f6ff !important;
+}
+
+.refund-container :deep(.el-input.is-disabled .el-input__wrapper) {
+  background: rgba(18, 30, 51, 0.72) !important;
+}
+
+.refund-container :deep(.el-input__inner),
+.refund-container :deep(.el-textarea__inner) {
+  color: #f2f6ff !important;
+  -webkit-text-fill-color: #f2f6ff;
+}
+
+.refund-container :deep(.el-input__inner::placeholder),
+.refund-container :deep(.el-textarea__inner::placeholder) {
+  color: rgba(255, 255, 255, 0.42) !important;
+}
+
+.refund-container :deep(.el-textarea__inner) {
+  padding-bottom: 34px;
+}
+
+.refund-container :deep(.el-textarea .el-input__count) {
+  background: rgba(12, 22, 41, 0.92) !important;
+  color: #ffb1a2 !important;
+  border: 1px solid rgba(192, 57, 43, 0.24);
+  border-radius: 999px;
+  padding: 2px 10px;
+  right: 10px;
+  bottom: 10px;
+  line-height: 1.6;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+}
+
+.refund-container :deep(.el-input-group__append),
+.refund-container :deep(.el-input__suffix) {
+  color: #b4c4de !important;
+}
+
+.refund-container :deep(.el-alert) {
+  background: linear-gradient(135deg, rgba(31, 45, 73, 0.94), rgba(20, 31, 52, 0.92)) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.refund-container :deep(.el-alert__title),
+.refund-container :deep(.el-alert__description),
+.refund-container :deep(.el-alert__content) {
+  color: #e4ecfb !important;
+}
+
+.refund-container :deep(.el-alert__icon) {
+  color: #8fb6ff !important;
+}
+
+.refund-container :deep(.el-button:not(.el-button--primary)) {
+  background: rgba(18, 30, 51, 0.88);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #dbe5fb;
 }
 </style>

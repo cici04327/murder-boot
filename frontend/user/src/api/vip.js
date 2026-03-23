@@ -21,14 +21,14 @@ export const getUserVipInfo = () => {
   })
 }
 
-// 开通VIP会员（packageId: 套餐ID, paymentMethod: 可选支付方式）
+// 开通VIP会员（当前仅支持支付宝）
 export const purchaseVip = (data) => {
   return request({
     url: '/vip/purchase',
     method: 'post',
     params: {
       packageId: data?.packageId,
-      paymentMethod: data?.paymentMethod || 'alipay'
+      paymentMethod: data?.paymentMethod || 'ALIPAY'
     }
   })
 }

@@ -50,7 +50,7 @@
           <el-form-item prop="loginAccount">
             <el-input
               v-model="loginForm.loginAccount"
-              placeholder="请输入门店账号"
+              :placeholder="loginType === 'staff' ? '请输入员工账号' : '请输入门店账号'"
               prefix-icon="Shop"
               size="large"
             />
@@ -108,6 +108,14 @@
           @click="switchLoginType('store')"
         >
           门店登录
+        </el-link>
+        <span class="footer-divider">|</span>
+        <el-link
+          :type="loginType === 'staff' ? 'primary' : 'info'"
+          :underline="false"
+          @click="switchLoginType('staff')"
+        >
+          员工登录
         </el-link>
       </div>
     </div>
@@ -194,6 +202,11 @@ const handleLogin = async () => {
         username: loginForm.username,
         password: loginForm.password
       })
+    } else if (loginType.value === 'staff') {
+      res = await userService.post('/store/employee/login', {
+        loginAccount: loginForm.loginAccount,
+        password: loginForm.password
+      })
     } else {
       res = await userService.post('/store/login', {
         loginAccount: loginForm.loginAccount,
@@ -205,7 +218,7 @@ const handleLogin = async () => {
       localStorage.setItem('admin-token', res.data.token)
       localStorage.setItem('admin-user', JSON.stringify(res.data))
       localStorage.setItem('admin-login-type', loginType.value)
-      if (loginType.value === 'store') {
+      if (loginType.value === 'store' || loginType.value === 'staff') {
         localStorage.setItem('admin-store-id', res.data.storeId)
         localStorage.setItem('admin-store-name', res.data.storeName)
       }

@@ -2,6 +2,7 @@ package com.murder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.murder.common.context.BaseContext;
 import com.murder.common.constant.JwtClaimsConstant;
 import com.murder.common.constant.RedisConstant;
 import com.murder.common.exception.PasswordErrorException;
@@ -35,6 +36,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -67,11 +69,19 @@ public class StoreServiceImpl implements StoreService {
      */
     @Override
     public PageResult<StoreVO> pageQuery(Integer page, Integer pageSize, String name) {
+        return pageQuery(page, pageSize, name, null);
+    }
+
+    @Override
+    public PageResult<StoreVO> pageQuery(Integer page, Integer pageSize, String name, Long storeId) {
         Page<Store> pageInfo = new Page<>(page, pageSize);
         
         LambdaQueryWrapper<Store> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(name)) {
             wrapper.like(Store::getName, name);
+        }
+        if (storeId != null) {
+            wrapper.eq(Store::getId, storeId);
         }
         wrapper.orderByDesc(Store::getCreateTime);
         
@@ -80,9 +90,7 @@ public class StoreServiceImpl implements StoreService {
         
         storeMapper.selectPage(pageInfo, wrapper);
         
-        List<StoreVO> storeVOList = pageInfo.getRecords().stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        List<StoreVO> storeVOList = convertToVOList(pageInfo.getRecords());
         
         // 使用手动查询�?total �?
         return new PageResult<>(total, storeVOList);
@@ -176,6 +184,9 @@ public class StoreServiceImpl implements StoreService {
         if (queryDTO.getMaxRating() != null) {
             wrapper.le(Store::getRating, queryDTO.getMaxRating());
         }
+        if (queryDTO.getStoreId() != null) {
+            wrapper.eq(Store::getId, queryDTO.getStoreId());
+        }
         
         // 手动查询总数
         Long total = storeMapper.selectCount(wrapper);
@@ -208,9 +219,7 @@ public class StoreServiceImpl implements StoreService {
         
         storeMapper.selectPage(pageInfo, wrapper);
         
-        List<StoreVO> storeVOList = pageInfo.getRecords().stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        List<StoreVO> storeVOList = convertToVOList(pageInfo.getRecords());
         
         // 如果是距离排序且提供了经纬度，需要计算距离并重新排序
         if ("distance".equals(sortBy) && queryDTO.getLongitude() != null && queryDTO.getLatitude() != null) {
@@ -412,10 +421,17 @@ public class StoreServiceImpl implements StoreService {
 
     @Override
     public List<StoreVO> listAll() {
-        List<Store> stores = storeMapper.selectList(null);
-        return stores.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        return listAll(null);
+    }
+
+    @Override
+    public List<StoreVO> listAll(Long storeId) {
+        LambdaQueryWrapper<Store> wrapper = new LambdaQueryWrapper<>();
+        if (storeId != null) {
+            wrapper.eq(Store::getId, storeId);
+        }
+        List<Store> stores = storeMapper.selectList(wrapper);
+        return convertToVOList(stores);
     }
 
     /**
@@ -430,9 +446,7 @@ public class StoreServiceImpl implements StoreService {
             wrapper.orderByDesc(Store::getCreateTime);
             wrapper.last("LIMIT 10");
             List<Store> stores = storeMapper.selectList(wrapper);
-            return stores.stream()
-                    .map(this::convertToVO)
-                    .collect(Collectors.toList());
+            return convertToVOList(stores);
         } catch (Exception e) {
             // 打印异常日志
             e.printStackTrace();
@@ -450,9 +464,7 @@ public class StoreServiceImpl implements StoreService {
         wrapper.orderByDesc(Store::getCreateTime);
         wrapper.last("LIMIT 10");
         List<Store> stores = storeMapper.selectList(wrapper);
-        return stores.stream()
-                .map(this::convertToVO)
-                .collect(Collectors.toList());
+        return convertToVOList(stores);
     }
     
     /**
@@ -522,6 +534,10 @@ public class StoreServiceImpl implements StoreService {
         }
         StoreVO storeVO = new StoreVO();
         BeanUtils.copyProperties(store, storeVO);
+        String role = BaseContext.getRole();
+        if (!"SUPER_ADMIN".equals(role) && !"STORE_ADMIN".equals(role)) {
+            storeVO.setLoginAccount(null);
+        }
         // 手动转换LocalTime为String
         if (store.getOpenTime() != null) {
             storeVO.setOpenTime(store.getOpenTime().toString());
@@ -530,6 +546,26 @@ public class StoreServiceImpl implements StoreService {
             storeVO.setCloseTime(store.getCloseTime().toString());
         }
         return storeVO;
+    }
+
+    private List<StoreVO> convertToVOList(List<Store> stores) {
+        if (stores == null || stores.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        List<StoreVO> result = new ArrayList<>();
+        for (Store store : stores) {
+            try {
+                StoreVO storeVO = convertToVO(store);
+                if (storeVO != null) {
+                    result.add(storeVO);
+                }
+            } catch (Exception e) {
+                Long storeId = store != null ? store.getId() : null;
+                log.error("转换门店列表项失败，已跳过异常数据: storeId={}", storeId, e);
+            }
+        }
+        return result;
     }
     
     /**

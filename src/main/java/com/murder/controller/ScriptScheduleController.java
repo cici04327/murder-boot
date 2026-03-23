@@ -54,6 +54,33 @@ public class ScriptScheduleController {
     }
 
     /**
+     * 查询当前 DM 在门店某日期的排期列表
+     */
+    @GetMapping("/mine")
+    @Operation(summary = "查询我的排期列表")
+    public Result<List<ScriptSchedule>> listMine(
+            @RequestParam Long storeId,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate date) {
+        log.info("查询我的排期列表: storeId={}, date={}", storeId, date);
+        List<ScriptSchedule> list = scriptScheduleService.listMySchedulesByDate(storeId, date);
+        return Result.success(list);
+    }
+
+    /**
+     * 查询当前 DM 在门店日期范围内的排期
+     */
+    @GetMapping("/mine/range")
+    @Operation(summary = "查询我的日期范围排期")
+    public Result<List<ScriptSchedule>> listMineByRange(
+            @RequestParam Long storeId,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+        log.info("查询我的日期范围排期: storeId={}, {} - {}", storeId, startDate, endDate);
+        List<ScriptSchedule> list = scriptScheduleService.listMySchedulesByDateRange(storeId, startDate, endDate);
+        return Result.success(list);
+    }
+
+    /**
      * 新增排期
      */
     @PostMapping

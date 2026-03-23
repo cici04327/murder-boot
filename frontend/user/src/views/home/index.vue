@@ -2013,23 +2013,23 @@ onBeforeUnmount(() => {
 }
 
 .meta-badge.difficulty.diff-1 {
-  background: #e8f5e9;
-  color: #2e7d32;
+  background: rgba(46, 125, 50, 0.18);
+  color: #a3e4ad;
 }
 
 .meta-badge.difficulty.diff-2 {
-  background: #fff8e1;
-  color: #f57c00;
+  background: rgba(245, 124, 0, 0.18);
+  color: #ffbe7c;
 }
 
 .meta-badge.difficulty.diff-3 {
-  background: #fff3e0;
-  color: #e65100;
+  background: rgba(230, 81, 0, 0.18);
+  color: #ffb27d;
 }
 
 .meta-badge.difficulty.diff-4 {
-  background: #ffebee;
-  color: #c62828;
+  background: rgba(198, 40, 40, 0.2);
+  color: #ff9d9d;
 }
 
 .script-rating {
@@ -2071,8 +2071,9 @@ onBeforeUnmount(() => {
 
 .book-hint {
   font-size: 12px;
-  color: #16213e;
+  color: #ff8f8f;
   font-weight: 500;
+  text-shadow: 0 2px 8px rgba(122, 29, 29, 0.38);
   opacity: 0;
   transition: opacity 0.3s;
 }

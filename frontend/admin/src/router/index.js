@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Layout from '@/layout/index.vue'
+import { hasRoutePermission } from '@/utils/permission'
 
 const routes = [
   {
@@ -11,7 +12,18 @@ const routes = [
   {
     path: '/',
     component: Layout,
-    redirect: '/dashboard',
+    redirect: () => {
+      const loginType = localStorage.getItem('admin-login-type') || 'admin'
+      if (loginType === 'staff') {
+        try {
+          const adminUser = JSON.parse(localStorage.getItem('admin-user') || '{}')
+          return adminUser.staffRole === 'DM' ? '/staff/my-schedule' : '/reservation/list'
+        } catch (e) {
+          return '/reservation/list'
+        }
+      }
+      return '/dashboard'
+    },
     children: [
       {
         path: 'dashboard',
@@ -28,7 +40,7 @@ const routes = [
       const loginType = localStorage.getItem('admin-login-type')
       return loginType === 'store' ? '/store/operation-board' : '/store/list'
     },
-    meta: { title: '门店管理', icon: 'Shop', roles: ['admin', 'store'] },
+    meta: { title: '门店管理', icon: 'Shop', roles: ['admin', 'store', 'staff'], permissionCodes: ['employee:manage', 'report:view'] },
     children: [
       {
         path: 'list',
@@ -53,7 +65,7 @@ const routes = [
         path: 'operation-board',
         name: 'OperationBoard',
         component: () => import('@/views/store/operation-board.vue'),
-        meta: { title: '经营看板', icon: 'TrendCharts', roles: ['admin', 'store'] }
+        meta: { title: '经营看板', icon: 'TrendCharts', roles: ['admin', 'store', 'staff'], permissionCodes: ['report:view'] }
       },
       {
         path: 'room',
@@ -66,6 +78,12 @@ const routes = [
         name: 'StoreDm',
         component: () => import('@/views/store/dm.vue'),
         meta: { title: 'DM管理', icon: 'Avatar', roles: ['admin', 'store'] }
+      },
+      {
+        path: 'employee',
+        name: 'StoreEmployee',
+        component: () => import('@/views/store/employee.vue'),
+        meta: { title: '员工管理', icon: 'UserFilled', roles: ['admin', 'store', 'staff'], permissionCodes: ['employee:manage'] }
       },
       {
         path: 'review',
@@ -83,7 +101,7 @@ const routes = [
         path: 'daily-report',
         name: 'StoreDailyReport',
         component: () => import('@/views/store/daily-report.vue'),
-        meta: { title: '营收日报', icon: 'TrendCharts', roles: ['admin', 'store'] }
+        meta: { title: '营收日报', icon: 'TrendCharts', roles: ['admin', 'store', 'staff'], permissionCodes: ['report:view'] }
       }
     ]
   },
@@ -139,13 +157,13 @@ const routes = [
     path: '/reservation',
     component: Layout,
     redirect: '/reservation/list',
-    meta: { title: '预约管理', icon: 'Calendar', roles: ['admin', 'store'] },
+    meta: { title: '预约管理', icon: 'Calendar', roles: ['admin', 'store', 'staff'] },
     children: [
       {
         path: 'list',
         name: 'ReservationList',
         component: () => import('@/views/reservation/list.vue'),
-        meta: { title: '预约列表', icon: 'List', roles: ['admin', 'store'] }
+        meta: { title: '预约列表', icon: 'List', roles: ['admin', 'store', 'staff'], permissionCodes: ['reservation:view'] }
       },
       {
         path: 'add',
@@ -158,7 +176,7 @@ const routes = [
         path: 'detail/:id',
         name: 'ReservationDetail',
         component: () => import('@/views/reservation/detail.vue'),
-        meta: { title: '预约详情', activeMenu: '/reservation/list', roles: ['admin', 'store'] },
+        meta: { title: '预约详情', activeMenu: '/reservation/list', roles: ['admin', 'store', 'staff'], permissionCodes: ['reservation:view'] },
         hidden: true
       },
       {
@@ -172,7 +190,27 @@ const routes = [
         path: 'refund',
         name: 'ReservationRefund',
         component: () => import('@/views/reservation/refund.vue'),
-        meta: { title: '退款管理', icon: 'RefreshLeft', roles: ['admin', 'store'] }
+        meta: { title: '退款管理', icon: 'RefreshLeft', roles: ['admin', 'store', 'staff'], permissionCodes: ['refund:process'] }
+      }
+    ]
+  },
+  {
+    path: '/staff',
+    component: Layout,
+    redirect: '/staff/my-schedule',
+    meta: { title: '我的工作', icon: 'Calendar', roles: ['staff'], staffRoles: ['DM'] },
+    children: [
+      {
+        path: 'my-schedule',
+        name: 'StaffMySchedule',
+        component: () => import('@/views/staff/my-schedule.vue'),
+        meta: { title: '我的场次', icon: 'Calendar', roles: ['staff'], staffRoles: ['DM'] }
+      },
+      {
+        path: 'my-reservation',
+        name: 'StaffMyReservation',
+        component: () => import('@/views/staff/my-reservation.vue'),
+        meta: { title: '我的预约', icon: 'Tickets', roles: ['staff'], staffRoles: ['DM'] }
       }
     ]
   },
@@ -263,13 +301,13 @@ const routes = [
     path: '/notification',
     component: Layout,
     redirect: '/notification/index',
-    meta: { title: '通知中心', icon: 'Bell', roles: ['admin', 'store'] },
+    meta: { title: '通知中心', icon: 'Bell', roles: ['admin', 'store', 'staff'], permissionCodes: ['notification:view'] },
     children: [
       {
         path: 'index',
         name: 'Notification',
         component: () => import('@/views/notification/index.vue'),
-        meta: { title: '通知中心', icon: 'Bell', roles: ['admin', 'store'] }
+        meta: { title: '通知中心', icon: 'Bell', roles: ['admin', 'store', 'staff'], permissionCodes: ['notification:view'] }
       }
     ]
   },
@@ -308,10 +346,7 @@ const router = createRouter({
   routes
 })
 
-const hasPermission = (route, role) => {
-  if (!route.meta?.roles) return true
-  return route.meta.roles.includes(role)
-}
+const hasPermission = (route) => hasRoutePermission(route)
 
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('admin-token')
@@ -327,12 +362,21 @@ router.beforeEach((to, from, next) => {
   }
 
   const loginType = localStorage.getItem('admin-login-type') || 'admin'
-  const currentRole = loginType === 'store' ? 'store' : 'admin'
+  const currentRole = loginType === 'store' ? 'store' : (loginType === 'staff' ? 'staff' : 'admin')
 
-  if (hasPermission(to, currentRole)) {
+  if (hasPermission(to)) {
     next()
   } else {
     console.warn('无权限访问:', to.path)
+    if (currentRole === 'staff') {
+      try {
+        const adminUser = JSON.parse(localStorage.getItem('admin-user') || '{}')
+        next(adminUser.staffRole === 'DM' ? '/staff/my-schedule' : '/reservation/list')
+      } catch (e) {
+        next('/reservation/list')
+      }
+      return
+    }
     next('/dashboard')
   }
 })

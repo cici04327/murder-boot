@@ -200,12 +200,18 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
         // 总通知数
         LambdaQueryWrapper<AdminNotification> allWrapper = new LambdaQueryWrapper<>();
         allWrapper.eq(AdminNotification::getStatus, 2); // 只统计已发送的
+        if (storeId != null) {
+            allWrapper.eq(AdminNotification::getStoreId, storeId);
+        }
         Long totalCount = adminNotificationMapper.selectCount(allWrapper);
         
         // 未读数
         LambdaQueryWrapper<AdminNotification> unreadWrapper = new LambdaQueryWrapper<>();
         unreadWrapper.eq(AdminNotification::getStatus, 2);
         unreadWrapper.eq(AdminNotification::getIsRead, 0);
+        if (storeId != null) {
+            unreadWrapper.eq(AdminNotification::getStoreId, storeId);
+        }
         Long unreadCount = adminNotificationMapper.selectCount(unreadWrapper);
 
         // 已读数
@@ -227,6 +233,9 @@ public class AdminNotificationServiceImpl implements AdminNotificationService {
         LambdaQueryWrapper<AdminNotification> todayWrapper = new LambdaQueryWrapper<>();
         todayWrapper.eq(AdminNotification::getStatus, 2);
         todayWrapper.ge(AdminNotification::getCreateTime, todayStart);
+        if (storeId != null) {
+            todayWrapper.eq(AdminNotification::getStoreId, storeId);
+        }
         Long todayCount = adminNotificationMapper.selectCount(todayWrapper);
         
         statistics.put("totalCount", totalCount);

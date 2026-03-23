@@ -305,10 +305,20 @@ public class CouponServiceImpl implements CouponService {
     @Override
     @Transactional
     public void useCoupon(Long userCouponId, Long orderId) {
+        useCoupon(userCouponId, orderId, null);
+    }
+
+    @Override
+    @Transactional
+    public void useCoupon(Long userCouponId, Long orderId, Long userId) {
         UserCoupon userCoupon = userCouponMapper.selectById(userCouponId);
         
         if (userCoupon == null) {
             throw new CouponException("优惠券不存在");
+        }
+
+        if (userId != null && !userId.equals(userCoupon.getUserId())) {
+            throw new CouponException("无权使用该优惠券");
         }
         
         if (userCoupon.getStatus() != 1) {
@@ -411,11 +421,23 @@ public class CouponServiceImpl implements CouponService {
     @Override
     @Transactional
     public void refundCoupon(Long orderId) {
+        refundCoupon(orderId, null);
+    }
+
+    @Override
+    @Transactional
+    public void refundCoupon(Long orderId, Long userId) {
         LambdaQueryWrapper<UserCoupon> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(UserCoupon::getOrderId, orderId);
         wrapper.eq(UserCoupon::getStatus, 2); // 已使?
+        if (userId != null) {
+            wrapper.eq(UserCoupon::getUserId, userId);
+        }
         
         List<UserCoupon> userCoupons = userCouponMapper.selectList(wrapper);
+        if (userId != null && userCoupons.isEmpty()) {
+            throw new CouponException("无权退还该优惠券");
+        }
         
         for (UserCoupon userCoupon : userCoupons) {
             // 检查是否过?

@@ -30,6 +30,16 @@ public interface VipService {
     String purchaseVip(Long userId, Long packageId, String paymentMethod);
 
     /**
+     * 处理VIP支付宝异步通知
+     */
+    String handleAlipayNotify(Map<String, String> params);
+
+    /**
+     * 处理VIP支付宝同步回跳
+     */
+    String handleAlipayReturn(Map<String, String> params);
+
+    /**
      * 获取用户VIP信息
      */
     Map<String, Object> getUserVipInfo(Long userId);

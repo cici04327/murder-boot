@@ -10,6 +10,16 @@
         <component :is="Component" :key="route.path" />
       </transition>
     </router-view>
+    <button
+      class="paper-mode-toggle"
+      type="button"
+      :aria-pressed="paperMode"
+      :title="paperMode ? '恢复项目默认深色主题' : '切换为论文截图浅色主题'"
+      @click="togglePaperMode"
+    >
+      <span class="toggle-icon">{{ paperMode ? '🌙' : '📄' }}</span>
+      <span class="toggle-text">{{ paperMode ? '恢复深色' : '论文浅色' }}</span>
+    </button>
   </div>
 </template>
 
@@ -21,6 +31,8 @@ import { useUserStore } from '@/store/user'
 const router = useRouter()
 const userStore = useUserStore()
 const transitionName = ref('fade-slide')
+const paperMode = ref(false)
+const PAPER_MODE_KEY = 'paper-screenshot-mode'
 
 // 根据路由层级决定动画方向
 watch(
@@ -49,9 +61,30 @@ const onAfterEnter = () => {
   // 动画完成后的处理（可选）
 }
 
+const applyPaperMode = (enabled) => {
+  if (typeof document === 'undefined') {
+    return
+  }
+  document.documentElement.classList.toggle('paper-mode', enabled)
+  document.body.classList.toggle('paper-mode', enabled)
+  if (enabled) {
+    document.documentElement.setAttribute('data-theme', 'paper')
+  } else {
+    document.documentElement.removeAttribute('data-theme')
+  }
+  paperMode.value = enabled
+}
+
+const togglePaperMode = () => {
+  const nextValue = !paperMode.value
+  applyPaperMode(nextValue)
+  localStorage.setItem(PAPER_MODE_KEY, nextValue ? '1' : '0')
+}
+
 onMounted(() => {
   // 从本地存储恢复用户信息
   userStore.loadUserFromStorage()
+  applyPaperMode(localStorage.getItem(PAPER_MODE_KEY) === '1')
 })
 </script>
 
@@ -80,6 +113,62 @@ body {
   padding: 0;
   background: #f9fafb;
   color: #1f2937; /* text-gray-800 */
+}
+
+.paper-mode-toggle {
+  position: fixed;
+  right: 20px;
+  bottom: 24px;
+  z-index: 4000;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: 1px solid rgba(192, 57, 43, 0.22);
+  border-radius: 999px;
+  background: linear-gradient(135deg, rgba(26, 26, 46, 0.94) 0%, rgba(22, 33, 62, 0.92) 100%);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.24);
+  backdrop-filter: blur(14px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.paper-mode-toggle:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+}
+
+.paper-mode .paper-mode-toggle {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 247, 251, 0.94) 100%);
+  color: #253043;
+  border-color: rgba(192, 57, 43, 0.18);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.12);
+}
+
+.toggle-icon {
+  font-size: 15px;
+}
+
+.toggle-text {
+  line-height: 1;
+}
+
+@media (max-width: 768px) {
+  .paper-mode-toggle {
+    right: 14px;
+    bottom: 18px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+}
+
+@media print {
+  .paper-mode-toggle {
+    display: none !important;
+  }
 }
 
 /* ========== 路由过渡动画 ========== */

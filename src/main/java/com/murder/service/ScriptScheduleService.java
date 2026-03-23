@@ -22,6 +22,16 @@ public interface ScriptScheduleService {
     List<ScriptSchedule> listByStoreAndDateRange(Long storeId, LocalDate startDate, LocalDate endDate);
 
     /**
+     * 查询当前 DM 在门店某日期的排期列表
+     */
+    List<ScriptSchedule> listMySchedulesByDate(Long storeId, LocalDate scheduleDate);
+
+    /**
+     * 查询当前 DM 在门店日期范围内的排期
+     */
+    List<ScriptSchedule> listMySchedulesByDateRange(Long storeId, LocalDate startDate, LocalDate endDate);
+
+    /**
      * 新增排期
      */
     void add(ScriptSchedule schedule);

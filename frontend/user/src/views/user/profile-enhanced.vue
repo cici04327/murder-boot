@@ -378,7 +378,7 @@
         <el-button @click="showVipDialog = false">取消</el-button>
         <el-button type="warning" @click="handlePurchaseVip" :loading="vipPurchasing">
           <el-icon><Medal /></el-icon>
-          立即开通
+          前往会员中心支付
         </el-button>
       </template>
     </el-dialog>
@@ -389,12 +389,11 @@
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
-import { ElMessage, ElMessageBox } from 'element-plus'
-import { getUserInfo, getUserPoints, updateUserInfo, updatePassword, completeProfileTask } from '@/api/user'
+import { ElMessage } from 'element-plus'
+import { getUserPoints, updateUserInfo, updatePassword, completeProfileTask } from '@/api/user'
 import { getMyReservations } from '@/api/reservation'
 import { getMyCoupons } from '@/api/coupon'
 import { getFavoriteScripts } from '@/api/script'
-import { purchaseVip, getVipPackages } from '@/api/vip'
 import {
   User, Camera, Phone, Message, Calendar, Edit, Lock,
   Tickets, Star, Coin, Ticket, Bell, Wallet, ArrowRight,
@@ -890,38 +889,16 @@ const handlePurchaseVip = async () => {
   const plan = vipPlans.value.find(p => p.id === selectedPlan.value)
   if (!plan) { ElMessage.error('请选择套餐'); return }
 
-  try {
-    await ElMessageBox.confirm(
-      `确定要开通「${plan.name}」吗？费用为 ¥${plan.price}`,
-      '确认开通',
-      { confirmButtonText: '立即开通', cancelButtonText: '取消', type: 'warning' }
-    )
-  } catch { return /* 用户取消 */ }
-
   vipPurchasing.value = true
   try {
-    // 调用后端 POST /api/vip/purchase
-    const res = await purchaseVip({ packageId: plan.id })
-    if (res.code !== 1 && res.code !== 200) {
-      ElMessage.error(res.msg || '开通失败，请稍后重试')
-      return
-    }
-
-    ElMessage.success(`🎉 恭喜！「${plan.name}」开通成功！`)
-
-    // 从后端返回的最新用户信息中读取VIP等级，兜底用 plan.id
-    const newVipLevel = res.data?.vipLevel ?? plan.id
-    userInfo.value.vipLevel = newVipLevel
-    if (userStore.userInfo) {
-      userStore.userInfo.vipLevel = newVipLevel
-    }
-
     showVipDialog.value = false
-    // 刷新统计数据
-    await loadUserInfo()
+    router.push({
+      path: '/vip',
+      query: { packageId: plan.id }
+    })
   } catch (error) {
-    console.error('开通VIP失败:', error)
-    ElMessage.error(error?.msg || '开通失败，请稍后重试')
+    console.error('跳转会员中心失败:', error)
+    ElMessage.error('打开会员中心失败，请稍后重试')
   } finally {
     vipPurchasing.value = false
   }
@@ -1631,7 +1608,8 @@ export default {
 .vip-plan {
   position: relative;
   padding: 30px 20px;
-  border: 2px solid #eee;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(20, 28, 48, 0.94) 0%, rgba(13, 20, 36, 0.92) 100%);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.3s;
@@ -1644,7 +1622,8 @@ export default {
 
 .vip-plan-selected {
   border-color: #E6A23C;
-  background: #FFF9E6;
+  background: linear-gradient(135deg, rgba(230, 162, 60, 0.18) 0%, rgba(92, 55, 19, 0.3) 100%);
+  box-shadow: 0 10px 26px rgba(230, 162, 60, 0.18);
 }
 
 .plan-tag {

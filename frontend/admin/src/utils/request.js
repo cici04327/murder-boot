@@ -30,6 +30,25 @@ export const reservationService = axios.create({
   retry: 3
 })
 
+const clearAdminAuth = () => {
+  localStorage.removeItem('admin-token')
+  localStorage.removeItem('admin-login-type')
+  localStorage.removeItem('admin-store-id')
+  localStorage.removeItem('admin-current-store-id')
+}
+
+const redirectToAdminLogin = () => {
+  if (router.currentRoute.value.path !== '/login') {
+    router.push('/login')
+  }
+}
+
+const handleAdminUnauthorized = (message = '登录已过期，请重新登录') => {
+  ElMessage.error(message)
+  clearAdminAuth()
+  redirectToAdminLogin()
+}
+
 // 统一处理管理端请求：token + client-type + storeId
 const applyAdminRequestMeta = (config) => {
   const token = localStorage.getItem('admin-token')
@@ -46,7 +65,7 @@ const applyAdminRequestMeta = (config) => {
   const storeAdminStoreId = localStorage.getItem('admin-store-id')
   
   // 门店登录：在请求头中携带门店ID，用于后端权限控制
-  if (loginType === 'store' && storeAdminStoreId) {
+  if ((loginType === 'store' || loginType === 'staff') && storeAdminStoreId) {
     config.headers['X-Store-Id'] = storeAdminStoreId
   }
 
@@ -58,23 +77,14 @@ const applyAdminRequestMeta = (config) => {
 
   if (method === 'get' && allowStoreId) {
     // 门店管理员：强制使用自己门店的ID
-    if (loginType === 'store' && storeAdminStoreId) {
+    if ((loginType === 'store' || loginType === 'staff') && storeAdminStoreId) {
       config.params = config.params || {}
       config.params.storeId = Number(storeAdminStoreId)
-    } else {
-      // 超级管理员：使用选择的门店ID
-      const selectedStoreId = localStorage.getItem('admin-current-store-id')
-      if (selectedStoreId && selectedStoreId !== 'all') {
-        config.params = config.params || {}
-        if (config.params.storeId == null) {
-          config.params.storeId = Number(selectedStoreId)
-        }
-      }
     }
   }
   
   // POST/PUT 请求也附加 storeId（门店管理员）
-  if ((method === 'post' || method === 'put') && loginType === 'store' && storeAdminStoreId) {
+  if ((method === 'post' || method === 'put') && (loginType === 'store' || loginType === 'staff') && storeAdminStoreId) {
     if (config.data && typeof config.data === 'object' && !Array.isArray(config.data)) {
       config.data.storeId = Number(storeAdminStoreId)
     }
@@ -116,8 +126,7 @@ service.interceptors.response.use(
       
       // 401: 未授权，跳转登录页
       if (res.code === 401) {
-        localStorage.removeItem('admin-token')
-        router.push('/login')
+        handleAdminUnauthorized(res.msg || '登录已过期，请重新登录')
       }
       
       return Promise.reject(new Error(res.msg || '请求失败'))
@@ -145,7 +154,9 @@ service.interceptors.response.use(
     }
     
     // 只在所有重试都失败后才显示错误消息
-    if (error.response?.status === 429) {
+    if (error.response?.status === 401) {
+      handleAdminUnauthorized()
+    } else if (error.response?.status === 429) {
       ElMessage.error('请求过于频繁，请稍后再试')
     } else if (error.code === 'ERR_NETWORK') {
       ElMessage.error('网络连接失败，请检查网络或稍后重试')
@@ -166,8 +177,7 @@ userService.interceptors.response.use(
       ElMessage.error(res.msg || '请求失败')
       
       if (res.code === 401) {
-        localStorage.removeItem('admin-token')
-        router.push('/login')
+        handleAdminUnauthorized(res.msg || '登录已过期，请重新登录')
       }
       
       return Promise.reject(new Error(res.msg || '请求失败'))
@@ -195,7 +205,9 @@ userService.interceptors.response.use(
     }
     
     // 只在所有重试都失败后才显示错误消息
-    if (error.code === 'ERR_NETWORK') {
+    if (error.response?.status === 401) {
+      handleAdminUnauthorized()
+    } else if (error.code === 'ERR_NETWORK') {
       ElMessage.error('网络连接失败，请检查网络或稍后重试')
     } else if (!error.config?.__retryCount) {
       ElMessage.error(error.message || '网络错误')
@@ -225,8 +237,7 @@ reservationService.interceptors.response.use(
       ElMessage.error(res.msg || '请求失败')
       
       if (res.code === 401) {
-        localStorage.removeItem('admin-token')
-        router.push('/login')
+        handleAdminUnauthorized(res.msg || '登录已过期，请重新登录')
       }
       
       return Promise.reject(new Error(res.msg || '请求失败'))
@@ -254,7 +265,9 @@ reservationService.interceptors.response.use(
     }
     
     // 只在所有重试都失败后才显示错误消息
-    if (error.code === 'ERR_NETWORK') {
+    if (error.response?.status === 401) {
+      handleAdminUnauthorized()
+    } else if (error.code === 'ERR_NETWORK') {
       ElMessage.error('网络连接失败，请检查网络或稍后重试')
     } else if (!error.config?.__retryCount) {
       ElMessage.error(error.message || '网络错误')

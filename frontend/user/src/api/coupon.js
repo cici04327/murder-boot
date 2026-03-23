@@ -19,11 +19,16 @@ export const getMyCoupons = (params) => {
 }
 
 // 获取可领取的优惠券列表
-export const getAvailableCoupons = () => {
+export const getAvailableCoupons = (params = {}) => {
   return request({
     url: '/coupon/page',
     method: 'get',
-    params: { status: 1 }
+    params: {
+      page: 1,
+      pageSize: 100,
+      status: 1,
+      ...params
+    }
   })
 }
 

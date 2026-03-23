@@ -496,7 +496,7 @@ const removeImage = (index) => {
 const handleAccountManage = (row) => {
   currentStore.id = row.id
   currentStore.name = row.name
-  accountForm.loginAccount = row.loginAccount || `store_${row.id}`
+  accountForm.loginAccount = row.loginAccount || ''
   accountForm.loginPassword = ''
   accountForm.confirmPassword = ''
   accountDialogVisible.value = true

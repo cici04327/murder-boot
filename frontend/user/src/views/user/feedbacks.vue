@@ -461,15 +461,15 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.subject-game { background: #e3f2fd; color: #1976d2; }
-.subject-store { background: #fff3e0; color: #f57c00; }
-.subject-script { background: #f3e5f5; color: #7b1fa2; }
-.subject-suggestion { background: #e8f5e9; color: #388e3c; }
-.subject-bug { background: #ffebee; color: #d32f2f; }
-.subject-platform { background: #e0f2f1; color: #00796b; }
-.subject-booking { background: #fce4ec; color: #c2185b; }
-.subject-business { background: #fff8e1; color: #ffa000; }
-.subject-other { background: #eceff1; color: #546e7a; }
+.subject-game { background: rgba(64, 158, 255, 0.16); color: #8fc7ff; border: 1px solid rgba(64, 158, 255, 0.24); }
+.subject-store { background: rgba(245, 124, 0, 0.16); color: #ffb86c; border: 1px solid rgba(245, 124, 0, 0.24); }
+.subject-script { background: rgba(171, 71, 188, 0.16); color: #daa9ea; border: 1px solid rgba(171, 71, 188, 0.24); }
+.subject-suggestion { background: rgba(76, 175, 80, 0.16); color: #9de6a0; border: 1px solid rgba(76, 175, 80, 0.24); }
+.subject-bug { background: rgba(244, 67, 54, 0.16); color: #ff9a91; border: 1px solid rgba(244, 67, 54, 0.24); }
+.subject-platform { background: rgba(0, 150, 136, 0.16); color: #79dfd0; border: 1px solid rgba(0, 150, 136, 0.24); }
+.subject-booking { background: rgba(233, 30, 99, 0.16); color: #ff98bb; border: 1px solid rgba(233, 30, 99, 0.24); }
+.subject-business { background: rgba(255, 160, 0, 0.16); color: #ffd27b; border: 1px solid rgba(255, 160, 0, 0.24); }
+.subject-other { background: rgba(144, 164, 174, 0.16); color: #d0dce2; border: 1px solid rgba(144, 164, 174, 0.24); }
 
 .status-tag {
   padding: 4px 12px;
@@ -478,10 +478,10 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.status-pending { background: #fff3e0; color: #e65100; }
-.status-processing { background: #e3f2fd; color: #1565c0; }
-.status-replied { background: #e8f5e9; color: #2e7d32; }
-.status-closed { background: #eceff1; color: #546e7a; }
+.status-pending { background: rgba(255, 152, 0, 0.16); color: #ffc56a; border: 1px solid rgba(255, 152, 0, 0.24); }
+.status-processing { background: rgba(64, 158, 255, 0.16); color: #8fc7ff; border: 1px solid rgba(64, 158, 255, 0.24); }
+.status-replied { background: rgba(103, 194, 58, 0.16); color: #9de48b; border: 1px solid rgba(103, 194, 58, 0.24); }
+.status-closed { background: rgba(144, 164, 174, 0.16); color: #d0dce2; border: 1px solid rgba(144, 164, 174, 0.24); }
 
 .card-body {
   padding: 20px;
@@ -517,9 +517,9 @@ onUnmounted(() => {
 
 /* 回复区域 */
 .reply-section {
-  background: linear-gradient(135deg, #f0f9eb 0%, #e8f5e9 100%);
+  background: linear-gradient(135deg, rgba(46, 125, 50, 0.18) 0%, rgba(28, 73, 38, 0.28) 100%);
   padding: 16px 20px;
-  border-top: 1px dashed #c8e6c9;
+  border-top: 1px dashed rgba(129, 199, 132, 0.35);
 }
 
 .reply-header {
@@ -542,11 +542,11 @@ onUnmounted(() => {
 .reply-time {
   margin-left: auto;
   font-size: 12px;
-  color: #81c784;
+  color: rgba(129, 199, 132, 0.85);
 }
 
 .reply-content {
-  color: #333;
+  color: rgba(255, 255, 255, 0.88);
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;
@@ -559,8 +559,9 @@ onUnmounted(() => {
   justify-content: center;
   gap: 8px;
   padding: 16px;
-  background: #fff8e1;
-  color: #f57c00;
+  background: rgba(245, 124, 0, 0.16);
+  color: #ffbf6f;
+  border-top: 1px dashed rgba(245, 124, 0, 0.28);
   font-size: 14px;
 }
 

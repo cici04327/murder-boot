@@ -5,7 +5,9 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.murder.common.result.PageResult;
 import com.murder.entity.User;
 import com.murder.entity.UserPointsRecord;
+import com.murder.entity.Coupon;
 import com.murder.vo.UserPointsRecordVO;
+import com.murder.mapper.CouponMapper;
 import com.murder.mapper.UserMapper;
 import com.murder.mapper.UserPointsRecordMapper;
 import com.murder.service.UserPointsService;
@@ -23,8 +25,10 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +37,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class UserPointsServiceImpl implements UserPointsService {
+
+    private static final String COUPON_EXCHANGE_DESCRIPTION_PREFIX = "兑换优惠券#";
 
     @Autowired
     private UserPointsRecordMapper userPointsRecordMapper;
@@ -45,6 +51,9 @@ public class UserPointsServiceImpl implements UserPointsService {
 
     @Autowired
     private CouponService couponService;
+
+    @Autowired
+    private CouponMapper couponMapper;
 
     /**
      * 获取用户积分信息（含统计数据?
@@ -81,6 +90,16 @@ public class UserPointsServiceImpl implements UserPointsService {
         
         // 即将过期积分（暂时设?，如果有过期机制再实现）
         info.put("expiringSoon", 0);
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+
+        List<Long> todayExchangedCouponIds = getTodayExchangedCouponIds(userId, startOfDay, endOfDay);
+        boolean hasExchangedCouponToday = !todayExchangedCouponIds.isEmpty();
+        info.put("hasExchangedCouponToday", hasExchangedCouponToday);
+        info.put("todayExchangeCount", todayExchangedCouponIds.size());
+        info.put("todayExchangedCouponIds", todayExchangedCouponIds);
         
         return info;
     }
@@ -262,23 +281,97 @@ public class UserPointsServiceImpl implements UserPointsService {
      */
     @Override
     @Transactional
-    public void exchangeCoupon(Long userId, Long couponId, Integer points) {
-        // 检查用户积分是否足够
+    public void exchangeCoupon(Long userId, Long couponId) {
         User user = userMapper.selectById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
         }
-        if (user.getPoints() < points) {
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay();
+
+        Coupon coupon = couponMapper.selectById(couponId);
+        if (coupon == null || Integer.valueOf(1).equals(coupon.getIsDeleted())) {
+            throw new RuntimeException("优惠券不存在");
+        }
+        if (!Integer.valueOf(1).equals(coupon.getStatus())) {
+            throw new RuntimeException("优惠券已下架，无法兑换");
+        }
+
+        String exchangeDescription = buildCouponExchangeDescription(coupon);
+
+        LambdaQueryWrapper<UserPointsRecord> exchangeWrapper = new LambdaQueryWrapper<>();
+        exchangeWrapper.eq(UserPointsRecord::getUserId, userId)
+                .eq(UserPointsRecord::getType, 2)
+                .eq(UserPointsRecord::getDescription, exchangeDescription)
+                .ge(UserPointsRecord::getCreateTime, startOfDay)
+                .lt(UserPointsRecord::getCreateTime, endOfDay);
+        Long todayExchangeCount = userPointsRecordMapper.selectCount(exchangeWrapper);
+        if (todayExchangeCount != null && todayExchangeCount > 0) {
+            throw new RuntimeException("今日已兑换过该优惠券，请明天再试");
+        }
+
+        Integer requiredPoints = coupon.getExchangePoints();
+        if (requiredPoints == null || requiredPoints <= 0) {
+            throw new RuntimeException("该优惠券不支持积分兑换");
+        }
+
+        Integer currentPoints = user.getPoints() != null ? user.getPoints() : 0;
+        if (currentPoints < requiredPoints) {
             throw new RuntimeException("积分不足，无法兑换");
         }
-        
+
         // 先发放优惠券（如果发放失败会抛异常，不会扣积分）
         couponService.receiveCoupon(userId, couponId);
-        
-        // 扣减积分
-        deductPoints(userId, points, "兑换优惠券");
-        
-        log.info("积分兑换优惠券成功: userId={}, couponId={}, points={}", userId, couponId, points);
+
+        // 按优惠券配置的积分门槛扣减，不信任前端传值
+        deductPoints(userId, requiredPoints, exchangeDescription);
+
+        log.info("积分兑换优惠券成功: userId={}, couponId={}, requiredPoints={}", userId, couponId, requiredPoints);
+    }
+
+    private List<Long> getTodayExchangedCouponIds(Long userId, LocalDateTime startOfDay, LocalDateTime endOfDay) {
+        LambdaQueryWrapper<UserPointsRecord> exchangeWrapper = new LambdaQueryWrapper<>();
+        exchangeWrapper.eq(UserPointsRecord::getUserId, userId)
+                .eq(UserPointsRecord::getType, 2)
+                .likeRight(UserPointsRecord::getDescription, COUPON_EXCHANGE_DESCRIPTION_PREFIX)
+                .ge(UserPointsRecord::getCreateTime, startOfDay)
+                .lt(UserPointsRecord::getCreateTime, endOfDay);
+
+        List<UserPointsRecord> exchangeRecords = userPointsRecordMapper.selectList(exchangeWrapper);
+        Set<Long> couponIds = new LinkedHashSet<>();
+        for (UserPointsRecord exchangeRecord : exchangeRecords) {
+            Long couponId = parseCouponIdFromExchangeDescription(exchangeRecord.getDescription());
+            if (couponId != null) {
+                couponIds.add(couponId);
+            }
+        }
+        return new ArrayList<>(couponIds);
+    }
+
+    private String buildCouponExchangeDescription(Coupon coupon) {
+        String couponName = coupon.getName() != null ? ":" + coupon.getName() : "";
+        return COUPON_EXCHANGE_DESCRIPTION_PREFIX + coupon.getId() + couponName;
+    }
+
+    private Long parseCouponIdFromExchangeDescription(String description) {
+        if (description == null || !description.startsWith(COUPON_EXCHANGE_DESCRIPTION_PREFIX)) {
+            return null;
+        }
+
+        String idPart = description.substring(COUPON_EXCHANGE_DESCRIPTION_PREFIX.length());
+        int nameSeparatorIndex = idPart.indexOf(':');
+        if (nameSeparatorIndex >= 0) {
+            idPart = idPart.substring(0, nameSeparatorIndex);
+        }
+
+        try {
+            return Long.valueOf(idPart);
+        } catch (NumberFormatException ex) {
+            log.warn("无法解析优惠券兑换记录中的couponId: description={}", description);
+            return null;
+        }
     }
 
     /**

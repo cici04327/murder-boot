@@ -85,6 +85,11 @@ public class ArticleVO implements Serializable {
     private Integer favoriteCount;
 
     /**
+     * 当前用户是否已点赞
+     */
+    private Boolean userLiked;
+
+    /**
      * 是否置顶
      */
     private Integer isTop;
