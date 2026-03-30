@@ -171,10 +171,33 @@ public class RecommendationController {
     public Result<String> refreshHotRanking(
             @Parameter(description = "榜单类型：1今日热门，2本周热门，3本月热门，4口碑榜") 
             @RequestParam Integer rankingType) {
-        
         log.info("刷新热门榜单，类型：{}", rankingType);
-        
         recommendationService.refreshHotRanking(rankingType);
         return Result.success("刷新成功");
+    }
+
+    /**
+     * AI增强推荐：规则引擎 + AI重排序 + AI推荐理由
+     */
+    @GetMapping("/ai-enhanced")
+    @Operation(summary = "AI增强个性化推荐", description = "规则引擎推荐结果 + AI重排序 + 个性化推荐理由")
+    public Result<List<RecommendationVO>> getAiEnhancedRecommendations(
+            @Parameter(description = "推荐数量") @RequestParam(defaultValue = "10") Integer limit) {
+        Long userId = BaseContext.getCurrentId();
+        log.info("用户 {} 请求AI增强推荐，数量：{}", userId, limit);
+        List<RecommendationVO> result = recommendationService.getAiEnhancedRecommendations(userId, limit);
+        return Result.success(result);
+    }
+
+    /**
+     * AI用户画像分析
+     */
+    @GetMapping("/ai-profile")
+    @Operation(summary = "AI用户画像", description = "分析用户行为偏好，生成AI用户画像")
+    public Result<Map<String, Object>> getAiUserProfile() {
+        Long userId = BaseContext.getCurrentId();
+        log.info("用户 {} 请求AI用户画像", userId);
+        Map<String, Object> profile = recommendationService.getAiUserProfile(userId);
+        return Result.success(profile);
     }
 }

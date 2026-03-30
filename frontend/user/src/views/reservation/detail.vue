@@ -163,6 +163,49 @@
         <el-button size="large" @click="router.back()">返回</el-button>
       </div>
 
+      <!-- 我的评价区块 -->
+      <el-card v-if="reservation.status === 3 && myReview" class="review-block-card" style="margin-top: 20px">
+        <template #header>
+          <span>⭐ 我的评价</span>
+        </template>
+        <div class="review-block">
+          <div class="review-ratings">
+            <span class="r-label">综合</span>
+            <el-rate :model-value="myReview.overallRating" disabled show-score size="small" />
+            <template v-if="myReview.scriptRating">
+              <span class="r-label">剧本</span>
+              <el-rate :model-value="myReview.scriptRating" disabled show-score size="small" />
+            </template>
+            <template v-if="myReview.storeRating">
+              <span class="r-label">门店</span>
+              <el-rate :model-value="myReview.storeRating" disabled show-score size="small" />
+            </template>
+            <template v-if="myReview.dmRating">
+              <span class="r-label">DM</span>
+              <el-rate :model-value="myReview.dmRating" disabled show-score size="small" />
+            </template>
+          </div>
+          <p class="review-content-text">{{ myReview.content || '（未填写文字内容）' }}</p>
+          <div class="review-imgs" v-if="myReview.images">
+            <el-image
+              v-for="(img, idx) in myReview.images.split(',')"
+              :key="idx" :src="img"
+              :preview-src-list="myReview.images.split(',')"
+              fit="cover" class="review-thumb"
+            />
+          </div>
+          <div class="review-tags" v-if="myReview.tags">
+            <el-tag v-for="tag in myReview.tags.split(',')" :key="tag" size="small" type="info" style="margin:2px">{{ tag }}</el-tag>
+          </div>
+          <div class="review-time">发表于 {{ myReview.createTime }}</div>
+          <!-- 商家回复 -->
+          <div class="review-reply" v-if="myReview.replyContent">
+            <span class="reply-label">商家回复：</span>
+            <span class="reply-text">{{ myReview.replyContent }}</span>
+          </div>
+        </div>
+      </el-card>
+
       <el-card v-if="timeline.length > 0" class="timeline-card" style="margin-top: 20px">
         <template #header>
           <span>订单进度</span>
@@ -278,6 +321,7 @@
 import { computed, onMounted, onActivated, ref, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import request from '@/utils/request'
 import QRCode from 'qrcode'
 import { cancelReservation, getReservationDetail, rescheduleReservation } from '@/api/reservation'
 import { getScriptDetail } from '@/api/script'
@@ -289,6 +333,7 @@ const router = useRouter()
 const loading = ref(false)
 const canceling = ref(false)
 const reservation = ref(null)
+const myReview = ref(null)
 const scriptInfo = ref(null)
 const storeInfo = ref(null)
 const roomInfo = ref(null)
@@ -390,6 +435,10 @@ const loadReservation = async () => {
     const res = await getReservationDetail(route.params.id)
     reservation.value = res.data || null
     await Promise.all([loadScriptInfo(), loadStoreInfo()])
+    // 已完成且已评价，加载评价内容
+    if (reservation.value?.status === 3 && reservation.value?.hasReviewed === 1) {
+      loadMyReview(reservation.value.id)
+    }
   } catch (error) {
     ElMessage.error(error.message || '加载预约详情失败')
   } finally {
@@ -424,6 +473,21 @@ const loadStoreInfo = async () => {
   } catch (error) {
     console.error(error)
   }
+}
+
+const loadMyReview = async (reservationId) => {
+  try {
+    const res = await request({ url: `/reservation/review/reservation/${reservationId}`, method: 'get' })
+    if ((res.code === 1 || res.code === 200) && res.data) {
+      myReview.value = res.data
+    }
+  } catch (e) {
+    console.warn('加载评价失败', e)
+  }
+}
+
+const handleReview = () => {
+  router.push(`/reservation/review/${reservation.value.id}`)
 }
 
 const handlePay = () => {
@@ -814,6 +878,55 @@ onBeforeUnmount(() => {
 }
 
 .detail-card,
+/* 我的评价区块样式 */
+.review-block { padding: 4px 0; }
+.review-ratings {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.r-label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.6);
+}
+.review-content-text {
+  color: rgba(255,255,255,0.85);
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 0 0 10px;
+}
+.review-imgs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.review-thumb {
+  width: 80px;
+  height: 80px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.review-time {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 8px;
+}
+.review-reply {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(103,194,58,0.08);
+  border-left: 3px solid #67c23a;
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+}
+.reply-label { color: #67c23a; font-weight: 600; margin-right: 6px; }
+.review-tags { margin-bottom: 8px; }
+
 .timeline-card {
   border: 1px solid rgba(255, 255, 255, 0.08);
   background: linear-gradient(180deg, rgba(7, 15, 30, 0.94), rgba(10, 20, 37, 0.9));

@@ -233,6 +233,22 @@
         <el-button @click="handleCancel" size="large">取消</el-button>
       </div>
     </el-card>
+
+    <!-- 商家回复展示（如果已有评价且有回复） -->
+    <el-card v-if="existingReview && existingReview.replyContent" class="reply-card">
+      <template #header>
+        <div class="card-header">
+          <span>商家回复</span>
+        </div>
+      </template>
+      <div class="merchant-reply-section">
+        <div class="reply-header">
+          <el-tag type="success">商家回复</el-tag>
+          <span class="reply-time">{{ formatTime(existingReview.replyTime) }}</span>
+        </div>
+        <div class="reply-content">{{ existingReview.replyContent }}</div>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -253,6 +269,7 @@ const submitting = ref(false)
 const reservation = ref(null)
 const imageList = ref([])
 const activeReviewTab = ref('script')
+const existingReview = ref(null)
 
 // 剧本评价标签
 const scriptTags = [
@@ -355,16 +372,26 @@ const loadReservation = async () => {
       // 尝试加载排期关联的 DM 信息
       if (res.data.scheduleId) {
         try {
-          const scheduleRes = await request({ url: `/api/script/schedule/${res.data.scheduleId}`, method: 'get' })
+          const scheduleRes = await request({ url: `/script/schedule/${res.data.scheduleId}`, method: 'get' })
           const schedule = scheduleRes.data
           if (schedule?.dmId) {
             form.dmId = schedule.dmId
-            const dmRes = await request({ url: `/api/dm/${schedule.dmId}`, method: 'get' })
+            const dmRes = await request({ url: `/dm/${schedule.dmId}`, method: 'get' })
             dmInfo.value = dmRes.data
           }
         } catch (e) {
           console.warn('加载 DM 信息失败', e)
         }
+      }
+
+      // 加载该预约的评价（如果已有）
+      try {
+        const reviewRes = await request({ url: `/reservation/review/reservation/${res.data.id}`, method: 'get' })
+        if (reviewRes.code === 1 || reviewRes.code === 200) {
+          existingReview.value = reviewRes.data
+        }
+      } catch (e) {
+        console.warn('加载已有评价失败', e)
       }
       
       // 检查订单状态
@@ -423,7 +450,11 @@ const handleSubmit = async () => {
       .map(item => item.url || URL.createObjectURL(item.raw))
       .join(',')
     
-    // 构建提交数据
+    // 构建提交数据（字段名与后端 ReviewDTO 完全对应）
+    // content 取剧本评价内容优先，没有则取门店评价内容
+    const content = scriptReviewForm.content || storeReviewForm.content || ''
+    const tags = [...scriptReviewForm.tags, ...storeReviewForm.tags].join(',')
+
     const reviewData = {
       reservationId: form.reservationId,
       storeId: form.storeId,
@@ -432,20 +463,13 @@ const handleSubmit = async () => {
       dmRating: dmReviewForm.rating || null,
       isAnonymous: form.isAnonymous,
       images,
-      // 剧本评价
-      scriptRating: scriptReviewForm.rating,
-      scriptPlotRating: scriptReviewForm.plotRating,
-      scriptDifficultyRating: scriptReviewForm.difficultyRating,
-      scriptImmersionRating: scriptReviewForm.immersionRating,
-      scriptContent: scriptReviewForm.content,
-      scriptTags: scriptReviewForm.tags.join(','),
-      // 门店评价
-      storeRating: storeReviewForm.rating,
-      storeEnvironmentRating: storeReviewForm.environmentRating,
-      storeServiceRating: storeReviewForm.serviceRating,
-      storeLocationRating: storeReviewForm.locationRating,
-      storeContent: storeReviewForm.content,
-      storeTags: storeReviewForm.tags.join(',')
+      content,
+      tags,
+      // 各项评分（与 ReviewDTO 字段名一致）
+      overallRating: scriptReviewForm.rating || storeReviewForm.rating || 5,
+      scriptRating: scriptReviewForm.rating || null,
+      storeRating: storeReviewForm.rating || null,
+      serviceRating: storeReviewForm.serviceRating || null,
     }
     
     const res = await request.post('/reservation/review', reviewData)
@@ -502,14 +526,55 @@ onMounted(() => {
 </script>
 
 <style scoped>
+/* ========== CSS 变量：深色主题默认值 ========== */
 .review-page {
+  --rv-text: rgba(255, 255, 255, 0.92);
+  --rv-text-sub: rgba(255, 255, 255, 0.65);
+  --rv-text-muted: rgba(255, 255, 255, 0.5);
+  --rv-bg-card: rgba(255, 255, 255, 0.05);
+  --rv-bg-info: rgba(15, 23, 42, 0.68);
+  --rv-border: rgba(255, 255, 255, 0.12);
+  --rv-accent: rgba(192, 57, 43, 0.8);
+  --rv-icon: #ff8a7a;
+  --rv-btn-bg: #16213e;
+  --rv-btn-hover: #a00000;
+  --rv-reply-content: rgba(255, 255, 255, 0.85);
+  --rv-reply-time: rgba(255, 255, 255, 0.6);
+  --rv-tab-active: #c0392b;
   max-width: 900px;
   margin: 20px auto;
   padding: 0 20px;
 }
 
+/* ========== 浅色主题覆盖（light / default / purple / warm / nature / aurora） ========== */
+:global(.theme-light) .review-page,
+:global(.theme-default) .review-page,
+:global(.theme-purple) .review-page,
+:global(.theme-warm) .review-page,
+:global(.theme-nature) .review-page,
+:global(.theme-aurora) .review-page {
+  --rv-text: #1a1a2e;
+  --rv-text-sub: #4a4a6a;
+  --rv-text-muted: #888;
+  --rv-bg-card: rgba(0, 0, 0, 0.04);
+  --rv-bg-info: rgba(255, 255, 255, 0.75);
+  --rv-border: rgba(0, 0, 0, 0.10);
+  --rv-accent: #c0392b;
+  --rv-icon: #c0392b;
+  --rv-btn-bg: #c0392b;
+  --rv-btn-hover: #922b21;
+  --rv-reply-content: #2c2c3e;
+  --rv-reply-time: #888;
+  --rv-tab-active: #c0392b;
+}
+
 .review-card {
   margin-bottom: 20px;
+}
+
+.reply-card {
+  margin-bottom: 20px;
+  margin-top: 20px;
 }
 
 .card-header {
@@ -518,15 +583,16 @@ onMounted(() => {
   align-items: center;
   font-size: 18px;
   font-weight: bold;
+  color: var(--rv-text);
 }
 
 .order-info {
   margin-bottom: 30px;
   padding: 20px;
-  background: rgba(15, 23, 42, 0.68);
-  border: 1px solid rgba(192, 57, 43, 0.18);
+  background: var(--rv-bg-info);
+  border: 1px solid var(--rv-border);
   border-radius: 8px;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.10);
 }
 
 /* Tab样式 */
@@ -537,14 +603,15 @@ onMounted(() => {
 .review-tabs :deep(.el-tabs__item) {
   font-size: 16px;
   font-weight: 500;
+  color: var(--rv-text-sub);
 }
 
 .review-tabs :deep(.el-tabs__item.is-active) {
-  color: #16213e;
+  color: var(--rv-tab-active);
 }
 
 .review-tabs :deep(.el-tabs__active-bar) {
-  background-color: #16213e;
+  background-color: var(--rv-tab-active);
 }
 
 .tab-content {
@@ -558,16 +625,16 @@ onMounted(() => {
   gap: 10px;
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--rv-text);
   margin-bottom: 24px;
   padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--rv-bg-card);
   border-radius: 8px;
-  border-left: 4px solid rgba(192, 57, 43, 0.8);
+  border-left: 4px solid var(--rv-accent);
 }
 
 .review-section-title .el-icon {
-  color: #ff8a7a;
+  color: var(--rv-icon);
   font-size: 20px;
 }
 
@@ -577,8 +644,8 @@ onMounted(() => {
   align-items: center;
   gap: 16px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--rv-bg-card);
+  border: 1px solid var(--rv-border);
   border-radius: 10px;
   margin-bottom: 16px;
 }
@@ -587,7 +654,7 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: #fff;
+  color: var(--rv-text);
 }
 
 .dm-tags {
@@ -602,9 +669,14 @@ onMounted(() => {
   margin-top: 20px;
 }
 
+/* el-form-item label 颜色自适应 */
+.review-form :deep(.el-form-item__label) {
+  color: var(--rv-text);
+}
+
 .rating-desc {
   margin-left: 10px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--rv-text-sub);
   font-size: 14px;
 }
 
@@ -612,20 +684,20 @@ onMounted(() => {
 .upload-section {
   margin-top: 30px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--rv-bg-card);
+  border: 1px solid var(--rv-border);
   border-radius: 8px;
 }
 
 .upload-section h4 {
   margin: 0 0 16px;
   font-size: 16px;
-  color: #fff;
+  color: var(--rv-text);
 }
 
 .upload-tip {
   margin-top: 8px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--rv-text-muted);
   font-size: 12px;
 }
 
@@ -636,8 +708,8 @@ onMounted(() => {
   gap: 10px;
   margin-top: 20px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--rv-bg-card);
+  border: 1px solid var(--rv-border);
   border-radius: 8px;
 }
 
@@ -653,13 +725,13 @@ onMounted(() => {
 }
 
 .submit-section .el-button--primary {
-  background-color: #16213e;
-  border-color: #16213e;
+  background-color: var(--rv-btn-bg);
+  border-color: var(--rv-btn-bg);
 }
 
 .submit-section .el-button--primary:hover {
-  background-color: #a00000;
-  border-color: #a00000;
+  background-color: var(--rv-btn-hover);
+  border-color: var(--rv-btn-hover);
 }
 
 .points-tip {
@@ -685,8 +757,9 @@ onMounted(() => {
 }
 
 :deep(.el-checkbox-button.is-checked .el-checkbox-button__inner) {
-  background-color: #16213e;
-  border-color: #16213e;
+  background-color: var(--rv-btn-bg);
+  border-color: var(--rv-btn-bg);
+  color: #fff;
 }
 
 :deep(.el-upload-list--picture-card .el-upload-list__item) {
@@ -700,16 +773,60 @@ onMounted(() => {
   line-height: 100px;
 }
 
+/* 商家回复样式 */
+.merchant-reply-section {
+  padding: 16px;
+  background: var(--rv-bg-card);
+  border-radius: 8px;
+  border-left: 4px solid #67c23a;
+}
+
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reply-time {
+  color: var(--rv-reply-time);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.reply-content {
+  color: var(--rv-reply-content);
+  line-height: 1.6;
+  font-size: 14px;
+  word-break: break-word;
+}
+
+/* el-descriptions 浅色主题适配 */
+:global(.theme-light) .order-info :deep(.el-descriptions__label),
+:global(.theme-default) .order-info :deep(.el-descriptions__label),
+:global(.theme-purple) .order-info :deep(.el-descriptions__label),
+:global(.theme-warm) .order-info :deep(.el-descriptions__label),
+:global(.theme-nature) .order-info :deep(.el-descriptions__label),
+:global(.theme-aurora) .order-info :deep(.el-descriptions__label) {
+  background: rgba(0, 0, 0, 0.04);
+  color: #4a4a6a;
+}
+
+:global(.theme-light) .order-info :deep(.el-descriptions__content),
+:global(.theme-default) .order-info :deep(.el-descriptions__content),
+:global(.theme-purple) .order-info :deep(.el-descriptions__content),
+:global(.theme-warm) .order-info :deep(.el-descriptions__content),
+:global(.theme-nature) .order-info :deep(.el-descriptions__content),
+:global(.theme-aurora) .order-info :deep(.el-descriptions__content) {
+  color: #1a1a2e;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .review-page {
     padding: 0 10px;
   }
-  
-  .order-info :deep(.el-descriptions) {
-    --el-descriptions-item-bordered-label-background: rgba(255, 255, 255, 0.08);
-  }
-  
+
   .review-section-title {
     font-size: 14px;
   }

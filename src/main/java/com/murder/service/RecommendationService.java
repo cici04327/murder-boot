@@ -101,4 +101,19 @@ public interface RecommendationService {
      * @return 统计数据
      */
     Map<String, Object> getRecommendationStats(Integer days);
+
+    /**
+     * AI增强推荐：规则引擎推荐 + AI重排序 + AI个性化推荐理由
+     * @param userId 用户ID
+     * @param limit 推荐数量
+     * @return AI增强推荐列表
+     */
+    List<RecommendationVO> getAiEnhancedRecommendations(Long userId, Integer limit);
+
+    /**
+     * AI用户画像分析：分析用户行为，生成偏好标签和画像描述
+     * @param userId 用户ID
+     * @return 用户画像Map（profile, tags, summary等）
+     */
+    Map<String, Object> getAiUserProfile(Long userId);
 }

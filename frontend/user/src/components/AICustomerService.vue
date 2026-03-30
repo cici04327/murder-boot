@@ -340,7 +340,7 @@ import {
   CopyDocument, Microphone, Loading, RefreshRight, 
   ArrowDown, Sunny
 } from '@element-plus/icons-vue'
-import { submitFeedback as submitFeedbackAPI } from '@/api/ai'
+import { submitFeedback as submitFeedbackAPI, sendMessage as sendAIMessage } from '@/api/ai'
 import request from '@/utils/request'
 import { useUserStore } from '@/store/user'
 
@@ -555,11 +555,11 @@ const knowledgeBase = {
     showFeedback: true
   },
   '支付|付款|怎么付|支付方式': {
-    answer: `<div class="kb-answer"><p><strong>💳 支持的支付方式：</strong></p><ul><li>✅ 支付宝</li></ul><p><strong>🎁 省钱小技巧：</strong></p><ul><li>使用优惠券可享折扣</li><li>积分可抵扣部分金额</li><li>关注平台活动获取红包</li></ul></div>`,
+    answer: `<div class="kb-answer"><p><strong>💳 支持的支付方式：</strong></p><ul><li>✅ 支付宝（预约和VIP购买均通过支付宝完成）</li></ul><p><strong>🎁 省钱小技巧：</strong></p><ul><li>VIP会员享专属折扣（最高8折）</li><li>使用优惠券可享满减/折扣</li><li>VIP折扣和优惠券可叠加使用</li></ul></div>`,
     showFeedback: true
   },
   '退款|退钱|取消预约|不去了': {
-    answer: `<div class="kb-answer"><p><strong>🔄 退款规则：</strong></p><ul><li>✅ 游戏开始前 <strong>24小时以上</strong>：全额退款</li><li>⚠️ 游戏开始前 <strong>12-24小时</strong>：退款80%</li><li>⚠️ 游戏开始前 <strong>6-12小时</strong>：退款50%</li><li>❌ 游戏开始前 <strong>6小时内</strong>：不支持退款</li></ul><p><strong>📝 退款流程：</strong></p><ol><li>进入"我的预约"</li><li>找到要取消的订单</li><li>点击"申请退款"</li><li>填写退款原因</li><li>等待审核（1-3个工作日）</li></ol></div>`,
+    answer: `<div class="kb-answer"><p><strong>🔄 退款规则：</strong></p><ul><li>✅ 游戏开始前 <strong>24小时以上</strong>：全额退款</li><li>⚠️ 游戏开始前 <strong>12~24小时</strong>：退款80%</li><li>⚠️ 游戏开始前 <strong>6~12小时</strong>：退款50%</li><li>❌ 游戏开始前 <strong>6小时内</strong>：不支持退款</li><li>❌ 已到店核销后：不支持退款</li></ul><p><strong>📝 退款流程：</strong></p><ol><li>进入"我的预约"</li><li>找到要取消的订单</li><li>点击"申请退款"</li><li>填写退款原因</li><li>等待审核（1-3个工作日）</li></ol><p><strong>💳 退款到账：</strong>支付宝 1-3个工作日</p></div>`,
     actions: [{ label: '📋 我的预约', route: '/user/reservations', type: 'primary' }],
     showFeedback: true
   },
@@ -569,7 +569,7 @@ const knowledgeBase = {
     showFeedback: true
   },
   '积分|点数|奖励|兑换': {
-    answer: `<div class="kb-answer"><p><strong>⭐ 积分用途：</strong></p><ul><li>💰 抵扣现金（100积分=1元）</li><li>🎫 兑换优惠券</li><li>🎁 兑换精美周边</li><li>👑 提升会员等级</li></ul><p><strong>📈 获取积分的方式：</strong></p><ul><li>🎮 完成预约并游戏 +50积分</li><li>⭐ 发表评价 +20积分</li><li>📅 每日签到 +5积分</li><li>👥 邀请好友注册 +100积分</li></ul></div>`,
+    answer: `<div class="kb-answer"><p><strong>⭐ 积分获取方式：</strong></p><ul><li>📅 每日签到 +10积分</li><li>🎮 完成预约并游戏 +100积分</li><li>🎭 收藏剧本达到里程碑 +20积分/次</li><li>👑 VIP用户享有积分倍率加成</li></ul><p><strong>💡 积分用途：</strong></p><ul><li>🎫 积分兑换优惠券（每种券每天限兑一次）</li></ul></div>`,
     actions: [{ label: '⭐ 我的积分', route: '/user/points', type: 'primary' }],
     showFeedback: true
   },
@@ -599,7 +599,7 @@ const knowledgeBase = {
     showFeedback: false
   },
   'VIP|会员|开通|特权': {
-    answer: `<div class="kb-answer"><p><strong>👑 VIP会员特权：</strong></p><ul><li>💰 专属折扣（最高8折）</li><li>🎫 每月专属优惠券</li><li>⭐ 积分加成（最高2倍）</li><li>🎯 优先预约热门剧本</li><li>🎁 生日专属礼包</li></ul></div>`,
+    answer: `<div class="kb-answer"><p><strong>👑 VIP会员体系：</strong></p><ul><li>🕵️ <strong>见习侦探 Lv.1</strong>：9.5折 · 每月2张×10元体验券 · 生日礼券30元</li><li>🥈 <strong>银章侦探 Lv.2</strong>：9折 · 每月5张×20元体验券 · 生日礼券80元</li><li>🥇 <strong>金章侦探 Lv.3</strong>：8.5折 · 每月10张×50元体验券 · 生日礼券150元</li><li>🏆 <strong>传奇侦探 Lv.4</strong>：8折 · 每月15张×100元体验券 · 生日礼券200元</li></ul><p><strong>✨ 通用权益：</strong>积分倍率加成、优先预约、专属客服、生日月礼券</p><p><strong>💳 支付方式：</strong>仅支持支付宝，续费天数自动叠加</p></div>`,
     actions: [{ label: '👑 开通VIP', route: '/vip', type: 'primary' }],
     showFeedback: true
   },
@@ -648,7 +648,7 @@ const knowledgeBase = {
     showFeedback: true
   },
   '退款到账|多久到账|到账时间': {
-    answer: `<div class="kb-answer"><p><strong>💰 退款到账时间：</strong></p><ul><li>💳 <strong>微信/支付宝</strong>：1-3个工作日</li><li>🏦 <strong>银行卡</strong>：3-7个工作日</li><li>💵 <strong>余额支付</strong>：即时到账</li></ul><p><strong>📋 查看退款进度：</strong></p><ol><li>进入"我的预约"</li><li>找到对应订单</li><li>点击查看退款详情</li></ol><p><strong>⚠️ 注意：</strong>退款审核通过后开始计算到账时间</p></div>`,
+    answer: `<div class="kb-answer"><p><strong>💰 退款到账时间：</strong></p><ul><li>💳 <strong>支付宝</strong>：审核通过后 1-3个工作日到账</li></ul><p><strong>📋 查看退款进度：</strong></p><ol><li>进入"我的预约"</li><li>找到对应订单</li><li>点击查看退款详情</li></ol><p><strong>⚠️ 注意：</strong>本平台目前仅支持支付宝支付，退款统一原路退回支付宝</p></div>`,
     actions: [{ label: '📋 我的订单', route: '/user/reservations', type: 'primary' }],
     showFeedback: true
   },
@@ -700,6 +700,7 @@ const askQuestion = (question) => {
 const sendMessage = async () => {
   if (!inputMessage.value.trim() || isTyping.value) return
   const userMessage = inputMessage.value.trim()
+  const history = buildHistoryPayload()
   addUserMessage(userMessage)
   inputMessage.value = ''
   showQuickQuestions.value = false
@@ -727,22 +728,38 @@ const sendMessage = async () => {
 
   isTyping.value = true
   try {
-    const { sendMessage: sendAIMessage } = await import('@/api/ai')
+    const userStore = useUserStore()
+    const context = {
+      page: router.currentRoute.value.path
+    }
+    if (userStore.isLoggedIn && userStore.userInfo) {
+      context.userInfo = {
+        nickname: userStore.nickname || userStore.username,
+        vipLevel: userStore.userInfo.vipLevel || 0
+      }
+    }
     const response = await sendAIMessage({
       message: userMessage,
-      context: { page: router.currentRoute.value.path }
+      sessionId: currentSessionId.value,
+      history,
+      context
     })
     await delay(800)
     if (response.data && response.data.reply) {
-      addAIMessage(response.data.reply.replace(/\n/g, '<br>'), [], true)
+      addAIMessage(
+        response.data.reply.replace(/\n/g, '<br>'),
+        response.data.actions || [],
+        !response.data.error,
+        response.data.suggestions || []
+      )
     } else {
       throw new Error('Invalid response')
     }
   } catch (error) {
     console.error('AI API调用失败:', error)
     await delay(600)
-    const { answer, actions, showFeedback } = getKnowledgeResponse(userMessage)
-    addAIMessage(answer, actions || [], showFeedback)
+    const { answer, actions, showFeedback, suggestions } = getKnowledgeResponse(userMessage)
+    addAIMessage(answer, actions || [], showFeedback, suggestions || [])
   } finally {
     isTyping.value = false
   }
@@ -1029,6 +1046,28 @@ const getCurrentTime = () => {
 }
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
+const stripHtml = (content = '') => {
+  return content
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim()
+}
+
+const buildHistoryPayload = () => {
+  return messages.value
+    .filter(msg => msg.type === 'user' || msg.type === 'ai')
+    .slice(-10)
+    .map(msg => ({
+      role: msg.type === 'user' ? 'user' : 'assistant',
+      content: stripHtml(msg.content)
+    }))
+    .filter(msg => msg.content)
+}
 
 const scrollToBottom = () => {
   nextTick(() => {

@@ -126,9 +126,8 @@ request.interceptors.response.use(
             duration: 5000
           })
           console.error('后端服务连接失败，请检查：')
-          console.error('1. 网关服务是否运行 (端口 8080)')
-          console.error('2. 相关微服务是否启动 (端口 8082-8085)')
-          console.error('3. 可以运行 "node check-services.js" 检查服务状态')
+          console.error('1. 后端服务是否运行 (端口 8080)')
+          console.error('2. 可以运行 "node check-services.js" 检查服务状态')
         } else {
           ElMessage.error('网络连接异常，请检查网络或稍后重试')
         }

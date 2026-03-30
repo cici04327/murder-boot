@@ -59,18 +59,18 @@
         <el-table-column prop="createTime" label="评价时间" width="160" />
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="{ row }">
-            <el-button 
-              v-if="!row.reply" 
-              type="primary" 
-              size="small" 
+            <el-button
+              v-if="!row.reply"
+              type="primary"
+              size="small"
               @click="handleReply(row)"
             >
               回复
             </el-button>
-            <el-button 
-              v-else 
-              type="success" 
-              size="small" 
+            <el-button
+              v-else
+              type="success"
+              size="small"
               @click="handleViewReply(row)"
             >
               查看回复
@@ -87,8 +87,8 @@
         :total="total"
         :page-sizes="[10, 20, 50, 100]"
         layout="total, sizes, prev, pager, next, jumper"
-        @size-change="handleQuery"
-        @current-change="handleQuery"
+        @size-change="handleSizeChange"
+        @current-change="fetchData"
         style="margin-top: 20px; justify-content: flex-end"
       />
     </el-card>
@@ -109,11 +109,11 @@
             <div>{{ currentReview.content }}</div>
           </div>
         </el-form-item>
-        <el-form-item label="回复内容" prop="reply" :rules="[
+        <el-form-item label="回复内容" prop="replyContent" :rules="[
           { required: true, message: '请输入回复内容', trigger: 'blur' }
         ]">
           <el-input
-            v-model="replyForm.reply"
+            v-model="replyForm.replyContent"
             type="textarea"
             :rows="4"
             placeholder="请输入回复内容"
@@ -180,13 +180,14 @@ const queryForm = reactive({
 })
 
 const replyForm = reactive({
-  reply: ''
+  replyContent: ''
 })
 
 const fetchStoreList = async () => {
   try {
     const res = await request.get('/store/list')
-    storeList.value = res.data
+    storeList.value = res?.data || []
+    console.log('[store review] storeList:', storeList.value.length)
   } catch (error) {
     console.error('获取门店列表失败:', error)
   }
@@ -206,8 +207,11 @@ const fetchData = async () => {
       params.storeId = queryForm.storeId
     }
     const res = await request.get('/store/review/page', { params })
-    tableData.value = res.data.records
-    total.value = res.data.total
+    console.log('[store review] response:', JSON.stringify(res))
+    const resData = res?.data || res
+    tableData.value = resData?.records || []
+    total.value = resData?.total || 0
+    console.log('[store review] tableData:', tableData.value.length, 'total:', total.value)
   } catch (error) {
     console.error('获取数据失败:', error)
     ElMessage.error('获取数据失败')
@@ -217,6 +221,12 @@ const fetchData = async () => {
 }
 
 const handleQuery = () => {
+  queryForm.page = 1
+  fetchData()
+}
+
+const handleSizeChange = (size) => {
+  queryForm.pageSize = size
   queryForm.page = 1
   fetchData()
 }
@@ -241,9 +251,12 @@ const handleSubmitReply = async () => {
   try {
     await replyFormRef.value.validate()
     
-    await request.put(`/store/review/reply/${currentReview.value.id}?reply=${encodeURIComponent(replyForm.reply)}`)
+    await request.put(`/store/review/reply/${currentReview.value.id}`, null, {
+      params: { reply: replyForm.replyContent }
+    })
     ElMessage.success('回复成功')
     replyDialogVisible.value = false
+    replyForm.replyContent = ''
     fetchData()
   } catch (error) {
     console.error('回复失败:', error)
@@ -255,7 +268,7 @@ const handleSubmitReply = async () => {
 
 const handleReplyDialogClose = () => {
   replyFormRef.value?.resetFields()
-  replyForm.reply = ''
+  replyForm.replyContent = ''
 }
 
 const handleDelete = async (row) => {

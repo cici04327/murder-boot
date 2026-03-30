@@ -49,6 +49,77 @@
 
     <!-- 内容区域 -->
     <div class="content-area">
+
+      <!-- AI增强推荐 -->
+      <div v-show="activeTab === 'ai-enhanced'" class="tab-content">
+        <!-- AI用户画像卡片 -->
+        <div class="ai-profile-card" v-if="aiProfile || loadingProfile">
+          <div class="ai-profile-header">
+            <span class="ai-badge">🤖 AI</span>
+            <span class="ai-profile-title">你的玩家画像</span>
+            <span class="ai-profile-tags" v-if="aiProfile?.preferenceTags?.length">
+              <el-tag v-for="tag in (aiProfile.preferenceTags||[]).slice(0,5)" :key="tag"
+                size="small" type="info" style="margin:2px">{{ tag }}</el-tag>
+            </span>
+          </div>
+          <div class="ai-profile-desc" v-if="loadingProfile">
+            <span class="ai-typing">AI正在分析你的游戏偏好...</span>
+          </div>
+          <div class="ai-profile-desc" v-else-if="aiProfile?.aiProfile">
+            {{ aiProfile.aiProfile }}
+          </div>
+        </div>
+
+        <!-- AI推荐列表 -->
+        <div class="section-intro ai">
+          <span class="intro-icon">🤖</span>
+          <div class="intro-text">
+            <h3>AI智能推荐</h3>
+            <p>结合你的行为偏好，经AI重排序+个性化推荐理由，精准为你匹配</p>
+          </div>
+        </div>
+        <div v-loading="loading.aiEnhanced" class="script-grid" element-loading-text="AI正在为你分析推荐...">
+          <div v-for="(script, index) in recommendations.aiEnhanced" :key="script.id"
+            class="script-card" @click="goToScript(script.id)">
+            <div class="card-rank" v-if="script.aiRank">{{ script.aiRank }}</div>
+            <div class="card-cover">
+              <img :src="script.cover" :alt="script.name" loading="lazy" />
+              <div class="card-overlay">
+                <span class="overlay-btn">查看详情</span>
+              </div>
+            </div>
+            <div class="card-info">
+              <h3 class="card-name">{{ script.name }}</h3>
+              <div class="card-meta">
+                <span class="meta-category">{{ script.categoryName }}</span>
+                <span class="meta-difficulty" :class="getDifficultyClass(script.difficulty)">
+                  {{ getDifficultyText(script.difficulty) }}
+                </span>
+              </div>
+              <div class="card-rating">
+                <el-rate :model-value="Number(script.rating)" disabled size="small" />
+                <span class="rating-value">{{ script.rating }}</span>
+              </div>
+              <!-- AI推荐理由 -->
+              <div class="ai-reason-tag" v-if="script.aiReason">
+                <span class="ai-icon-small">🤖</span>
+                <span>{{ script.aiReason }}</span>
+              </div>
+              <div v-else-if="script.recommendReason" class="reason-tag">
+                {{ script.recommendReason }}
+              </div>
+              <div class="card-footer">
+                <span class="card-price">¥{{ script.price }}</span>
+                <span class="card-players">👥 {{ script.playerCount }}人</span>
+              </div>
+            </div>
+          </div>
+          <div v-if="!loading.aiEnhanced && recommendations.aiEnhanced.length === 0" class="empty-tip">
+            暂无AI推荐数据，请先浏览一些剧本
+          </div>
+        </div>
+      </div>
+
       <!-- 个性推荐 -->
       <div v-show="activeTab === 'personalized'" class="tab-content">
         <div class="section-intro">
@@ -345,22 +416,25 @@ import {
   getHotRecommendations,
   getNewScriptRecommendations,
   getHistoryBasedRecommendations,
-  recordRecommendationClick
+  recordRecommendationClick,
+  getAiEnhancedRecommendations,
+  getAiUserProfile
 } from '@/api/recommendation'
 import { getScriptList } from '@/api/script'
 
 const router = useRouter()
-const activeTab = ref('personalized')
-
 const tabs = ref([
+  { key: 'ai-enhanced', name: 'AI推荐', icon: '🤖', count: 0 },
   { key: 'personalized', name: '专属推荐', icon: '🎯', count: 0 },
   { key: 'hot-daily', name: '今日热门', icon: '🔥', count: 0 },
   { key: 'hot-weekly', name: '本周热门', icon: '📈', count: 0 },
   { key: 'reputation', name: '口碑榜', icon: '⭐', count: 0 },
   { key: 'new', name: '新品上架', icon: '✨', count: 0 }
 ])
+const activeTab = ref('ai-enhanced')
 
 const recommendations = reactive({
+  aiEnhanced: [],
   personalized: [],
   hotDaily: [],
   hotWeekly: [],
@@ -370,6 +444,7 @@ const recommendations = reactive({
 })
 
 const loading = reactive({
+  aiEnhanced: false,
   personalized: false,
   hotDaily: false,
   hotWeekly: false,
@@ -377,6 +452,61 @@ const loading = reactive({
   new: false,
   history: false
 })
+
+// AI用户画像
+const aiProfile = ref(null)
+const loadingProfile = ref(false)
+
+// 加载AI增强推荐
+const loadAiEnhanced = async () => {
+  loading.aiEnhanced = true
+  try {
+    const res = await getAiEnhancedRecommendations(12)
+    if ((res.code === 1 || res.code === 200) && res.data?.length > 0) {
+      recommendations.aiEnhanced = res.data.map(item => ({
+        id: item.id,
+        name: item.name,
+        cover: item.cover || '/default-script.jpg',
+        categoryName: item.categoryName || '剧本杀',
+        difficulty: item.difficulty || 2,
+        playerCount: item.playerCount || 6,
+        price: item.price || 0,
+        rating: item.rating || 4.5,
+        tags: item.tags || [],
+        recommendReason: item.aiReason || item.recommendReason || 'AI智能推荐',
+        aiReason: item.aiReason,
+        aiRank: item.aiRank,
+        recommendScore: item.recommendScore
+      }))
+      tabs.value[0].count = recommendations.aiEnhanced.length
+    } else {
+      await loadFallbackData('personalized')
+      recommendations.aiEnhanced = recommendations.personalized
+      tabs.value[0].count = recommendations.aiEnhanced.length
+    }
+  } catch (e) {
+    console.warn('AI推荐加载失败，使用备用', e)
+    await loadFallbackData('personalized')
+    recommendations.aiEnhanced = recommendations.personalized
+  } finally {
+    loading.aiEnhanced = false
+  }
+}
+
+// 加载AI用户画像
+const loadAiProfile = async () => {
+  loadingProfile.value = true
+  try {
+    const res = await getAiUserProfile()
+    if ((res.code === 1 || res.code === 200) && res.data) {
+      aiProfile.value = res.data
+    }
+  } catch (e) {
+    console.warn('AI画像加载失败', e)
+  } finally {
+    loadingProfile.value = false
+  }
+}
 
 // 统计数据
 const totalScripts = computed(() => {
@@ -622,9 +752,16 @@ const handleScriptClick = async (script) => {
   router.push(`/script/${script.id}`)
 }
 
+// goToScript跳转
+const goToScript = (id) => { router.push(`/script/${id}`) }
+
 // 初始化
 onMounted(async () => {
-  await Promise.all([
+  // AI推荐和用户画像优先加载（并行）
+  loadAiEnhanced()
+  loadAiProfile()
+  // 其他Tab数据后台加载
+  Promise.all([
     loadPersonalized(),
     loadHotDaily(),
     loadHotWeekly(),
@@ -1392,5 +1529,111 @@ onMounted(async () => {
   .history-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+/* ===== AI推荐样式 ===== */
+.ai-profile-card {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border: 1px solid rgba(99, 179, 237, 0.3);
+  border-radius: 16px;
+  padding: 20px 24px;
+  margin-bottom: 20px;
+  position: relative;
+  overflow: hidden;
+}
+.ai-profile-card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(99,179,237,0.05) 0%, transparent 60%);
+  animation: aiGlow 4s ease-in-out infinite;
+}
+@keyframes aiGlow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.ai-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.ai-badge {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.ai-profile-title {
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 600;
+}
+.ai-profile-desc {
+  color: #a0aec0;
+  font-size: 14px;
+  line-height: 1.8;
+  position: relative;
+  z-index: 1;
+}
+.ai-typing {
+  color: #63b3ed;
+  animation: blink 1s ease-in-out infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+.section-intro.ai {
+  background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
+  border-left-color: #667eea;
+}
+
+/* AI推荐理由标签 */
+.ai-reason-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, rgba(102,126,234,0.15), rgba(118,75,162,0.15));
+  border: 1px solid rgba(102,126,234,0.3);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: #667eea;
+  margin: 6px 0;
+  width: fit-content;
+  max-width: 100%;
+}
+.ai-icon-small { font-size: 11px; }
+
+/* AI排名角标 */
+.card-rank {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 26px;
+  height: 26px;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(102,126,234,0.5);
+}
+
+.empty-tip {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #909399;
+  padding: 40px;
+  font-size: 14px;
 }
 </style>

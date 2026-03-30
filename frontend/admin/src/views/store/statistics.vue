@@ -78,6 +78,75 @@
       </el-col>
     </el-row>
 
+    <!-- 图表区域 -->
+    <el-row :gutter="20" style="margin-top: 20px;">
+      <!-- 预约趋势折线图 -->
+      <el-col :span="16">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>📈 预约趋势（近{{ chartDays }}天）</span>
+              <el-radio-group v-model="chartDays" size="small" @change="fetchCharts">
+                <el-radio-button :label="7">近7天</el-radio-button>
+                <el-radio-button :label="14">近14天</el-radio-button>
+                <el-radio-button :label="30">近30天</el-radio-button>
+              </el-radio-group>
+            </div>
+          </template>
+          <div ref="trendChartRef" style="height: 300px;" v-loading="chartsLoading" />
+        </el-card>
+      </el-col>
+
+      <!-- 评分分布饼图 -->
+      <el-col :span="8">
+        <el-card shadow="hover">
+          <template #header>
+            <span>👥 会员等级分布</span>
+          </template>
+          <div ref="ratingChartRef" style="height: 300px;" v-loading="chartsLoading" />
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <!-- 剧本热度TOP5 + 实时数据 -->
+    <el-row :gutter="20" style="margin-top: 20px;">
+      <!-- 剧本热度TOP5柱状图 -->
+      <el-col :span="14">
+        <el-card shadow="hover">
+          <template #header>
+            <span>🔥 剧本热度 TOP5</span>
+          </template>
+          <div ref="scriptChartRef" style="height: 280px;" v-loading="rankingsLoading" />
+        </el-card>
+      </el-col>
+
+      <!-- 实时数据面板 -->
+      <el-col :span="10">
+        <el-card shadow="hover">
+          <template #header>
+            <div class="card-header">
+              <span>⚡ 实时数据</span>
+              <el-button size="small" @click="fetchRealtime">刷新</el-button>
+            </div>
+          </template>
+          <div v-loading="realtimeLoading">
+            <div class="realtime-item" v-for="item in realtimeList" :key="item.id">
+              <div class="realtime-left">
+                <span class="realtime-name">{{ item.scriptName || '—' }}</span>
+                <span class="realtime-time">
+                  {{ item.storeName ? item.storeName + ' · ' : '' }}{{ formatTime(item.reservationTime) }}
+                </span>
+              </div>
+              <el-tag size="small" type="primary">
+                {{ item.userNickname || '用户' }}
+              </el-tag>
+            </div>
+            <el-empty v-if="!realtimeLoading && realtimeList.length === 0" description="暂无实时数据" :image-size="60" />
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+
     <!-- 门店列表 -->
     <el-card class="store-list-card" style="margin-top: 20px;">
       <template #header>
@@ -168,12 +237,27 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Shop, Reading, User, Star } from '@element-plus/icons-vue'
 import request from '@/utils/request'
+import * as echarts from 'echarts'
 
 const isSuperAdmin = computed(() => localStorage.getItem('admin-login-type') !== 'store')
+
+// 图表相关
+const trendChartRef = ref(null)
+const ratingChartRef = ref(null)
+const scriptChartRef = ref(null)
+let trendChart = null
+let ratingChart = null
+let scriptChart = null
+
+const chartDays = ref(7)
+const chartsLoading = ref(false)
+const rankingsLoading = ref(false)
+const realtimeLoading = ref(false)
+const realtimeList = ref([])
 
 const loading = ref(false)
 const detailLoading = ref(false)
@@ -260,15 +344,192 @@ const getRoomTypeText = (type) => {
   return map[type] || '未知'
 }
 
+// ===== 图表数据获取 =====
+const fetchCharts = async () => {
+  chartsLoading.value = true
+  try {
+    const params = { days: chartDays.value }
+    if (!isSuperAdmin.value) params.storeId = localStorage.getItem('admin-store-id')
+    const res = await request.get('/statistics/charts', { params })
+    const data = res.data || {}
+    await nextTick()
+    renderTrendChart(data)
+    renderRatingChart(data)
+  } catch (e) {
+    console.error('获取图表数据失败', e)
+  } finally {
+    chartsLoading.value = false
+  }
+}
+
+const fetchRankings = async () => {
+  rankingsLoading.value = true
+  try {
+    const params = { limit: 5 }
+    if (!isSuperAdmin.value) params.storeId = localStorage.getItem('admin-store-id')
+    const res = await request.get('/statistics/rankings', { params })
+    const data = res.data || {}
+    await nextTick()
+    renderScriptChart(data)
+  } catch (e) {
+    console.error('获取排行榜数据失败', e)
+  } finally {
+    rankingsLoading.value = false
+  }
+}
+
+const fetchRealtime = async () => {
+  realtimeLoading.value = true
+  try {
+    const params = { limit: 8 }
+    if (!isSuperAdmin.value) params.storeId = localStorage.getItem('admin-store-id')
+    const res = await request.get('/statistics/realtime', { params })
+    // 后端字段：recentReservations[].scriptName / storeName / reservationTime
+    realtimeList.value = res.data?.recentReservations || []
+  } catch (e) {
+    console.error('获取实时数据失败', e)
+    realtimeList.value = []
+  } finally {
+    realtimeLoading.value = false
+  }
+}
+
+// ===== ECharts 渲染函数 =====
+const renderTrendChart = (data) => {
+  if (!trendChartRef.value) return
+  if (!trendChart) trendChart = echarts.init(trendChartRef.value)
+  // 后端字段：revenueDates / revenueAmounts / userGrowthDates / userGrowthCounts
+  const dates = data.revenueDates || data.userGrowthDates || []
+  const revenues = data.revenueAmounts || []
+  const userCounts = data.userGrowthCounts || []
+  trendChart.setOption({
+    tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } },
+    legend: { data: ['营收(元)', '新增用户'], top: 0 },
+    grid: { left: 50, right: 60, bottom: 30, top: 40 },
+    xAxis: { type: 'category', data: dates, axisLabel: { rotate: dates.length > 10 ? 30 : 0 } },
+    yAxis: [
+      { type: 'value', name: '营收(元)', position: 'left', axisLabel: { formatter: '¥{value}' } },
+      { type: 'value', name: '新增用户', position: 'right' }
+    ],
+    series: [
+      {
+        name: '营收(元)', type: 'bar', data: revenues,
+        itemStyle: { color: 'rgba(64,158,255,0.8)', borderRadius: [4,4,0,0] }
+      },
+      {
+        name: '新增用户', type: 'line', smooth: true, yAxisIndex: 1, data: userCounts,
+        itemStyle: { color: '#67c23a' },
+        areaStyle: { color: 'rgba(103,194,58,0.10)' }
+      }
+    ]
+  })
+}
+
+const renderRatingChart = (data) => {
+  if (!ratingChartRef.value) return
+  if (!ratingChart) ratingChart = echarts.init(ratingChartRef.value)
+  // 用会员等级分布 memberLevelDistribution 做饼图（StatisticsChartsVO 没有评分分布字段）
+  const dist = data.memberLevelDistribution || {}
+  const levelNames = { 0: '普通用户', 1: '见习侦探', 2: '银章侦探', 3: '金章侦探', 4: '传奇侦探' }
+  const colors = ['#909399', '#409eff', '#67c23a', '#e6a23c', '#c0392b']
+  const pieData = Object.entries(dist).map(([level, count], idx) => ({
+    name: levelNames[level] || `等级${level}`,
+    value: count,
+    itemStyle: { color: colors[Number(level)] || colors[0] }
+  })).filter(d => d.value > 0)
+  ratingChart.setOption({
+    tooltip: { trigger: 'item', formatter: '{b}: {c}条 ({d}%)' },
+    legend: { orient: 'vertical', left: 'left', top: 'middle' },
+    series: [{
+      type: 'pie', radius: ['45%', '70%'], center: ['65%', '50%'],
+      avoidLabelOverlap: false,
+      label: { show: false },
+      emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+      data: pieData
+    }]
+  })
+}
+
+const renderScriptChart = (data) => {
+  if (!scriptChartRef.value) return
+  if (!scriptChart) scriptChart = echarts.init(scriptChartRef.value)
+  // 后端字段：scriptRankings[].name / bookingCount / rating
+  const scripts = (data.scriptRankings || []).slice(0, 5)
+  const names = scripts.map(s => s.name || '未知')
+  const counts = scripts.map(s => s.bookingCount || 0)
+  const ratings = scripts.map(s => Number(s.rating || 0).toFixed(1))
+  const barColors = ['#c0392b','#e74c3c','#e67e22','#f39c12','#f1c40f']
+  scriptChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params) => {
+        const idx = params[0].dataIndex
+        return `${names[idx]}<br/>预约数：${counts[idx]}<br/>评分：⭐${ratings[idx]}`
+      }
+    },
+    grid: { left: 120, right: 60, top: 20, bottom: 40 },
+    xAxis: { type: 'value', name: '预约次数' },
+    yAxis: {
+      type: 'category', data: names,
+      axisLabel: { width: 100, overflow: 'truncate' }
+    },
+    series: [{
+      type: 'bar', data: counts, barMaxWidth: 32,
+      itemStyle: {
+        color: (params) => barColors[params.dataIndex] || '#409eff',
+        borderRadius: [0,4,4,0]
+      },
+      label: { show: true, position: 'right', formatter: (p) => `${p.value}次 ⭐${ratings[p.dataIndex]}` }
+    }]
+  })
+}
+
+// ===== 实用函数 =====
+const formatTime = (time) => {
+  if (!time) return ''
+  return new Date(time).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+}
+
+const getReservationTagType = (status) => {
+  const map = { 1: 'warning', 2: 'primary', 3: 'success', 4: 'info' }
+  return map[status] || 'info'
+}
+
+const getReservationStatusText = (status) => {
+  const map = { 1: '待确认', 2: '已确认', 3: '已完成', 4: '已取消' }
+  return map[status] || '未知'
+}
+
 const refreshData = () => {
   fetchStatistics()
   fetchStoreList()
+  fetchCharts()
+  fetchRankings()
+  fetchRealtime()
   ElMessage.success('数据已刷新')
+}
+
+// 窗口resize时自动调整图表大小
+const handleResize = () => {
+  trendChart?.resize()
+  ratingChart?.resize()
+  scriptChart?.resize()
 }
 
 onMounted(() => {
   fetchStatistics()
   fetchStoreList()
+  fetchCharts()
+  fetchRankings()
+  fetchRealtime()
+  window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', handleResize)
+  trendChart?.dispose()
+  ratingChart?.dispose()
+  scriptChart?.dispose()
 })
 </script>
 
@@ -347,4 +608,16 @@ onMounted(() => {
 .store-detail {
   padding: 12px;
 }
+
+.realtime-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.realtime-item:last-child { border-bottom: none; }
+.realtime-left { display: flex; flex-direction: column; gap: 2px; }
+.realtime-name { font-size: 13px; color: #303133; font-weight: 500; }
+.realtime-time { font-size: 11px; color: #909399; }
 </style>

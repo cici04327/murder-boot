@@ -2,8 +2,11 @@ package com.murder.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.murder.entity.KnowledgeBase;
 import com.murder.service.AIService;
+import com.murder.service.KnowledgeBaseService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -41,6 +44,9 @@ public class AIServiceImpl implements AIService {
     @Value("${ai.max-tokens:1000}")
     private int maxTokens;
 
+    @Autowired(required = false)
+    private KnowledgeBaseService knowledgeBaseService;
+
     public AIServiceImpl(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
@@ -74,6 +80,8 @@ public class AIServiceImpl implements AIService {
                     return chatWithOpenAI(message, history, context);
                 case "openrouter":
                     return chatWithOpenRouter(message, history, context);
+                case "deepseek":
+                    return chatWithDeepSeek(message, history, context);
                 case "wenxin":
                     return chatWithWenxin(message, history, context);
                 case "tongyi":
@@ -89,12 +97,96 @@ public class AIServiceImpl implements AIService {
     }
 
     /**
+     * DeepSeek 官方 API 调用
+     * DeepSeek 兼容 OpenAI Chat Completions 协议
+     */
+    private Map<String, Object> chatWithDeepSeek(String message, List<Map<String, Object>> history, Map<String, Object> context) {
+        try {
+            // RAG: 先检索相关知识，注入到系统提示词
+            String knowledgeContext = retrieveKnowledge(message, context);
+            String systemPrompt = buildSystemPrompt(context) + knowledgeContext;
+
+            List<Map<String, String>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+
+            if (history != null && !history.isEmpty()) {
+                int startIdx = Math.max(0, history.size() - 10);
+                for (int i = startIdx; i < history.size(); i++) {
+                    Map<String, Object> msg = history.get(i);
+                    String role = (String) msg.get("role");
+                    String content = (String) msg.get("content");
+                    if (role != null && content != null) {
+                        messages.add(Map.of("role", role, "content", content));
+                    }
+                }
+            }
+
+            messages.add(Map.of("role", "user", "content", message));
+
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", model);
+            requestBody.put("messages", messages);
+            requestBody.put("temperature", temperature);
+            requestBody.put("max_tokens", maxTokens);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(requestBody, headers);
+
+            String url = (apiUrl == null || apiUrl.isBlank())
+                    ? "https://api.deepseek.com/chat/completions"
+                    : apiUrl;
+            log.info("调用DeepSeek API: url={}, model={}", url, model);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.POST,
+                    request,
+                    String.class
+            );
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            if (root.has("error")) {
+                String errorMsg = root.path("error").path("message").asText("DeepSeek返回未知错误");
+                log.error("DeepSeek返回错误: {}", errorMsg);
+                throw new RuntimeException(errorMsg);
+            }
+
+            JsonNode choices = root.path("choices");
+            String reply = "";
+            if (choices.isArray() && choices.size() > 0) {
+                JsonNode messageNode = choices.get(0).path("message");
+                if (messageNode.has("content") && !messageNode.path("content").isNull()) {
+                    reply = messageNode.path("content").asText("");
+                }
+                if (reply.isEmpty() && messageNode.has("reasoning_content")) {
+                    reply = messageNode.path("reasoning_content").asText("");
+                }
+            }
+
+            if (reply.isEmpty()) {
+                log.warn("DeepSeek响应解析失败，原始响应: {}", response.getBody());
+                throw new RuntimeException("无法解析DeepSeek响应");
+            }
+
+            reply = cleanReply(reply);
+            return createSuccessResponse(reply, extractSuggestions(reply), extractActions(message));
+        } catch (Exception e) {
+            log.error("DeepSeek调用失败", e);
+            throw new RuntimeException("DeepSeek服务调用失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * OpenAI API调用
      */
     private Map<String, Object> chatWithOpenAI(String message, List<Map<String, Object>> history, Map<String, Object> context) {
         try {
-            // 构建系统提示词
-            String systemPrompt = buildSystemPrompt(context);
+            // RAG: 先检索相关知识，注入到系统提示词
+            String knowledgeContext = retrieveKnowledge(message, context);
+            String systemPrompt = buildSystemPrompt(context) + knowledgeContext;
             
             // 构建消息列表
             List<Map<String, String>> messages = new ArrayList<>();
@@ -157,8 +249,9 @@ public class AIServiceImpl implements AIService {
      */
     private Map<String, Object> chatWithOpenRouter(String message, List<Map<String, Object>> history, Map<String, Object> context) {
         try {
-            // 构建系统提示词
-            String systemPrompt = buildSystemPrompt(context);
+            // RAG: 先检索相关知识，注入到系统提示词
+            String knowledgeContext = retrieveKnowledge(message, context);
+            String systemPrompt = buildSystemPrompt(context) + knowledgeContext;
             
             // 构建消息列表
             List<Map<String, String>> messages = new ArrayList<>();
@@ -376,51 +469,223 @@ public class AIServiceImpl implements AIService {
     }
 
     /**
-     * 构建系统提示词
+     * RAG检索：根据用户消息和上下文检索最相关的知识条目，拼装为Prompt片段
+     */
+    private String retrieveKnowledge(String message, Map<String, Object> context) {
+        if (knowledgeBaseService == null) return "";
+        try {
+            List<KnowledgeBase> results = new ArrayList<>();
+
+            // 1. 先按问题内容检索（最多4条）
+            List<KnowledgeBase> queryResults = knowledgeBaseService.search(message, 4);
+            results.addAll(queryResults);
+
+            // 2. 再按当前页面补充检索（最多2条，去重）
+            if (context != null) {
+                String page = (String) context.get("page");
+                if (page != null && !page.isBlank()) {
+                    List<KnowledgeBase> pageResults = knowledgeBaseService.searchByPage(page, 2);
+                    Set<Long> existIds = results.stream()
+                            .map(KnowledgeBase::getId)
+                            .collect(java.util.stream.Collectors.toSet());
+                    pageResults.stream()
+                            .filter(k -> !existIds.contains(k.getId()))
+                            .forEach(results::add);
+                }
+            }
+
+            if (results.isEmpty()) return "";
+            return knowledgeBaseService.buildContextBlock(results);
+        } catch (Exception e) {
+            log.warn("RAG知识检索失败，降级为无检索模式: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    /**
+     * 构建系统提示词 —— RAG增强版
+     * 基础系统提示词保留平台角色定位，具体业务知识由RAG检索动态注入
      */
     private String buildSystemPrompt(Map<String, Object> context) {
         StringBuilder prompt = new StringBuilder();
-        prompt.append("你是一个专业的剧本杀预约平台客服助手，你的名字是小剧。\n\n");
-        prompt.append("你的职责：\n");
-        prompt.append("1. 帮助用户了解剧本、预约流程、支付方式、退款政策等信息\n");
-        prompt.append("2. 推荐合适的剧本和门店\n");
-        prompt.append("3. 解答用户的疑问，态度友好、专业\n");
-        prompt.append("4. 如果问题超出你的能力范围，建议用户联系人工客服\n\n");
-        
-        prompt.append("平台信息：\n");
+
+        // ========== 身份定位 ==========
+        prompt.append("你是「剧本杀预约与门店管理平台」的专属AI客服，名字叫小剧。\n");
+        prompt.append("你不是通用剧本杀顾问，而是这个平台的内部客服。\n");
+        prompt.append("回答问题时，必须优先基于本平台已实现的真实功能，不能虚构或承诺平台没有的能力。\n\n");
+
+        // ========== 平台整体结构 ==========
+        prompt.append("【平台角色体系】\n");
+        prompt.append("本平台分为用户端和管理端：\n");
+        prompt.append("- 普通用户：通过用户端完成剧本浏览、预约、支付、会员、拼团等操作\n");
+        prompt.append("- 系统管理员：负责平台级用户、门店、剧本、通知、反馈和数据统计管理\n");
+        prompt.append("- 门店管理员：负责本门店信息维护、经营看板、员工管理、排期和预约处理\n");
+        prompt.append("- 门店员工：按权限角色分为 MANAGER（店长/副店长）、DM（主持人）、CLERK（服务员）\n");
+        prompt.append("  * MANAGER 可查看预约、核销、完成场次、分配DM、处理退款、管理员工、看报表\n");
+        prompt.append("  * DM 可查看分配给自己的预约、完成场次、查看通知\n");
+        prompt.append("  * CLERK 可查看预约、到店核销、查看通知\n\n");
+
+        // ========== 预约核心业务 ==========
+        prompt.append("【预约流程】\n");
+        prompt.append("用户预约剧本杀的完整流程：\n");
+        prompt.append("1. 浏览剧本列表，选择感兴趣的剧本\n");
+        prompt.append("2. 选择门店和场次（排期）\n");
+        prompt.append("3. 填写参与人数\n");
+        prompt.append("4. 选择可用优惠券（如有）\n");
+        prompt.append("5. 确认总价，完成支付宝支付\n");
+        prompt.append("6. 支付成功后，系统自动下发核销码，并推送站内通知\n");
+        prompt.append("7. 到店后出示核销码，由门店员工完成核销\n");
+        prompt.append("8. 场次结束后，员工将预约标记为已完成\n");
+        prompt.append("9. 完成后用户可提交评价，获得积分奖励\n\n");
+        prompt.append("预约状态说明：\n");
+        prompt.append("- 待确认（1）：已提交，等待门店确认\n");
+        prompt.append("- 已确认（2）：门店已确认，等待游戏开始\n");
+        prompt.append("- 已完成（3）：游戏结束，核销完成\n");
+        prompt.append("- 已取消（4）：用户或管理员取消\n\n");
+
+        // ========== 退款政策（来自真实业务逻辑）==========
+        prompt.append("【退款规则】（本平台真实规则，请严格按此回答）\n");
+        prompt.append("- 游戏开始前 24小时以上：全额退款 ✅\n");
+        prompt.append("- 游戏开始前 12~24小时：退款80% ⚠️\n");
+        prompt.append("- 游戏开始前 6~12小时：退款50% ⚠️\n");
+        prompt.append("- 游戏开始前 6小时内：不支持退款 ❌\n");
+        prompt.append("- 已核销（到店）的订单：不支持退款 ❌\n");
+        prompt.append("退款申请步骤：进入我的预约 → 找到订单 → 点击申请退款 → 填写原因 → 等待审核\n");
+        prompt.append("退款到账时间：支付宝 1-3个工作日\n\n");
+
+        // ========== 改期规则 ==========
+        prompt.append("【改期规则】\n");
+        prompt.append("- 游戏开始前 24小时以上：可免费改期1次 ✅\n");
+        prompt.append("- 游戏开始前 12~24小时：需联系门店确认\n");
+        prompt.append("- 游戏开始前 12小时内：不支持改期 ❌\n");
+        prompt.append("改期步骤：进入我的预约 → 选择订单 → 点击修改时间 → 选择新场次\n\n");
+
+        // ========== VIP会员体系（来自真实代码）==========
+        prompt.append("【VIP会员体系】（本平台真实实现，请严格按此回答）\n");
+        prompt.append("VIP分4个等级：\n");
+        prompt.append("- 等级1：见习侦探 —— 9.5折优惠，每月2张×10元体验券，生日礼券30元\n");
+        prompt.append("- 等级2：银章侦探 —— 9折优惠，每月5张×20元体验券，生日礼券80元\n");
+        prompt.append("- 等级3：金章侦探 —— 8.5折优惠，每月10张×50元体验券，生日礼券150元\n");
+        prompt.append("- 等级4：传奇侦探 —— 8折优惠，每月15张×100元体验券，生日礼券200元\n");
+        prompt.append("VIP通用权益：\n");
+        prompt.append("- 积分倍率加成（按套餐配置，VIP等级越高倍率越高）\n");
+        prompt.append("- 优先预约热门剧本\n");
+        prompt.append("- 专属客服服务\n");
+        prompt.append("- 每月发放月度体验券（当月有效，月底过期）\n");
+        prompt.append("- 生日月自动发放生日专享礼券\n");
+        prompt.append("VIP购买方式：仅支持支付宝支付，支持续费，续费天数自动叠加\n\n");
+
+        // ========== 积分体系（来自真实代码）==========
+        prompt.append("【积分体系】（本平台真实实现）\n");
+        prompt.append("获取积分的方式：\n");
+        prompt.append("- 每日签到：+10积分\n");
+        prompt.append("- 完成预约游戏：+100积分\n");
+        prompt.append("- 发表评价：另有积分奖励\n");
+        prompt.append("- 收藏剧本达到里程碑：+20积分/次\n");
+        prompt.append("- VIP用户享有积分倍率加成\n");
+        prompt.append("积分用途：\n");
+        prompt.append("- 积分兑换优惠券（按优惠券配置的兑换所需积分）\n");
+        prompt.append("- 每种优惠券每天只能兑换一次\n\n");
+
+        // ========== 优惠券体系 ==========
+        prompt.append("【优惠券体系】\n");
+        prompt.append("优惠券类型：满减券、折扣券、代金券\n");
+        prompt.append("获取方式：\n");
+        prompt.append("- VIP会员每月自动发放月度体验券\n");
+        prompt.append("- 积分兑换（在积分页面操作）\n");
+        prompt.append("- 平台活动发放\n");
+        prompt.append("使用规则：\n");
+        prompt.append("- 每笔订单限用一张优惠券\n");
+        prompt.append("- 结合VIP折扣可叠加使用（先算VIP折扣，再减优惠券）\n");
+        prompt.append("- 优惠券有有效期，过期自动失效\n");
+        prompt.append("- 部分券有最低消费门槛\n\n");
+
+        // ========== 拼团功能 ==========
+        prompt.append("【拼团/拼单功能】\n");
+        prompt.append("- 用户人数不足时，可发起拼团房间，等待其他玩家加入\n");
+        prompt.append("- 也可以直接加入他人发起的拼团房间\n");
+        prompt.append("- 当人数不足剧本要求时，系统会自动发起拼团\n");
+        prompt.append("- 人齐后各自完成支付\n\n");
+
+        // ========== 支付方式 ==========
+        prompt.append("【支付方式】\n");
+        prompt.append("- 本平台目前仅支持支付宝支付（预约和VIP均通过支付宝完成）\n\n");
+
+        // ========== 通知体系 ==========
+        prompt.append("【通知体系】\n");
+        prompt.append("平台支持站内实时通知，场景包括：\n");
+        prompt.append("- 预约成功通知\n");
+        prompt.append("- 支付成功通知（含核销码）\n");
+        prompt.append("- VIP月度体验券到账通知\n");
+        prompt.append("- 系统公告通知\n\n");
+
+        // ========== 人工客服 ==========
+        prompt.append("【人工客服】\n");
         prompt.append("- 客服热线：400-123-4567\n");
-        prompt.append("- 服务时间：9:00-21:00\n");
-        prompt.append("- 邮箱：service@jubensha.com\n\n");
-        
-        prompt.append("退款政策：\n");
-        prompt.append("- 预约前7天以上取消：全额退款\n");
-        prompt.append("- 预约前3-7天取消：退款80%\n");
-        prompt.append("- 预约前1-3天取消：退款50%\n");
-        prompt.append("- 预约当天取消：不予退款\n\n");
-        
-        // 添加用户上下文
-        if (context != null && context.containsKey("userInfo")) {
-            Map<String, Object> userInfo = (Map<String, Object>) context.get("userInfo");
+        prompt.append("- 服务时间：9:00-22:00（全年无休）\n");
+        prompt.append("- 邮箱：service@jubensha.com\n");
+        prompt.append("- 也可在聊天窗口说转人工，直接发起在线人工客服\n\n");
+
+        // ========== 动态用户上下文 ==========
+        if (context != null) {
+            String page = (String) context.get("page");
+            if (page != null && !page.isBlank()) {
+                prompt.append("【当前页面】用户正在浏览：").append(page).append("\n");
+                if (page.contains("/vip")) {
+                    prompt.append("→ 用户在VIP页面，优先解答VIP相关问题\n");
+                } else if (page.contains("/reservation")) {
+                    prompt.append("→ 用户在预约相关页面，优先解答预约、退款、改期问题\n");
+                } else if (page.contains("/script")) {
+                    prompt.append("→ 用户在剧本页面，优先解答剧本选择、推荐问题\n");
+                } else if (page.contains("/user/points")) {
+                    prompt.append("→ 用户在积分页面，优先解答积分获取和兑换问题\n");
+                } else if (page.contains("/user/coupons")) {
+                    prompt.append("→ 用户在优惠券页面，优先解答优惠券使用问题\n");
+                }
+                prompt.append("\n");
+            }
+
+            Map<String, Object> userInfo = context.containsKey("userInfo")
+                    ? (Map<String, Object>) context.get("userInfo") : null;
             if (userInfo != null) {
-                prompt.append("当前用户信息：\n");
+                prompt.append("【当前用户信息】\n");
                 if (userInfo.containsKey("nickname")) {
                     prompt.append("- 昵称：").append(userInfo.get("nickname")).append("\n");
                 }
                 if (userInfo.containsKey("vipLevel")) {
-                    prompt.append("- VIP等级：").append(userInfo.get("vipLevel")).append("\n");
+                    Integer vipLevel = (Integer) userInfo.get("vipLevel");
+                    String levelName = vipLevel != null && vipLevel > 0
+                            ? getVipLevelName(vipLevel) : "普通用户（非VIP）";
+                    prompt.append("- VIP等级：").append(levelName).append("\n");
                 }
                 prompt.append("\n");
             }
         }
-        
-        prompt.append("回复要求：\n");
-        prompt.append("1. 使用友好、亲切的语气\n");
-        prompt.append("2. 回答简洁明了，重点突出\n");
-        prompt.append("3. 适当使用emoji增加亲和力\n");
-        prompt.append("4. 提供具体的操作步骤\n");
-        prompt.append("5. 必要时提供快捷操作链接\n");
-        
+
+        // ========== 回答原则 ==========
+        prompt.append("【回答原则】\n");
+        prompt.append("1. 优先基于「相关知识库检索结果」中的内容回答，这些是平台的真实规则\n");
+        prompt.append("2. 涉及退款金额、VIP折扣、积分数量等数字，请严格按知识库内容说明，不要自行推断\n");
+        prompt.append("3. 语气友好、亲切，可适当使用emoji\n");
+        prompt.append("4. 回答简洁清晰，给出具体操作步骤，不要泛泛而谈\n");
+        prompt.append("5. 如果用户问的是后台操作（管理端/员工端），请根据平台角色体系说明对应权限\n");
+        prompt.append("6. 知识库中没有的内容，不要凭空编造，建议用户联系人工客服：400-123-4567\n");
+        prompt.append("7. 如果用户说转人工，请主动提示转接人工客服\n");
+
         return prompt.toString();
+    }
+
+    /**
+     * 获取VIP等级名称（与 VipServiceImpl 保持一致）
+     */
+    private String getVipLevelName(int level) {
+        switch (level) {
+            case 1: return "见习侦探（Lv.1）";
+            case 2: return "银章侦探（Lv.2）";
+            case 3: return "金章侦探（Lv.3）";
+            case 4: return "传奇侦探（Lv.4）";
+            default: return "普通用户";
+        }
     }
 
     /**

@@ -25,5 +25,11 @@ public class ScriptReviewDTO implements Serializable {
     
     @Schema(description = "图片")
     private String images;
+    
+    @Schema(description = "DM ID（可选）")
+    private Long dmId;
+    
+    @Schema(description = "DM 评分（可选）")
+    private Integer dmRating;
 }
 

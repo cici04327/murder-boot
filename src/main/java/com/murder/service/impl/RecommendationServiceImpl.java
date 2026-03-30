@@ -5,10 +5,14 @@ import com.murder.entity.*;
 import com.murder.mapper.*;
 import com.murder.service.RecommendationService;
 import com.murder.vo.RecommendationVO;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -50,6 +54,12 @@ public class RecommendationServiceImpl implements RecommendationService {
 
     @Autowired
     private ScriptCategoryMapper scriptCategoryMapper;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
+    private Environment environment;
 
     @Override
     public List<RecommendationVO> getPersonalizedRecommendations(Long userId, Integer limit) {
@@ -1194,5 +1204,185 @@ public class RecommendationServiceImpl implements RecommendationService {
         
         log.info("默认榜单生成完成，共 {} 条数据", rankings.size());
         return rankings;
+    }
+
+    // ==================== AI增强推荐 ====================
+
+    @Override
+    public List<RecommendationVO> getAiEnhancedRecommendations(Long userId, Integer limit) {
+        log.info("AI增强推荐 userId={}, limit={}", userId, limit);
+        List<RecommendationVO> candidates = getPersonalizedRecommendations(userId, Math.min(limit * 2, 20));
+        if (candidates == null || candidates.isEmpty()) candidates = getHotRecommendations(1, limit);
+        if (candidates == null || candidates.isEmpty()) return new ArrayList<>();
+        String userPrefDesc = buildUserPreferenceDesc(userId);
+        return aiReRankAndAddReasons(candidates, userPrefDesc, limit);
+    }
+
+    @Override
+    public Map<String, Object> getAiUserProfile(Long userId) {
+        log.info("AI用户画像 userId={}", userId);
+        Map<String, Object> profile = new HashMap<>();
+        String behaviorDesc = buildUserPreferenceDesc(userId);
+        // 提取tag类型的偏好值作为标签
+        List<UserPreference> prefs = userPreferenceMapper.selectList(
+            new LambdaQueryWrapper<UserPreference>()
+                .eq(UserPreference::getUserId, userId)
+                .likeRight(UserPreference::getPreferenceType, "tag")
+                .orderByDesc(UserPreference::getScore).last("LIMIT 20"));
+        List<String> prefTags = new ArrayList<>();
+        for (UserPreference p : prefs) {
+            String val = p.getPreferenceValue();
+            if (val != null && !val.trim().isEmpty() && !prefTags.contains(val.trim())) {
+                prefTags.add(val.trim());
+            }
+            if (prefTags.size() >= 8) break;
+        }
+        profile.put("userId", userId);
+        profile.put("preferenceTags", prefTags);
+        profile.put("behaviorSummary", behaviorDesc);
+        profile.put("aiProfile", callAiForUserProfile(behaviorDesc, prefTags));
+        profile.put("generatedAt", java.time.LocalDateTime.now().toString());
+        return profile;
+    }
+
+    private String buildUserPreferenceDesc(Long userId) {
+        try {
+            List<UserPreference> prefs = userPreferenceMapper.selectList(
+                new LambdaQueryWrapper<UserPreference>()
+                    .eq(UserPreference::getUserId, userId)
+                    .orderByDesc(UserPreference::getScore).last("LIMIT 15"));
+            if (prefs.isEmpty()) return "新用户，暂无历史偏好";
+            // 按preferenceType分组提取偏好描述
+            Set<String> tagValues = new LinkedHashSet<>();
+            Set<String> categoryValues = new LinkedHashSet<>();
+            int totalCount = 0;
+            for (UserPreference p : prefs) {
+                String type = p.getPreferenceType();
+                String val  = p.getPreferenceValue();
+                if (type != null && val != null) {
+                    if (type.startsWith("tag"))      tagValues.add(val.trim());
+                    if (type.startsWith("category")) categoryValues.add(val.trim());
+                }
+                if (p.getCount() != null) totalCount += p.getCount();
+            }
+            StringBuilder sb = new StringBuilder();
+            if (!tagValues.isEmpty())      sb.append("偏好标签：").append(String.join("、", tagValues)).append("；");
+            if (!categoryValues.isEmpty()) sb.append("偏好分类：").append(String.join("、", categoryValues)).append("；");
+            sb.append("累计互动次数：").append(totalCount);
+            return sb.toString();
+        } catch (Exception e) {
+            log.warn("构建用户偏好描述失败: {}", e.getMessage());
+            return "偏好数据获取失败";
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<RecommendationVO> aiReRankAndAddReasons(List<RecommendationVO> candidates, String userPrefDesc, int limit) {
+        String apiKey = environment.getProperty("ai.api-key", "");
+        String apiUrl = environment.getProperty("ai.api-url", "https://api.deepseek.com/chat/completions");
+        String model  = environment.getProperty("ai.model", "deepseek-chat");
+
+        if (apiKey.isBlank()) {
+            for (int i = 0; i < candidates.size() && i < limit; i++) {
+                RecommendationVO vo = candidates.get(i);
+                vo.setAiRank(i + 1);
+                if (vo.getAiReason() == null) vo.setAiReason(buildRuleReason(vo));
+            }
+            return candidates.subList(0, Math.min(limit, candidates.size()));
+        }
+        try {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < candidates.size(); i++) {
+                RecommendationVO vo = candidates.get(i);
+                sb.append(i+1).append(".《").append(vo.getName()).append("》分类:").append(vo.getCategoryName())
+                  .append(",评分:").append(vo.getRating()).append(",标签:")
+                  .append(vo.getTags()!=null?String.join("/",vo.getTags()):"无").append("\n");
+            }
+            String prompt = "你是剧本杀推荐助手。根据用户偏好从候选剧本选出最适合的" + limit + "个重新排序，" +
+                "为每个生成15字以内的个性化推荐理由。\n用户偏好：" + userPrefDesc + "\n候选剧本：\n" + sb +
+                "\n只返回JSON数组，格式：[{\"rank\":1,\"index\":1,\"reason\":\"推荐理由\"}...]";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", model); body.put("temperature", 0.7); body.put("max_tokens", 800);
+            body.put("messages", List.of(Map.of("role","user","content",prompt)));
+            ResponseEntity<Map> resp = restTemplate.postForEntity(apiUrl, new HttpEntity<>(body, headers), Map.class);
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                List<Map<String,Object>> choices = (List<Map<String,Object>>) resp.getBody().get("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    Map<String,Object> msg = (Map<String,Object>) choices.get(0).get("message");
+                    String content = msg != null ? (String) msg.get("content") : null;
+                    if (content != null) {
+                        content = content.trim().replaceAll("```json","").replaceAll("```","").trim();
+                        ObjectMapper mapper = new ObjectMapper();
+                        List<Map<String,Object>> aiRes = mapper.readValue(content,
+                            mapper.getTypeFactory().constructCollectionType(List.class, Map.class));
+                        List<RecommendationVO> reranked = new ArrayList<>();
+                        for (Map<String,Object> item : aiRes) {
+                            int idx = ((Number)item.get("index")).intValue()-1;
+                            if (idx>=0 && idx<candidates.size()) {
+                                RecommendationVO vo = candidates.get(idx);
+                                vo.setAiRank(((Number)item.get("rank")).intValue());
+                                vo.setAiReason((String)item.get("reason"));
+                                reranked.add(vo);
+                            }
+                        }
+                        reranked.sort(Comparator.comparingInt(v -> v.getAiRank()!=null?v.getAiRank():99));
+                        return reranked.subList(0, Math.min(limit, reranked.size()));
+                    }
+                }
+            }
+        } catch (Exception e) { log.warn("AI重排序失败，降级: {}", e.getMessage()); }
+        for (int i = 0; i < candidates.size() && i < limit; i++) {
+            candidates.get(i).setAiRank(i+1);
+            candidates.get(i).setAiReason(buildRuleReason(candidates.get(i)));
+        }
+        return candidates.subList(0, Math.min(limit, candidates.size()));
+    }
+
+    private String buildRuleReason(RecommendationVO vo) {
+        if (vo.getRecommendationType() != null) {
+            switch (vo.getRecommendationType()) {
+                case 1: return "和你口味相似的玩家都爱这个";
+                case 2: return "与你喜欢的剧本风格相近";
+                case 3: return "近期最多玩家选择";
+                case 4: return "根据你的游玩历史推荐";
+            }
+        }
+        if (vo.getRating() != null && vo.getRating().doubleValue() >= 4.5) return "口碑极佳，强烈推荐";
+        if (vo.getTags() != null && !vo.getTags().isEmpty()) return "符合你的" + vo.getTags().get(0) + "偏好";
+        return "综合评分推荐";
+    }
+
+    @SuppressWarnings("unchecked")
+    private String callAiForUserProfile(String behaviorDesc, List<String> prefTags) {
+        String apiKey = environment.getProperty("ai.api-key", "");
+        String apiUrl = environment.getProperty("ai.api-url", "https://api.deepseek.com/chat/completions");
+        String model  = environment.getProperty("ai.model", "deepseek-chat");
+        if (apiKey.isBlank()) {
+            return prefTags.isEmpty() ? "探索中的新玩家" :
+                "热衷" + String.join("、", prefTags.subList(0, Math.min(3, prefTags.size()))) + "风格的资深玩家";
+        }
+        try {
+            String prompt = "你是剧本杀用户分析师。根据以下数据，用2-3句话生成有趣的玩家画像，要口语化有个性：\n" +
+                "行为：" + behaviorDesc + "\n偏好标签：" + String.join("、", prefTags) + "\n只返回画像描述。";
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(apiKey);
+            Map<String,Object> body = new HashMap<>();
+            body.put("model", model); body.put("temperature", 0.8); body.put("max_tokens", 200);
+            body.put("messages", List.of(Map.of("role","user","content",prompt)));
+            ResponseEntity<Map> resp = restTemplate.postForEntity(apiUrl, new HttpEntity<>(body, headers), Map.class);
+            if (resp.getStatusCode().is2xxSuccessful() && resp.getBody() != null) {
+                List<Map<String,Object>> choices = (List<Map<String,Object>>) resp.getBody().get("choices");
+                if (choices != null && !choices.isEmpty()) {
+                    Map<String,Object> msg = (Map<String,Object>) choices.get(0).get("message");
+                    if (msg != null) return (String) msg.get("content");
+                }
+            }
+        } catch (Exception e) { log.warn("AI用户画像失败: {}", e.getMessage()); }
+        return prefTags.isEmpty() ? "探索中的新玩家" :
+            "热衷" + String.join("、", prefTags.subList(0, Math.min(3, prefTags.size()))) + "风格的资深玩家";
     }
 }

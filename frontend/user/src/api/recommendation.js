@@ -93,3 +93,22 @@ export function refreshHotRanking(rankingType) {
     params: { rankingType }
   })
 }
+
+// AI增强推荐（规则引擎 + AI重排序 + 推荐理由）
+export function getAiEnhancedRecommendations(limit = 10) {
+  return request({
+    url: '/recommendation/ai-enhanced',
+    method: 'get',
+    params: { limit },
+    timeout: 60000  // AI调用可能较慢，设置60秒超时
+  })
+}
+
+// AI用户画像分析
+export function getAiUserProfile() {
+  return request({
+    url: '/recommendation/ai-profile',
+    method: 'get',
+    timeout: 60000
+  })
+}

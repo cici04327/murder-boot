@@ -91,8 +91,20 @@ public class GlobalExceptionHandler {
     public Result<String> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
         log.error("数据完整性异常: {}", ex.getMessage(), ex);
         String message = ex.getMostSpecificCause() != null ? ex.getMostSpecificCause().getMessage() : ex.getMessage();
-        if (message != null && message.contains("doesn't have a default value")) {
-            return Result.error("保存数据失败，缺少必要字段");
+        if (message != null) {
+            if (message.contains("Duplicate entry")) {
+                if (message.contains("phone")) {
+                    return Result.error("该手机号已被注册");
+                } else if (message.contains("username")) {
+                    return Result.error("该用户名已存在");
+                } else if (message.contains("email")) {
+                    return Result.error("该邮箱已被注册");
+                }
+                return Result.error("数据已存在，请勿重复提交");
+            }
+            if (message.contains("doesn't have a default value")) {
+                return Result.error("保存数据失败，缺少必要字段");
+            }
         }
         return Result.error("数据库操作失败");
     }

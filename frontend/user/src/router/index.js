@@ -168,6 +168,12 @@ const routes = [
         meta: { title: '浏览历史', requireAuth: true }
       },
       {
+        path: 'user/reviews',
+        name: 'UserReviews',
+        component: () => import('@/views/user/reviews.vue'),
+        meta: { title: '我的评价', requireAuth: true }
+      },
+      {
         path: 'user/settings',
         name: 'UserSettings',
         component: () => import('@/views/user/settings.vue'),

@@ -114,4 +114,14 @@ public class RecommendationVO implements Serializable {
      * 是否独家
      */
     private Integer isExclusive;
+
+    /**
+     * AI生成的个性化推荐理由（调用DeepSeek生成）
+     */
+    private String aiReason;
+
+    /**
+     * AI重排序后的排名（1开始）
+     */
+    private Integer aiRank;
 }

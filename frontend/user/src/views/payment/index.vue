@@ -45,6 +45,22 @@
         </div>
       </div>
       
+      <!-- 倒计时 -->
+      <div class="countdown-wrap" v-if="!countdownExpired">
+        <el-icon><Clock /></el-icon>
+        <span :class="['countdown-text', countdownSeconds <= 300 ? 'warn' : '']">
+          剩余支付时间：{{ countdownDisplay }}
+        </span>
+      </div>
+      <el-alert
+        v-else
+        title="支付超时，订单已自动取消"
+        type="error"
+        :closable="false"
+        show-icon
+        style="margin-bottom:16px"
+      />
+
       <!-- 支付方式 -->
       <el-card class="payment-method-card">
         <template #header>
@@ -66,6 +82,7 @@
           type="primary"
           size="large"
           :loading="paying"
+          :disabled="countdownExpired"
           @click="handlePay"
         >
           确认支付 ¥{{ finalPrice }}
@@ -76,9 +93,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Clock, CreditCard } from '@element-plus/icons-vue'
 import { getReservationDetail, createPayment } from '@/api/reservation'
 
 const route = useRoute()
@@ -90,6 +108,39 @@ const reservation = ref(null)
 const loadError = ref(false)
 const loadErrorMessage = ref('')
 const paymentMethod = ref('alipay')
+
+// 倒计时
+const countdownSeconds = ref(1800) // 30分钟
+const countdownExpired = ref(false)
+let countdownTimer = null
+
+const countdownDisplay = computed(() => {
+  const s = Math.max(0, countdownSeconds.value)
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`
+})
+
+const startCountdown = (createTime) => {
+  if (!createTime) return
+  const created = new Date(createTime).getTime()
+  const deadline = created + 30 * 60 * 1000
+  const update = () => {
+    const remaining = Math.floor((deadline - Date.now()) / 1000)
+    if (remaining <= 0) {
+      countdownSeconds.value = 0
+      countdownExpired.value = true
+      clearInterval(countdownTimer)
+      setTimeout(() => router.push('/user/reservations'), 3000)
+    } else {
+      countdownSeconds.value = remaining
+    }
+  }
+  update()
+  countdownTimer = setInterval(update, 1000)
+}
+
+onUnmounted(() => { clearInterval(countdownTimer) })
 
 // 优惠券折扣金额
 const couponDiscount = computed(() => {
@@ -125,6 +176,7 @@ const loadReservation = async () => {
     const res = await getReservationDetail(route.params.id)
     if ((res.code === 1 || res.code === 200) && res.data) {
       reservation.value = res.data
+      startCountdown(res.data?.createTime)
     } else {
       throw new Error(res.msg || '未获取到预约信息')
     }
@@ -237,6 +289,19 @@ onMounted(() => {
   color: #ff8f8f;
   font-size: 24px;
 }
+
+.countdown-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.countdown-text { font-size: 15px; color: #dbe5fb; }
+.countdown-text.warn { color: #e6a23c; font-weight: bold; }
 
 .payment-method-card {
   margin-bottom: 20px;

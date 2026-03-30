@@ -7,13 +7,13 @@ ai:
   provider: openrouter
   
   # API密钥
-  api-key: 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
+  api-key: sk-2ead85e0832e444fae1411da2a71ba7b
   
   # API地址 (OpenRouter使用兼容OpenAI的API格式)
-  api-url: https://openrouter.ai/api/v1/chat/completions
+  api-url: https://api.deepseek.com/chat/completions
   
   # 模型名称 - 使用免费的 DeepSeek R1 模型
-  model: deepseek/deepseek-r1-0528:free
+  model: deepseek-chat
   
   # 温度参数(0-1)，越大越有创造性
   temperature: 0.7

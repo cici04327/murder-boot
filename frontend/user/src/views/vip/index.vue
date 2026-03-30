@@ -370,7 +370,7 @@
             :class="{ 'active': paymentMethod === 'ALIPAY' }"
             @click="paymentMethod = 'ALIPAY'"
           >
-            <img src="https://gw.alipayobjects.com/mdn/rms_08e378/afts/img/A*xPQ2RYsKY7QAAAAAAAAAAAAAARQnAQ" alt="支付宝">
+            <div class="payment-brand payment-brand-alipay" aria-hidden="true">支</div>
             <span>支付宝支付</span>
             <el-icon v-if="paymentMethod === 'ALIPAY'" class="check"><CircleCheck /></el-icon>
           </div>
@@ -538,6 +538,13 @@ const loadData = async () => {
     
     if (vipInfoRes.code === 200 || vipInfoRes.code === 1) {
       userVipInfo.value = vipInfoRes.data
+      // 同步最新 vipLevel 到 userStore，确保 AI 客服和其他组件能拿到最新等级
+      if (vipInfoRes.data) {
+        userStore.updateUserInfo({
+          vipLevel: vipInfoRes.data.level || 0,
+          vipExpireTime: vipInfoRes.data.expireTime || null
+        })
+      }
     }
 
     if (couponStatusRes.code === 200 || couponStatusRes.code === 1) {
@@ -1545,10 +1552,22 @@ onMounted(() => {
         }
       }
 
-      img {
+      .payment-brand {
         width: 32px;
         height: 32px;
-        object-fit: contain;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        flex-shrink: 0;
+
+        &.payment-brand-alipay {
+          background: linear-gradient(135deg, #1677ff 0%, #0f5fd7 100%);
+          color: #fff;
+          box-shadow: 0 6px 14px rgba(22, 119, 255, 0.25);
+        }
       }
 
       .el-icon {

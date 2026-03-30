@@ -33,15 +33,36 @@
     <el-card class="notification-list-card">
       <template #header>
         <el-tabs v-model="activeTab" @tab-change="handleTabChange">
-          <el-tab-pane label="全部消息" name="all">
+          <el-tab-pane name="all">
             <template #label>
-              <span>全部消息</span>
+              <span>全部</span>
               <el-badge v-if="unreadCount > 0" :value="unreadCount" class="tab-badge" />
             </template>
           </el-tab-pane>
-          <el-tab-pane label="系统通知" name="system"></el-tab-pane>
-          <el-tab-pane label="预约消息" name="reservation"></el-tab-pane>
-          <el-tab-pane label="优惠活动" name="promotion"></el-tab-pane>
+          <el-tab-pane name="reservation">
+            <template #label>
+              <span>预约通知</span>
+              <el-badge v-if="tabUnread('reservation') > 0" :value="tabUnread('reservation')" class="tab-badge" />
+            </template>
+          </el-tab-pane>
+          <el-tab-pane name="payment">
+            <template #label>
+              <span>支付通知</span>
+              <el-badge v-if="tabUnread('payment') > 0" :value="tabUnread('payment')" class="tab-badge" />
+            </template>
+          </el-tab-pane>
+          <el-tab-pane name="promotion">
+            <template #label>
+              <span>优惠活动</span>
+              <el-badge v-if="tabUnread('promotion') > 0" :value="tabUnread('promotion')" class="tab-badge" />
+            </template>
+          </el-tab-pane>
+          <el-tab-pane name="system">
+            <template #label>
+              <span>系统通知</span>
+              <el-badge v-if="tabUnread('system') > 0" :value="tabUnread('system')" class="tab-badge" />
+            </template>
+          </el-tab-pane>
         </el-tabs>
       </template>
 
@@ -176,10 +197,19 @@ const pageSize = ref(10)
 const total = ref(0)
 const unreadCount = ref(0)
 
+// Tab → 后端 type 映射
 const TAB_TYPE_MAP = {
   system: [4],
-  reservation: [1, 2, 7, 8],
-  promotion: [3]
+  reservation: [1],
+  promotion: [2],
+  payment: [3],
+}
+
+// 计算每个Tab的未读数
+const tabUnread = (tab) => {
+  const types = TAB_TYPE_MAP[tab]
+  if (!types) return 0
+  return (allNotifications.value || []).filter(n => types.includes(Number(n.type)) && n.isRead === 0).length
 }
 
 const applyFilterAndPagination = () => {
@@ -340,52 +370,45 @@ const handleClearAll = async () => {
   }
 }
 
-// 获取通知图标
+// 后端 type 字段：1=预约 2=拼单/优惠 3=支付 4=系统
 const getNotificationIcon = (type) => {
   const iconMap = {
-    'system': InfoFilled,
-    'reservation': ShoppingCart,
-    'promotion': Tickets,
-    'warning': Warning,
-    'message': ChatDotSquare
+    1: ShoppingCart,   // 预约
+    2: Tickets,        // 优惠/拼单
+    3: ShoppingCart,   // 支付
+    4: InfoFilled,     // 系统
   }
-  return iconMap[type] || Bell
+  return iconMap[Number(type)] || Bell
 }
 
-// 获取通知颜色
 const getNotificationColor = (type) => {
   const colorMap = {
-    'system': '#409EFF',
-    'reservation': '#67C23A',
-    'promotion': '#E6A23C',
-    'warning': '#F56C6C',
-    'message': '#909399'
+    1: '#67C23A',
+    2: '#E6A23C',
+    3: '#409EFF',
+    4: '#909399',
   }
-  return colorMap[type] || '#909399'
+  return colorMap[Number(type)] || '#909399'
 }
 
-// 获取类型标签样式
 const getTypeTag = (type) => {
   const tagMap = {
-    'system': 'info',
-    'reservation': 'success',
-    'promotion': 'warning',
-    'warning': 'danger',
-    'message': ''
+    1: 'success',
+    2: 'warning',
+    3: 'primary',
+    4: 'info',
   }
-  return tagMap[type] || ''
+  return tagMap[Number(type)] || ''
 }
 
-// 获取类型标签文本
 const getTypeLabel = (type) => {
   const labelMap = {
-    'system': '系统通知',
-    'reservation': '预约消息',
-    'promotion': '优惠活动',
-    'warning': '重要提醒',
-    'message': '消息'
+    1: '预约通知',
+    2: '优惠活动',
+    3: '支付通知',
+    4: '系统通知',
   }
-  return labelMap[type] || '通知'
+  return labelMap[Number(type)] || '通知'
 }
 
 // 格式化日期时间

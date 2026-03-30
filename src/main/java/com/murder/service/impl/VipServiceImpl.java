@@ -267,10 +267,13 @@ public class VipServiceImpl implements VipService {
         }
 
         LocalDateTime now = LocalDateTime.now();
-        UserVip currentVip = userVipMapper.getCurrentVip(vipOrder.getUserId());
+        // 使用 getLatestPaidVip 查找已激活的endTime最晚的VIP（包含未来生效的续费订单），
+        // 避免 getCurrentVip 只查 start_time <= now 导致多次续费时天数不叠加的问题
+        UserVip latestPaidVip = getLatestPaidVip(vipOrder.getUserId());
+        // 排除当前正在激活的订单本身（status=0，不在 latestPaidVip 查询范围内，所以无需排除）
         LocalDateTime startTime = now;
-        if (currentVip != null && currentVip.getEndTime() != null && currentVip.getEndTime().isAfter(now)) {
-            startTime = currentVip.getEndTime();
+        if (latestPaidVip != null && latestPaidVip.getEndTime() != null && latestPaidVip.getEndTime().isAfter(now)) {
+            startTime = latestPaidVip.getEndTime();
         }
         LocalDateTime endTime = startTime.plusDays(vipPackage.getDurationDays());
 

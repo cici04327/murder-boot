@@ -626,17 +626,39 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         }
 
         if (!participantIds.isEmpty()) {
-            String participantContent = creatorReservation != null
-                    ? String.format("您参与的拼单《%s》已成团，系统已生成正式预约订单，请在2小时内完成支付。场次时间：%s。", group.getScriptName(), playTimeText)
-                    : String.format("您参与的拼单《%s》已成团，场次时间：%s，请尽快联系门店确认正式预约。", group.getScriptName(), playTimeText);
-            notificationService.sendToUsers(
-                    "拼单已成团通知",
-                    participantContent,
-                    2,
-                    "group",
-                    group.getId(),
-                    participantIds.toArray(new Long[0])
-            );
+            // 查询各参与者对应的预约记录，推送时带上 reservationId，前端收到后可直接跳支付页
+            LambdaQueryWrapper<Reservation> memberResWrapper = new LambdaQueryWrapper<>();
+            memberResWrapper.eq(Reservation::getGroupId, group.getId())
+                    .eq(Reservation::getIsDeleted, 0)
+                    .ne(Reservation::getStatus, 4);
+            List<Reservation> memberReservations = reservationMapper.selectList(memberResWrapper);
+            java.util.Map<Long, Long> userReservationMap = new java.util.HashMap<>();
+            for (Reservation r : memberReservations) {
+                if (r.getUserId() != null && r.getId() != null) {
+                    userReservationMap.putIfAbsent(r.getUserId(), r.getId());
+                }
+            }
+
+            for (Long participantId : participantIds) {
+                Long memberReservationId = userReservationMap.get(participantId);
+                String participantContent = creatorReservation != null
+                        ? String.format("您参与的拼单《%s》已成团！系统已为您生成正式预约，请尽快前往「我的预约」完成支付（30分钟内）。场次时间：%s。",
+                                group.getScriptName(), playTimeText)
+                        : String.format("您参与的拼单《%s》已成团，场次时间：%s，请尽快联系门店确认正式预约。",
+                                group.getScriptName(), playTimeText);
+                try {
+                    notificationService.sendToUsers(
+                            "拼单成团，请前往支付",
+                            participantContent,
+                            2,
+                            "reservation",
+                            memberReservationId != null ? memberReservationId : group.getId(),
+                            participantId
+                    );
+                } catch (Exception e) {
+                    log.error("发送拼单成团通知失败: participantId={}", participantId, e);
+                }
+            }
         }
     }
 

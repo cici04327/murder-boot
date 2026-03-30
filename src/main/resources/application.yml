@@ -102,32 +102,20 @@ murder:
     user-token-name: token
     # 管理端配置
     admin-secret-key: murder-admin-secret-key-2024-secure-key-for-jwt
-    admin-ttl: 7200000  # 2小时
+    admin-ttl: 0  # 0 表示不过期
     admin-token-name: token
 
 # AI服务配置
 ai:
-  provider: openrouter
-  api-key: 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
-  api-url: https://openrouter.ai/api/v1/chat/completions
-  # 使用免费的DeepSeek R1模型
-  model: deepseek/deepseek-r1-0528:free
+  provider: deepseek
+  api-key: sk-2ead85e0832e444fae1411da2a71ba7b
+  api-url: https://api.deepseek.com/chat/completions
+  # DeepSeek 官方对话模型
+  model: deepseek-chat
   temperature: 0.7
   max-tokens: 1000
 
 # 支付宝配置
-alipay:
-  app-id: ${ALIPAY_APP_ID:}
-  private-key: ${ALIPAY_PRIVATE_KEY:}
-  public-key: ${ALIPAY_PUBLIC_KEY:}
-  gateway-url: ${ALIPAY_GATEWAY_URL:https://openapi.alipay.com/gateway.do}
-  format: json
-  charset: UTF-8
-  sign-type: RSA2
-  notify-url: ${ALIPAY_NOTIFY_URL:http://your-domain.com/api/reservation/payment/notify}
-  return-url: ${ALIPAY_RETURN_URL:http://your-domain.com/api/reservation/payment/return}
-  result-url: ${ALIPAY_RESULT_URL:http://your-frontend-domain.com/payment/result}
-  mock-payment: ${ALIPAY_MOCK_PAYMENT:true}
 
 # Knife4j配置
 knife4j:

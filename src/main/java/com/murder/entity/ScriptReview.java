@@ -52,6 +52,16 @@ public class ScriptReview implements Serializable {
     private Integer difficultyRating;
     
     /**
+     * DM ID（主持人）
+     */
+    private Long dmId;
+    
+    /**
+     * DM 评分（1-5星）
+     */
+    private Integer dmRating;
+    
+    /**
      * 评价内容
      */
     private String content;

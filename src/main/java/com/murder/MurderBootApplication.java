@@ -21,12 +21,12 @@ import java.net.UnknownHostException;
 /**
  * 剧本杀预约与门店管理系统 - Spring Boot 单体应用启动类
  * 
- * 整合了原有的微服务架构：
- * - murder-auth: 认证服务
+ * 包含以下功能模块：
+ * - 认证模块：登录注册、JWT鉴权
  * - 用户模块：登录注册、积分、优惠券、通知等
  * - 门店模块：门店信息、房间、员工、统计等
  * - 剧本模块：剧本、分类、角色、收藏、评价等
- * - murder-reservation: 预约服务
+ * - 预约模块：预约管理、日程安排、退款等
  * 
  * @author Murder System
  * @date 2025-01-15

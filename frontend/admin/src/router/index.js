@@ -102,7 +102,7 @@ const routes = [
         name: 'StoreDailyReport',
         component: () => import('@/views/store/daily-report.vue'),
         meta: { title: '营收日报', icon: 'TrendCharts', roles: ['admin', 'store', 'staff'], permissionCodes: ['report:view'] }
-      }
+      },
     ]
   },
   {
@@ -150,7 +150,13 @@ const routes = [
         name: 'ScriptSchedule',
         component: () => import('@/views/script/schedule.vue'),
         meta: { title: '排期管理', icon: 'Calendar', roles: ['admin', 'store'] }
-      }
+      },
+      {
+        path: 'ai-schedule',
+        name: 'AiDmSchedule',
+        component: () => import('@/views/script/ai-schedule.vue'),
+        meta: { title: 'AI智能分配DM', icon: 'MagicStick', roles: ['admin', 'store'] }
+      },
     ]
   },
   {

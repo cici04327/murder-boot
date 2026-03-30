@@ -324,8 +324,8 @@
     <div class="section recommendation-section">
       <div class="section-header">
         <div class="header-left">
-          <h3>💎 为你推荐</h3>
-          <span class="header-subtitle">根据你的喜好精选</span>
+          <h3>{{ isNewUserRecommend ? '🔥 热门推荐' : '💎 为你推荐' }}</h3>
+          <span class="header-subtitle">{{ isNewUserRecommend ? '精选高人气剧本，快来体验' : '根据你的喜好精选' }}</span>
         </div>
         <el-link type="primary" @click="router.push('/recommend/enhanced')">
           查看更多 <el-icon class="el-icon--right"><ArrowRight /></el-icon>
@@ -479,6 +479,7 @@ import LazyImage from '@/components/LazyImage.vue'
 import { useRouter } from 'vue-router'
 import { Reading, ArrowRight } from '@element-plus/icons-vue'
 import { getHotScripts, getRecommendedScripts, getScheduledSessions } from '@/api/script'
+import { getHotRecommendations } from '@/api/recommendation'
 import { PLACEHOLDERS } from '@/assets/placeholders'
 import { getScriptCover } from '@/assets/script-covers'
 import { getHotStores } from '@/api/store'
@@ -800,62 +801,45 @@ const loadRecommendedScripts = async () => {
   recommendedScriptsLoading.value = true
   try {
     const res = await getRecommendedScripts()
-    if (res.data) {
-      recommendedScripts.value = res.data.slice(0, 4)
+    const list = res.data ? res.data.slice(0, 4) : []
+
+    if (list.length > 0) {
+      // 有个性化推荐数据，直接使用
+      recommendedScripts.value = list
+    } else {
+      // 新用户或无偏好数据：降级为热门榜
+      console.log('个性化推荐数据为空，降级为热门推荐')
+      await loadFallbackRecommendations()
     }
   } catch (error) {
-    // 静默失败，使用模拟数据（带精美封面图片）
-    console.log('使用默认推荐剧本数据')
-    recommendedScripts.value = [
-      {
-        id: 11,
-        name: '红楼梦境',
-        categoryName: '情感沉浸',
-        difficulty: 2,
-        playerCount: 6,
-        duration: 4,
-        price: 88,
-        rating: 4.7,
-        coverImage: 'https://images.unsplash.com/photo-1528127269322-539801943592?q=80&w=1200&auto=format&fit=crop' // 中国古典园林
-      },
-      {
-        id: 12,
-        name: '深海秘境',
-        categoryName: '冒险探索',
-        difficulty: 2,
-        playerCount: 5,
-        duration: 3,
-        price: 78,
-        rating: 4.5,
-        coverImage: 'https://images.unsplash.com/photo-1559827260-dc66d52bef19?q=80&w=1200&auto=format&fit=crop' // 深海潜水
-      },
-      {
-        id: 13,
-        name: '黑暗骑士',
-        categoryName: '机制对抗',
-        difficulty: 3,
-        playerCount: 7,
-        duration: 5,
-        price: 98,
-        rating: 4.6,
-        coverImage: 'https://images.unsplash.com/photo-1599423300746-b62533397364?q=80&w=1200&auto=format&fit=crop' // 中世纪盔甲
-      },
-      {
-        id: 14,
-        name: '魔法学院',
-        categoryName: '欢乐互动',
-        difficulty: 1,
-        playerCount: 6,
-        duration: 3,
-        price: 68,
-        rating: 4.8,
-        coverImage: 'https://images.unsplash.com/photo-1519791883288-dc8bd696e667?q=80&w=1200&auto=format&fit=crop' // 图书馆魔法书
-      }
-    ]
+    // 接口异常：降级为热门榜
+    console.log('推荐接口异常，降级为热门推荐')
+    await loadFallbackRecommendations()
   } finally {
     recommendedScriptsLoading.value = false
   }
 }
+
+/**
+ * 新用户/无偏好时的降级推荐：使用热门榜数据
+ */
+const loadFallbackRecommendations = async () => {
+  try {
+    const hotRes = await getHotRecommendations(1, 4)
+    const hotList = hotRes.data ? hotRes.data.slice(0, 4) : []
+    if (hotList.length > 0) {
+      recommendedScripts.value = hotList
+      // 标记为新用户推荐，section标题可感知
+      isNewUserRecommend.value = true
+      return
+    }
+  } catch (e) {
+    console.warn('热门推荐接口也失败，使用空列表', e)
+  }
+  recommendedScripts.value = []
+}
+
+const isNewUserRecommend = ref(false)
 
 const loadHotStores = async () => {
   hotStoresLoading.value = true

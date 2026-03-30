@@ -63,13 +63,23 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             throw new RuntimeException("密码不能为空");
         }
 
-        // 检查用户名是否已存?
+        // 检查用户名是否已存在
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(User::getUsername, userRegisterDTO.getUsername());
         User existUser = userMapper.selectOne(wrapper);
         
         if (existUser != null) {
             throw new RuntimeException(MessageConstant.USER_ALREADY_EXISTS);
+        }
+
+        // 检查手机号是否已被注册
+        if (StringUtils.hasText(userRegisterDTO.getPhone())) {
+            LambdaQueryWrapper<User> phoneWrapper = new LambdaQueryWrapper<>();
+            phoneWrapper.eq(User::getPhone, userRegisterDTO.getPhone());
+            User existPhoneUser = userMapper.selectOne(phoneWrapper);
+            if (existPhoneUser != null) {
+                throw new RuntimeException("该手机号已被注册");
+            }
         }
         
         // 创建新用?

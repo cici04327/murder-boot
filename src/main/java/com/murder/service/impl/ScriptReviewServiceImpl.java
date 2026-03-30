@@ -13,10 +13,12 @@ import com.murder.mapper.ScriptReviewMapper;
 import com.murder.mapper.UserMapper;
 import com.murder.entity.User;
 import com.murder.service.ScriptReviewService;
+import com.murder.service.DmService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,8 +27,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 剧本评价服务实现�?
+ * 剧本评价服务实现类
  */
+@Slf4j
 @Service
 public class ScriptReviewServiceImpl implements ScriptReviewService {
 
@@ -38,6 +41,9 @@ public class ScriptReviewServiceImpl implements ScriptReviewService {
     
     @Autowired
     private UserMapper userMapper;
+    
+    @Autowired(required = false)
+    private DmService dmService;
 
     @Override
     @Transactional
@@ -56,6 +62,16 @@ public class ScriptReviewServiceImpl implements ScriptReviewService {
         
         // 更新剧本平均评分
         updateScriptRating(reviewDTO.getScriptId());
+        
+        // 如果ScriptReviewDTO中包含dmId，则刷新DM评分
+        if (reviewDTO.getDmId() != null && dmService != null) {
+            try {
+                dmService.refreshRating(reviewDTO.getDmId());
+            } catch (Exception e) {
+                // 刷新DM评分失败不影响主流程
+                log.warn("刷新DM评分失败: dmId={}", reviewDTO.getDmId(), e);
+            }
+        }
     }
 
     @Override
@@ -139,7 +155,7 @@ public class ScriptReviewServiceImpl implements ScriptReviewService {
             }
         }
         
-        // 查询用户昵称：单体模式下直接查本地用户表，避免遗留微服务端口(8081)导致网络错误
+        // 查询用户昵称：直接查本地用户表
         if (review.getUserId() != null) {
             try {
                 User user = userMapper.selectById(review.getUserId());

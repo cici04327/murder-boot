@@ -4,6 +4,7 @@ import com.murder.common.context.BaseContext;
 import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
 import com.murder.dto.ReviewDTO;
+import com.murder.entity.Review;
 import com.murder.vo.ReviewStatisticsVO;
 import com.murder.vo.ReviewVO;
 import com.murder.service.ReviewService;
@@ -129,6 +130,21 @@ public class ReviewController {
         log.info("设置精选评价: id={}, isFeatured={}", id, isFeatured);
         reviewService.setFeatured(id, isFeatured);
         return Result.success("设置成功");
+    }
+
+    /**
+     * 根据预约ID查询评价（用户端查询自己的评价）
+     */
+    @GetMapping("/reservation/{reservationId}")
+    @Operation(summary = "根据预约ID查询评价")
+    public Result<ReviewVO> getByReservationId(@PathVariable Long reservationId) {
+        log.info("根据预约ID查询评价: reservationId={}", reservationId);
+        Review review = reviewService.getByReservationId(reservationId);
+        if (review == null) {
+            return Result.success(null);
+        }
+        ReviewVO vo = reviewService.getById(review.getId());
+        return Result.success(vo);
     }
 
     /**

@@ -65,6 +65,10 @@
                     <el-icon><Star /></el-icon>
                     我的积分
                   </el-dropdown-item>
+                  <el-dropdown-item command="reviews">
+                    <el-icon><ChatDotRound /></el-icon>
+                    我的评价
+                  </el-dropdown-item>
                   <el-dropdown-item divided command="logout">
                     <el-icon><SwitchButton /></el-icon>
                     退出登录
@@ -119,10 +123,11 @@ import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { ElMessageBox, ElNotification } from 'element-plus'
-import { Location, Bell, User, Calendar, Ticket, Star, SwitchButton, Medal, Clock } from '@element-plus/icons-vue'
+import { Location, Bell, User, Calendar, Ticket, Star, SwitchButton, Medal, Clock, ChatDotRound } from '@element-plus/icons-vue'
 import GlobalSearch from '@/components/GlobalSearch.vue'
 import AICustomerService from '@/components/AICustomerService.vue'
 import { getUnreadCount } from '@/api/user'
+import { getUserVipInfo } from '@/api/vip'
 import notificationWS from '@/utils/websocket'
 
 const router = useRouter()
@@ -138,11 +143,26 @@ const refreshUnreadCount = async () => {
   }
   try {
     const res = await getUnreadCount()
-    // request 拦截器保证成功时返回 res
     unreadCount.value = Number(res.data || 0)
   } catch (e) {
-    // 读取失败不打断 UI
     console.warn('获取未读通知数量失败:', e)
+  }
+}
+
+// 全局刷新 VIP 状态，确保 AI 客服拿到的 vipLevel 始终最新
+const refreshVipStatus = async () => {
+  if (!userStore.isLoggedIn) return
+  try {
+    const res = await getUserVipInfo()
+    if ((res.code === 1 || res.code === 200) && res.data) {
+      userStore.updateUserInfo({
+        vipLevel: res.data.level || 0,
+        vipExpireTime: res.data.expireTime || null
+      })
+    }
+  } catch (e) {
+    // 静默失败，不影响页面正常使用
+    console.warn('全局刷新VIP状态失败:', e)
   }
 }
 
@@ -192,13 +212,15 @@ const connectWsIfNeeded = () => {
 
 onMounted(() => {
   refreshUnreadCount()
+  refreshVipStatus()
   connectWsIfNeeded()
 })
 
 watch(
   () => [userStore.isLoggedIn, userStore.userId],
-  () => {
+  ([isLoggedIn]) => {
     refreshUnreadCount()
+    if (isLoggedIn) refreshVipStatus()
     connectWsIfNeeded()
   }
 )
@@ -240,6 +262,9 @@ const handleUserCommand = (command) => {
       break
     case 'points':
       router.push('/user/points')
+      break
+    case 'reviews':
+      router.push('/user/reviews')
       break
     case 'logout':
       ElMessageBox.confirm('确定要退出登录吗？', '提示', {

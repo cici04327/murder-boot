@@ -21,7 +21,14 @@ import com.murder.mapper.UserMapper;
 import com.murder.service.StoreService;
 import com.murder.service.ScriptService;
 import com.murder.service.DmService;
+import com.murder.service.NotificationService;
 import com.murder.mapper.DmMapper;
+import com.murder.mapper.ScriptMapper;
+import com.murder.mapper.ScriptReviewMapper;
+import com.murder.mapper.StoreMapper;
+import com.murder.entity.Script;
+import com.murder.entity.Store;
+import com.murder.entity.ScriptReview;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -56,6 +63,18 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Autowired(required = false)
     private DmMapper dmMapper;
+
+    @Autowired(required = false)
+    private ScriptMapper scriptMapper;
+
+    @Autowired(required = false)
+    private NotificationService notificationService;
+
+    @Autowired(required = false)
+    private ScriptReviewMapper scriptReviewMapper;
+
+    @Autowired(required = false)
+    private StoreMapper storeMapper;
 
     /**
      * 创建评价
@@ -156,7 +175,38 @@ public class ReviewServiceImpl implements ReviewService {
             log.error("更新评分失败", e);
         }
 
-        // 8. 刷新 DM 评分（异步静默，失败不影响主流程）
+        // 8. 【问题1修复】订单评价提交时自动同步创建剧本评价（如果该预约还没有剧本评价）
+        if (reviewDTO.getScriptId() != null && reviewDTO.getScriptRating() != null
+                && scriptReviewMapper != null) {
+            try {
+                // 检查该预约是否已有剧本评价，避免重复创建
+                LambdaQueryWrapper<ScriptReview> srCheck = new LambdaQueryWrapper<>();
+                srCheck.eq(ScriptReview::getReservationId, reviewDTO.getReservationId());
+                Long srCount = scriptReviewMapper.selectCount(srCheck);
+                if (srCount == null || srCount == 0) {
+                    ScriptReview scriptReview = new ScriptReview();
+                    scriptReview.setScriptId(reviewDTO.getScriptId());
+                    scriptReview.setUserId(userId);
+                    scriptReview.setReservationId(reviewDTO.getReservationId());
+                    scriptReview.setRating(reviewDTO.getScriptRating());
+                    // 将订单评价内容一并写入剧本评价
+                    scriptReview.setContent(reviewDTO.getContent());
+                    // DM信息
+                    if (reviewDTO.getDmId() != null) {
+                        scriptReview.setDmId(reviewDTO.getDmId());
+                        scriptReview.setDmRating(reviewDTO.getDmRating());
+                    }
+                    scriptReviewMapper.insert(scriptReview);
+                    log.info("订单评价自动同步创建剧本评价: reservationId={}, scriptId={}, rating={}",
+                            reviewDTO.getReservationId(), reviewDTO.getScriptId(), reviewDTO.getScriptRating());
+                }
+            } catch (Exception e) {
+                log.error("自动同步创建剧本评价失败: reservationId={}", reviewDTO.getReservationId(), e);
+                // 失败不影响主流程
+            }
+        }
+
+        // 9. 刷新 DM 评分（异步静默，失败不影响主流程）
         if (reviewDTO.getDmId() != null && dmService != null) {
             try {
                 dmService.refreshRating(reviewDTO.getDmId());
@@ -194,7 +244,7 @@ public class ReviewServiceImpl implements ReviewService {
             if (storeId != null) {
                 LambdaQueryWrapper<Review> storeWrapper = new LambdaQueryWrapper<>();
                 storeWrapper.eq(Review::getStoreId, storeId);
-                storeWrapper.eq(Review::getStatus, 1);
+                storeWrapper.eq(Review::getStatus, 2); // 已通过的评价
                 List<Review> storeReviews = reviewMapper.selectList(storeWrapper);
                 
                 if (!storeReviews.isEmpty()) {
@@ -207,32 +257,29 @@ public class ReviewServiceImpl implements ReviewService {
                     BigDecimal avgStoreRating = BigDecimal.valueOf(avgRating)
                         .setScale(1, RoundingMode.HALF_UP);
                     
-                    // 单体版本：不再调用外部门店服务更新评分。
-                    // 如果需要将评分写回门店表，可在 StoreService 中补充更新接口后在此调用。
-                    log.info("计算门店{}平均评分: {}", storeId, avgStoreRating);
+                    // 真正回写门店评分
+                    if (storeMapper != null) {
+                        Store store = new Store();
+                        store.setId(storeId);
+                        store.setRating(avgStoreRating);
+                        storeMapper.updateById(store);
+                        log.info("更新门店{}平均评分: {}", storeId, avgStoreRating);
+                    }
                 }
             }
             
-            // 计算剧本平均评分
+            // 计算剧本平均评分并回写Script表
             if (scriptId != null) {
-                LambdaQueryWrapper<Review> scriptWrapper = new LambdaQueryWrapper<>();
-                scriptWrapper.eq(Review::getScriptId, scriptId);
-                scriptWrapper.eq(Review::getStatus, 1);
-                List<Review> scriptReviews = reviewMapper.selectList(scriptWrapper);
-                
-                if (!scriptReviews.isEmpty()) {
-                    double avgRating = scriptReviews.stream()
-                        .map(Review::getScriptRating)
-                        .filter(Objects::nonNull)
-                        .mapToInt(Integer::intValue)
-                        .average()
-                        .orElse(0.0);
-                    BigDecimal avgScriptRating = BigDecimal.valueOf(avgRating)
-                        .setScale(1, RoundingMode.HALF_UP);
-                    
-                    // 单体版本：不再调用外部剧本服务更新评分。
-                    // 如果需要将评分写回剧本表，可在 ScriptService 中补充更新接口后在此调用。
-                    log.info("计算剧本{}平均评分: {}", scriptId, avgScriptRating);
+                BigDecimal avgScriptRating = reviewMapper.calculateAvgScriptRating(scriptId);
+                if (avgScriptRating != null && scriptMapper != null) {
+                    // 将评分均值真正写回Script表
+                    Script script = new Script();
+                    script.setId(scriptId);
+                    script.setRating(avgScriptRating.setScale(2, RoundingMode.HALF_UP));
+                    scriptMapper.updateById(script);
+                    log.info("更新剧本{}平均评分: {}", scriptId, avgScriptRating);
+                } else {
+                    log.info("剧本{}无已通过的评价数据", scriptId);
                 }
             }
         } catch (Exception e) {
@@ -346,6 +393,50 @@ public class ReviewServiceImpl implements ReviewService {
         }
         
         reviewMapper.updateById(review);
+        
+        // 审核完成后，推送通知给用户
+        try {
+            Review auditedReview = reviewMapper.selectById(id);
+            if (auditedReview != null && auditedReview.getUserId() != null) {
+                String title = null;
+                String content = null;
+                
+                if (status == 2) {
+                    // 审核通过
+                    title = "您的评价已通过审核";
+                    // 获取剧本名称
+                    String scriptName = "剧本";
+                    if (auditedReview.getScriptId() != null && scriptService != null) {
+                        try {
+                            com.murder.entity.Script script = scriptService.getById(auditedReview.getScriptId());
+                            if (script != null) {
+                                scriptName = script.getName();
+                            }
+                        } catch (Exception e) {
+                            log.warn("获取剧本名称失败: scriptId={}", auditedReview.getScriptId(), e);
+                        }
+                    }
+                    content = String.format("您对[%s]的评价已通过审核，感谢您的分享！", scriptName);
+                } else if (status == 3) {
+                    // 审核拒绝
+                    title = "您的评价未通过审核";
+                    String auditReason = reason != null ? reason : "不符合规范";
+                    content = String.format("您对[剧本]的评价未通过审核，原因：%s", auditReason);
+                }
+                
+                // 推送通知
+                if (title != null && content != null && notificationService != null) {
+                    try {
+                        notificationService.sendToUsers(title, content, 4, "review", id, auditedReview.getUserId());
+                        log.info("审核评价通知已推送: reviewId={}, userId={}, status={}", id, auditedReview.getUserId(), status);
+                    } catch (Exception e) {
+                        log.error("推送审核评价通知失败: reviewId={}, userId={}", id, auditedReview.getUserId(), e);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("审核评价后推送通知异常: reviewId={}", id, e);
+        }
     }
 
     /**
