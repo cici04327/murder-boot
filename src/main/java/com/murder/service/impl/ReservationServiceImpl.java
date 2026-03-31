@@ -869,9 +869,30 @@ public class ReservationServiceImpl implements ReservationService {
         String reservationTime = reservation.getReservationTime() == null
                 ? ""
                 : reservation.getReservationTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+
+        boolean isGrouping = reservation.getGroupId() != null;
+
+        String title;
+        String content;
+
+        if (isGrouping) {
+            // 人数不足，进入拼团等待状态
+            title = "预约提交成功，等待拼团";
+            content = String.format(
+                    "您的预约已提交，预约编号：%s，预约时间：%s。" +
+                    "当前场次人数尚未满员，系统已为您自动发起拼团，待人数凑齐后将正式成团并通知您完成支付，请耐心等待。",
+                    reservation.getOrderNo(), reservationTime);
+        } else {
+            // 人数已满，直接预约成功
+            title = "预约成功通知";
+            content = String.format(
+                    "您已成功预约，预约编号：%s，预约时间：%s，请前往「我的预约」完成支付，支付后请准时到场。",
+                    reservation.getOrderNo(), reservationTime);
+        }
+
         notificationService.sendToUsers(
-                "预约成功通知",
-                String.format("您已成功预约，预约编号：%s，预约时间：%s，请准时到场。", reservation.getOrderNo(), reservationTime),
+                title,
+                content,
                 1,
                 "reservation",
                 reservation.getId(),

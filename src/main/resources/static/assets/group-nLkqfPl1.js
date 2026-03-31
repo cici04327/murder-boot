@@ -1,0 +1,1 @@
+import{L as r}from"./index-CGFQPuzk.js";const e=t=>r({url:"/group/page",method:"get",params:t}),u=(t=10)=>r({url:"/group/hot",method:"get",params:{limit:t}}),s=t=>r({url:`/group/${t}`,method:"get"}),p=t=>r({url:`/group/${t}/join`,method:"post"});export{e as a,s as b,u as g,p as j};

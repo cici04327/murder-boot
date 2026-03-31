@@ -1,0 +1,1 @@
+import{L as o}from"./index-Ce5KY3go.js";const t=e=>o({url:"/coupon/user",method:"get",params:e}),s=(e={})=>o({url:"/coupon/page",method:"get",params:{page:1,pageSize:100,status:1,...e}}),a=e=>o({url:"/coupon/receive",method:"post",params:{couponId:e}});export{s as a,t as g,a as r};

@@ -320,57 +320,6 @@
       </el-row>
     </div>
 
-    <!-- 个性化推荐 -->
-    <div class="section recommendation-section">
-      <div class="section-header">
-        <div class="header-left">
-          <h3>{{ isNewUserRecommend ? '🔥 热门推荐' : '💎 为你推荐' }}</h3>
-          <span class="header-subtitle">{{ isNewUserRecommend ? '精选高人气剧本，快来体验' : '根据你的喜好精选' }}</span>
-        </div>
-        <el-link type="primary" @click="router.push('/recommend/enhanced')">
-          查看更多 <el-icon class="el-icon--right"><ArrowRight /></el-icon>
-        </el-link>
-      </div>
-      <el-row :gutter="20" v-loading="recommendedScriptsLoading">
-        <el-col :xs="24" :sm="12" :md="6" v-for="(script, index) in recommendedScripts" :key="script.id">
-          <div class="script-card recommend-card" @click="router.push(`/script/${script.id}`)">
-            <div class="script-image">
-              <LazyImage
-                :src="script.cover || getScriptCover(script.name, script.categoryName)"
-                :alt="script.name"
-                :height="220"
-                :immediate="true"
-                @error="handleImageError"
-              />
-              <div class="script-tag">🎭 {{ script.categoryName }}</div>
-              <div class="recommend-badge">💎 推荐</div>
-              <div class="difficulty-stars">{{ getDifficultyStars(script.difficulty) }}</div>
-              <div class="image-overlay">
-                <span class="overlay-btn">▶ 立即预约</span>
-              </div>
-            </div>
-            <div class="script-info">
-              <h4>{{ script.name }}</h4>
-              <div class="script-meta">
-                <span class="meta-badge difficulty" :class="'diff-' + script.difficulty">{{ getDifficultyText(script.difficulty) }}</span>
-                <span class="meta-badge">👥 {{ script.playerCount }}人</span>
-                <span class="meta-badge">⏱️ {{ script.duration }}h</span>
-              </div>
-              <div class="script-rating">
-                <el-rate v-model="script.rating" disabled show-score size="small" />
-                <span class="rating-text">{{ script.rating?.toFixed(1) }}</span>
-              </div>
-              <div class="script-footer">
-                <div class="script-price">
-                  <small>¥</small><span class="price-value">{{ script.price }}</span><small>/人</small>
-                </div>
-                <span class="book-hint">点击预约 →</span>
-              </div>
-            </div>
-          </div>
-        </el-col>
-      </el-row>
-    </div>
 
     <!-- 推荐门店 -->
     <div class="section store-section">

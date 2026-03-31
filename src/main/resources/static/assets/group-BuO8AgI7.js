@@ -1,0 +1,1 @@
+import{L as t}from"./index-Jvk3f3AZ.js";const u=r=>t({url:"/group/page",method:"get",params:r}),s=(r=10)=>t({url:"/group/hot",method:"get",params:{limit:r}}),p=r=>t({url:`/group/${r}`,method:"get"}),a=(r,o=1)=>t({url:`/group/${r}/join`,method:"post",params:{joinCount:o}});export{u as a,p as b,s as g,a as j};

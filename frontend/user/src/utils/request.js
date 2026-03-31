@@ -74,14 +74,19 @@ request.interceptors.response.use(
       const { status, data } = error.response
       
       switch (status) {
-        case 401:
-          if (!isSilent) {
-            ElMessage.error('登录已过期，请重新登录')
-          }
+        case 401: {
           const userStore = useUserStore()
-          userStore.logout()
-          router.push('/login')
+          if (userStore.isLoggedIn) {
+            // 已登录用户 token 过期，才提示并跳转
+            if (!isSilent) {
+              ElMessage.warning('登录已过期，请重新登录')
+            }
+            userStore.logout()
+            router.push({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } })
+          }
+          // 未登录游客访问返回401，静默处理，不提示不跳转
           break
+        }
         case 403:
           if (!isSilent) {
             ElMessage.error('没有权限访问')

@@ -1,0 +1,1 @@
+import{L as e}from"./index-ChjnfTzV.js";function n(o=1,r=10){return e({url:"/recommendation/hot",method:"get",params:{rankingType:o,limit:r}})}function s(o,r,t=0){return e({url:"/recommendation/browse",method:"post",params:{targetType:o,targetId:r,duration:t}})}export{n as g,s as r};

@@ -239,18 +239,6 @@ const routes = [
         component: () => import('@/views/article/detail-enhanced.vue'),
         meta: { title: '文章详情' }
       },
-      {
-        path: 'recommend',
-        name: 'Recommend',
-        component: () => import('@/views/recommend/index.vue'),
-        meta: { title: '为你推荐' }
-      },
-      {
-        path: 'recommend/enhanced',
-        name: 'RecommendEnhanced',
-        component: () => import('@/views/recommend/enhanced.vue'),
-        meta: { title: '智能推荐' }
-      },
       // 拼单模块
       {
         path: 'group',

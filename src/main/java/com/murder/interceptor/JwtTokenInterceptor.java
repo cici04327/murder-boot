@@ -220,11 +220,57 @@ public class JwtTokenInterceptor implements HandlerInterceptor {
         if (uri == null || method == null) {
             return false;
         }
+        // POST请求中允许匿名的接口
+        if ("POST".equalsIgnoreCase(method)) {
+            return uri.equals("/api/ai/chat")
+                    || uri.equals("/api/ai/service")
+                    || uri.equals("/api/store/page/advanced")
+                    || uri.startsWith("/api/script/page")
+                    || uri.equals("/api/script/list")
+                    || uri.startsWith("/api/group/page")
+                    || uri.startsWith("/api/search");
+        }
         if (!"GET".equalsIgnoreCase(method)) {
             return false;
         }
-        return uri.matches(ARTICLE_DETAIL_PATTERN)
+        // 文章相关
+        if (uri.matches(ARTICLE_DETAIL_PATTERN)
                 || uri.matches(ARTICLE_COMMENT_PATTERN)
-                || uri.matches(ARTICLE_FAVORITE_STATUS_PATTERN);
+                || uri.matches(ARTICLE_FAVORITE_STATUS_PATTERN)) {
+            return true;
+        }
+        // 剧本相关（列表、详情、分类、评价、收藏状态、角色）
+        if (uri.startsWith("/api/script")) {
+            return true;
+        }
+        // 门店相关（列表、详情、房间、评价）
+        if (uri.startsWith("/api/store") && !uri.startsWith("/api/store/employee")) {
+            return true;
+        }
+        // 排期相关
+        if (uri.startsWith("/api/schedule") || uri.startsWith("/api/script-schedule")) {
+            return true;
+        }
+        // 拼单相关（列表、详情、热门）
+        if (uri.startsWith("/api/group")) {
+            return true;
+        }
+        // 搜索
+        if (uri.startsWith("/api/search")) {
+            return true;
+        }
+        // 文章列表
+        if (uri.startsWith("/api/article")) {
+            return true;
+        }
+        // DM列表（预约页展示用）
+        if (uri.startsWith("/api/dm") && "GET".equalsIgnoreCase(method)) {
+            return true;
+        }
+        // 首页推荐、统计等公开接口
+        if (uri.startsWith("/api/recommend") || uri.startsWith("/api/home")) {
+            return true;
+        }
+        return false;
     }
 }

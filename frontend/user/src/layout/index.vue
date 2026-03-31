@@ -1,7 +1,7 @@
 <template>
   <div class="layout-container">
     <!-- 顶部导航栏 -->
-    <el-header class="header">
+    <el-header class="header" :class="{ 'header-light': isLightTheme }">
       <div class="header-content">
         <div class="logo" @click="router.push('/')">
           <span class="logo-icon">🎭</span>
@@ -214,6 +214,12 @@ onMounted(() => {
   refreshUnreadCount()
   refreshVipStatus()
   connectWsIfNeeded()
+  initThemeObserver()
+})
+
+onBeforeUnmount(() => {
+  notificationWS.offMessage(handleWsMessage)
+  if (themeObserver) themeObserver.disconnect()
 })
 
 watch(
@@ -226,15 +232,29 @@ watch(
 )
 
 // 注意：layout 在路由切换时可能会被卸载重建，
-// 这里不要主动 close WebSocket，否则会出现“频繁断开/重连”。
+// 这里不要主动 close WebSocket，否则会出现"频繁断开/重连"。
 // WebSocket 只应在用户登出时关闭（watch 已处理）。
-onBeforeUnmount(() => {
-  notificationWS.offMessage(handleWsMessage)
-})
 
 const activeMenu = computed(() => {
   return route.path
 })
+
+// paper-mode 浅色检测
+const isLightTheme = ref(false)
+
+const checkPaperMode = () => {
+  isLightTheme.value = document.body.classList.contains('paper-mode')
+}
+
+// 用MutationObserver监听body class变化（paper-mode切换时实时响应）
+let themeObserver = null
+const initThemeObserver = () => {
+  checkPaperMode()
+  themeObserver = new MutationObserver(() => {
+    checkPaperMode()
+  })
+  themeObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] })
+}
 
 const handleMenuSelect = (index) => {
   router.push(index)
@@ -302,6 +322,14 @@ const handleUserCommand = (command) => {
   top: 0;
   z-index: 1000;
   border-bottom: none;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+/* 浅色主题下导航栏 */
+.header.header-light {
+  background: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
 }
 
 .header-content {
@@ -399,6 +427,40 @@ const handleUserCommand = (command) => {
 
 .btn-register:hover {
   background: rgba(255, 215, 0, 0.9);
+}
+
+/* 浅色主题下的导航文字 */
+.header.header-light .header-nav a {
+  color: #1a1a2e !important;
+}
+.header.header-light .header-nav a:hover,
+.header.header-light .header-nav a.active {
+  color: #c0392b !important;
+}
+.header.header-light .logo {
+  color: #c0392b !important;
+}
+.header.header-light .btn-login {
+  color: #c0392b !important;
+  border-color: #c0392b !important;
+}
+.header.header-light .btn-login:hover {
+  background: rgba(192, 57, 43, 0.08) !important;
+}
+.header.header-light .btn-register {
+  background: #c0392b !important;
+  color: #fff !important;
+}
+.header.header-light .username {
+  color: #1a1a2e !important;
+}
+.header.header-light :deep(.el-icon) {
+  color: #1a1a2e !important;
+}
+.header.header-light :deep(.el-button) {
+  border-color: rgba(0,0,0,0.2) !important;
+  color: #1a1a2e !important;
+  background: transparent !important;
 }
 
 /* 图标颜色 */

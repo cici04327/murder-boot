@@ -1,0 +1,1 @@
+const i=t=>{const n=String((t==null?void 0:t.scheduleDate)||"").slice(0,10),e=String((t==null?void 0:t.startTime)||"").slice(0,8);if(!n||!e)return null;const r=e.length===5?`${e}:00`:e,a=new Date(`${n}T${r}`);return Number.isNaN(a.getTime())?null:a},o=(t,n=Date.now())=>{const e=i(t);return e?(n instanceof Date?n:new Date(n)).getTime()>=e.getTime():!1};export{o as h};

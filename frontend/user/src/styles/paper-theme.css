@@ -5471,6 +5471,97 @@ body.paper-mode .el-image__error {
 }
 
 
+/* ========== 浅色主题下导航栏文字适配（light/purple/warm/nature/aurora） ========== */
+body.theme-light .header,
+body.theme-purple .header,
+body.theme-warm .header,
+body.theme-nature .header,
+body.theme-aurora .header {
+  background: rgba(255, 255, 255, 0.92) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.10) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+body.theme-light .header-nav a,
+body.theme-purple .header-nav a,
+body.theme-warm .header-nav a,
+body.theme-nature .header-nav a,
+body.theme-aurora .header-nav a {
+  color: #1a1a2e !important;
+}
+
+body.theme-light .header-nav a:hover,
+body.theme-purple .header-nav a:hover,
+body.theme-warm .header-nav a:hover,
+body.theme-nature .header-nav a:hover,
+body.theme-aurora .header-nav a:hover,
+body.theme-light .header-nav a.active,
+body.theme-purple .header-nav a.active,
+body.theme-warm .header-nav a.active,
+body.theme-nature .header-nav a.active,
+body.theme-aurora .header-nav a.active {
+  color: #c0392b !important;
+}
+
+body.theme-light .logo,
+body.theme-purple .logo,
+body.theme-warm .logo,
+body.theme-nature .logo,
+body.theme-aurora .logo {
+  color: #c0392b !important;
+}
+
+body.theme-light .btn-login,
+body.theme-purple .btn-login,
+body.theme-warm .btn-login,
+body.theme-nature .btn-login,
+body.theme-aurora .btn-login {
+  color: #c0392b !important;
+  border-color: #c0392b !important;
+}
+
+body.theme-light .btn-login:hover,
+body.theme-purple .btn-login:hover,
+body.theme-warm .btn-login:hover,
+body.theme-nature .btn-login:hover,
+body.theme-aurora .btn-login:hover {
+  background: rgba(192, 57, 43, 0.08) !important;
+}
+
+body.theme-light .btn-register,
+body.theme-purple .btn-register,
+body.theme-warm .btn-register,
+body.theme-nature .btn-register,
+body.theme-aurora .btn-register {
+  background: #c0392b !important;
+  color: #fff !important;
+}
+
+body.theme-light .username,
+body.theme-purple .username,
+body.theme-warm .username,
+body.theme-nature .username,
+body.theme-aurora .username {
+  color: #1a1a2e !important;
+}
+
+body.theme-light .header-right .el-icon,
+body.theme-purple .header-right .el-icon,
+body.theme-warm .header-right .el-icon,
+body.theme-nature .header-right .el-icon,
+body.theme-aurora .header-right .el-icon {
+  color: #1a1a2e !important;
+}
+
+body.theme-light .header-right .el-button,
+body.theme-purple .header-right .el-button,
+body.theme-warm .header-right .el-button,
+body.theme-nature .header-right .el-button,
+body.theme-aurora .header-right .el-button {
+  border-color: rgba(0, 0, 0, 0.2) !important;
+  color: #1a1a2e !important;
+}
+
 /* ========== AI客服头部强制深色（必须放在文件最末尾，覆盖所有通配规则） ========== */
 body.paper-mode .ai-customer-service .chat-header {
   background: #1a1a2e !important;

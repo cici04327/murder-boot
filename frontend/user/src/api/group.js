@@ -36,10 +36,11 @@ export const createGroup = (data) => {
 }
 
 // 加入拼单
-export const joinGroup = (id) => {
+export const joinGroup = (id, joinCount = 1) => {
   return request({
     url: `/group/${id}/join`,
-    method: 'post'
+    method: 'post',
+    params: { joinCount }
   })
 }
 

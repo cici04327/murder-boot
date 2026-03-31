@@ -171,6 +171,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
+import { h } from 'vue'
+import { ElInputNumber } from 'element-plus'
 import { getGroupDetail, joinGroup } from '@/api/group'
 import { useUserStore } from '@/store/user'
 
@@ -230,23 +232,46 @@ const loadDetail = async () => {
   }
 }
 
+const joinCount = ref(1)
+
 const handleJoin = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
     router.push('/login')
     return
   }
+
+  // 计算剩余空位
+  const emptyCount = (group.value?.needCount || 0) - (group.value?.currentCount || 0)
+
+  // 弹窗让用户选人数
+  joinCount.value = 1
   try {
-    await ElMessageBox.confirm(
-      '确定要参加这个神秘局吗？您的身份将被匿名保护。', 
-      '🎭 确认上车', 
-      { 
-        type: 'info',
-        confirmButtonText: '确认上车',
-        cancelButtonText: '再考虑下'
-      }
-    )
-    const res = await joinGroup(route.params.id)
+    await ElMessageBox({
+      title: '🎭 确认上车',
+      message: h('div', { style: 'padding: 8px 0' }, [
+        h('p', { style: 'margin-bottom: 12px; color: #c0c4cc; font-size: 13px;' },
+          `当前还差 ${emptyCount} 个座位，请选择您要带几人参加：`),
+        h('div', { style: 'display: flex; align-items: center; gap: 12px;' }, [
+          h('span', { style: 'color: #f2f6ff;' }, '参与人数'),
+          h(ElInputNumber, {
+            modelValue: joinCount.value,
+            min: 1,
+            max: emptyCount,
+            size: 'small',
+            'onUpdate:modelValue': (val) => { joinCount.value = val }
+          })
+        ]),
+        h('p', { style: 'margin-top: 12px; color: #9fb3d9; font-size: 12px;' },
+          '您的身份将被匿名保护，开局后方可揭晓真实身份。')
+      ]),
+      confirmButtonText: '确认上车',
+      cancelButtonText: '再考虑下',
+      type: 'info',
+      customClass: 'join-group-dialog'
+    })
+
+    const res = await joinGroup(route.params.id, joinCount.value)
     if (res.code === 1 || res.code === 200) {
       ElNotification({
         title: '🎉 拼车成功',
@@ -254,6 +279,7 @@ const handleJoin = async () => {
           <p><strong>剧本：</strong>${group.value.scriptName}</p>
           <p><strong>门店：</strong>${group.value.storeName}</p>
           <p><strong>开局时间：</strong>${formatPlayTime(group.value.playTime)}</p>
+          <p><strong>参与人数：</strong>${joinCount.value} 人</p>
           <p style="color: #e6a23c; margin-top: 8px;">⏰ 请在预约时间前15分钟到达门店</p>
         </div>`,
         type: 'success',

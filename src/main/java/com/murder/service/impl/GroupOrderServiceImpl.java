@@ -616,8 +616,9 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
         if (!creatorIds.isEmpty()) {
             notificationService.sendToUsers(
-                    "拼单已成团通知",
-                    String.format("您的拼单已成团，剧本《%s》已锁定场次，时间：%s。", group.getScriptName(), playTimeText),
+                    "拼单成团，请前往支付",
+                    String.format("🎉 好消息！您发起的拼单《%s》已成团，场次时间：%s。请尽快前往「我的预约」完成支付（30分钟内），逾期将自动取消。",
+                            group.getScriptName(), playTimeText),
                     2,
                     "group",
                     group.getId(),
