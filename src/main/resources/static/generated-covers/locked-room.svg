@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1021"/>
+      <stop offset="55%" stop-color="#172f56"/>
+      <stop offset="100%" stop-color="#09121f"/>
+    </linearGradient>
+    <radialGradient id="keyglow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#c8e7ff" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#c8e7ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <g opacity="0.16" stroke="#7bb8ff" stroke-width="2">
+    <circle cx="116" cy="210" r="30"/><circle cx="618" cy="184" r="18"/><circle cx="560" cy="314" r="12"/>
+    <line x1="0" y1="240" x2="720" y2="240"/><line x1="0" y1="700" x2="720" y2="700"/>
+  </g>
+  <rect x="188" y="170" width="344" height="560" rx="18" fill="#0d1b30" stroke="#8fc2ff" stroke-opacity="0.34" stroke-width="5"/>
+  <rect x="230" y="220" width="260" height="460" rx="10" fill="#102444"/>
+  <circle cx="268" cy="450" r="12" fill="#d9edff"/>
+  <circle cx="360" cy="420" r="70" fill="url(#keyglow)"/>
+  <path d="M360 380c32 0 58 26 58 58 0 20-10 38-26 48v44h-64v-44c-16-10-26-28-26-48 0-32 26-58 58-58z" fill="#d7ecff"/>
+  <circle cx="360" cy="438" r="22" fill="#102444"/>
+  <rect x="352" y="452" width="16" height="52" rx="8" fill="#102444"/>
+  <rect x="368" y="490" width="24" height="12" rx="4" fill="#102444"/>
+  <rect x="392" y="474" width="18" height="12" rx="4" fill="#102444"/>
+  <path d="M168 784c160-40 292-44 422 0" fill="none" stroke="#85bfff" stroke-opacity="0.28" stroke-width="4"/>
+  <text x="54" y="94" fill="#8fc1ff" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">LOCKED ROOM MYSTERY</text>
+  <text x="54" y="810" fill="#f4fbff" font-size="68" font-weight="700" font-family="Microsoft YaHei, sans-serif">密室疑云</text>
+  <text x="56" y="864" fill="#9dcafc" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">LOCKED ROOM</text>
+  <text x="56" y="906" fill="#d6ebff" opacity="0.9" font-size="22" font-family="Microsoft YaHei, sans-serif">反锁的房门背后，藏着一场看似不可能发生的案件。</text>
+</svg>

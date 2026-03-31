@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#16110d"/>
+      <stop offset="50%" stop-color="#4c3825"/>
+      <stop offset="100%" stop-color="#1b1410"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f0e0bf"/>
+      <stop offset="100%" stop-color="#d0b78e"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <rect x="110" y="132" width="500" height="680" rx="18" fill="#1d1511" stroke="#f0c98f" stroke-opacity="0.28" stroke-width="4"/>
+  <rect x="160" y="184" width="400" height="540" rx="10" fill="url(#paper)"/>
+  <rect x="284" y="154" width="152" height="44" rx="10" fill="#b27e42"/>
+  <circle cx="360" cy="312" r="82" fill="#624629"/>
+  <circle cx="360" cy="292" r="34" fill="#d7c2a1"/>
+  <path d="M286 392c12-50 52-76 74-76 22 0 62 26 74 76" fill="#d7c2a1"/>
+  <path d="M220 474H500M220 524H500M220 574H432M220 624H468" stroke="#735233" stroke-width="8" stroke-linecap="round" opacity="0.62"/>
+  <path d="M186 212l338 0" stroke="#000" stroke-opacity="0.08" stroke-width="2"/>
+  <path d="M504 172l62 66" stroke="#d9b177" stroke-width="12" stroke-linecap="round"/>
+  <path d="M546 168l-40 44" stroke="#d9b177" stroke-width="12" stroke-linecap="round"/>
+  <path d="M168 734c120 32 272 34 386 2" fill="none" stroke="#f0c98f" stroke-width="3" stroke-dasharray="8 10" opacity="0.35"/>
+  <text x="54" y="94" fill="#e4be86" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">SUSPENSE CASE</text>
+  <text x="54" y="810" fill="#fff6e8" font-size="68" font-weight="700" font-family="Microsoft YaHei, sans-serif">消失的证人</text>
+  <text x="56" y="864" fill="#e3c08f" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">MISSING WITNESS</text>
+  <text x="56" y="906" fill="#f4e5ce" opacity="0.9" font-size="22" font-family="Microsoft YaHei, sans-serif">关键证人失踪后，每一份证词都开始动摇。</text>
+</svg>

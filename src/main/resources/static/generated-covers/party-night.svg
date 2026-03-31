@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1d1230"/>
+      <stop offset="45%" stop-color="#7a2048"/>
+      <stop offset="100%" stop-color="#ff7a3d"/>
+    </linearGradient>
+    <radialGradient id="ball" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#b8d8ff"/>
+    </radialGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <circle cx="360" cy="240" r="96" fill="url(#ball)"/>
+  <g stroke="#c9e4ff" stroke-width="2" opacity="0.5">
+    <line x1="264" y1="240" x2="456" y2="240"/><line x1="360" y1="144" x2="360" y2="336"/>
+    <line x1="292" y1="172" x2="428" y2="308"/><line x1="428" y1="172" x2="292" y2="308"/>
+  </g>
+  <g fill="#ffd968">
+    <circle cx="132" cy="214" r="34"/><circle cx="596" cy="292" r="28"/><circle cx="558" cy="518" r="24"/>
+  </g>
+  <g fill="#91d2ff">
+    <circle cx="174" cy="492" r="26"/><circle cx="118" cy="650" r="22"/><circle cx="618" cy="630" r="22"/>
+  </g>
+  <g fill="#ff8fb0">
+    <rect x="188" y="384" width="10" height="42" rx="5" transform="rotate(32 193 405)"/>
+    <rect x="262" y="540" width="10" height="42" rx="5" transform="rotate(-28 267 561)"/>
+    <rect x="486" y="420" width="10" height="42" rx="5" transform="rotate(24 491 441)"/>
+    <rect x="544" y="724" width="10" height="42" rx="5" transform="rotate(-32 549 745)"/>
+  </g>
+  <path d="M82 716c112 40 226 60 278 60s164-20 278-60v244H82z" fill="#3a1639" opacity="0.95"/>
+  <path d="M82 736c120 26 228 40 556 0" fill="none" stroke="#ffbc97" stroke-opacity="0.38" stroke-width="4"/>
+  <text x="54" y="94" fill="#ffe0cf" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">FUN PARTY STORY</text>
+  <text x="54" y="810" fill="#fff7ef" font-size="72" font-weight="700" font-family="Microsoft YaHei, sans-serif">派对之夜</text>
+  <text x="56" y="864" fill="#ffd7bf" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">PARTY NIGHT</text>
+  <text x="56" y="906" fill="#fff0e1" opacity="0.92" font-size="22" font-family="Microsoft YaHei, sans-serif">生日蜡烛还没吹灭，现场气氛就已经失控了。</text>
+</svg>

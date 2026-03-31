@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1300" viewBox="0 0 900 1300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#130f24"/>
+      <stop offset="48%" stop-color="#2d145c"/>
+      <stop offset="100%" stop-color="#10131f"/>
+    </linearGradient>
+    <radialGradient id="disc" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f5ffff"/>
+      <stop offset="100%" stop-color="#79d1ff"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="1300" fill="url(#bg)"/>
+  <circle cx="450" cy="236" r="108" fill="url(#disc)"/>
+  <path d="M450 128 V344" stroke="#dcefff" stroke-width="6"/>
+  <g opacity="0.82">
+    <path d="M210 398 L340 680" stroke="#ff4eb2" stroke-width="14" stroke-linecap="round"/>
+    <path d="M690 398 L560 680" stroke="#43d7ff" stroke-width="14" stroke-linecap="round"/>
+    <path d="M450 370 L450 744" stroke="#ffd85b" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  <path d="M206 928 C272 838 382 786 450 786 C518 786 628 838 694 928" fill="none" stroke="#ff5ca8" stroke-width="18"/>
+  <path d="M220 940 C292 858 382 820 450 820 C518 820 608 858 680 940" fill="none" stroke="#7fe8ff" stroke-width="8"/>
+  <path d="M310 620 C342 574 398 574 430 620 C412 648 370 662 310 620 Z" fill="#ff5ca8"/>
+  <path d="M470 620 C502 574 558 574 590 620 C572 648 530 662 470 620 Z" fill="#7fe8ff"/>
+  <rect x="250" y="988" width="400" height="28" rx="14" fill="#ffd85b"/>
+  <circle cx="172" cy="546" r="12" fill="#ff5ca8"/>
+  <circle cx="724" cy="506" r="12" fill="#7fe8ff"/>
+  <circle cx="668" cy="674" r="16" fill="#ffd85b"/>
+  <circle cx="214" cy="690" r="10" fill="#ffffff"/>
+  <text x="90" y="144" fill="#f7f8ff" font-size="74" font-family="Georgia, serif" letter-spacing="6">PARTY NIGHT</text>
+  <text x="92" y="200" fill="#d7daf8" font-size="24" font-family="Arial, sans-serif" letter-spacing="5">A CELEBRATION CAN KEEP A SECRET ONLY UNTIL THE MUSIC STOPS</text>
+  <text x="92" y="1146" fill="#ffd98d" font-size="32" font-family="Arial, sans-serif" letter-spacing="4">SOCIAL PARTY GAME</text>
+  <text x="92" y="1192" fill="#eef1ff" font-size="22" font-family="Arial, sans-serif">Neon, masks, confetti, and friendships tested on the dance floor.</text>
+</svg>

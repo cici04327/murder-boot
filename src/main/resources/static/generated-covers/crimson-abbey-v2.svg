@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1300" viewBox="0 0 900 1300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#15060c"/>
+      <stop offset="52%" stop-color="#39111d"/>
+      <stop offset="100%" stop-color="#12060d"/>
+    </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fce8a3"/>
+      <stop offset="48%" stop-color="#c53f4f"/>
+      <stop offset="100%" stop-color="#48111a"/>
+    </linearGradient>
+    <filter id="soft">
+      <feGaussianBlur stdDeviation="12"/>
+    </filter>
+  </defs>
+  <rect width="900" height="1300" fill="url(#bg)"/>
+  <circle cx="678" cy="252" r="126" fill="#861e34" opacity="0.85"/>
+  <circle cx="678" cy="252" r="158" fill="#be314a" opacity="0.18" filter="url(#soft)"/>
+  <path d="M450 222 C362 222 290 296 290 392 L290 884 C290 952 344 1008 412 1008 L488 1008 C556 1008 610 952 610 884 L610 392 C610 296 538 222 450 222 Z" fill="#0d080b" stroke="#a98a63" stroke-width="8"/>
+  <path d="M450 258 C380 258 324 316 324 392 L324 856 C324 910 368 954 422 954 L478 954 C532 954 576 910 576 856 L576 392 C576 316 520 258 450 258 Z" fill="url(#glass)"/>
+  <path d="M450 322 L450 912" stroke="#181114" stroke-width="18"/>
+  <path d="M344 598 L556 598" stroke="#181114" stroke-width="18"/>
+  <path d="M362 386 C410 440 490 440 538 386" fill="none" stroke="#181114" stroke-width="18"/>
+  <path d="M362 810 C410 756 490 756 538 810" fill="none" stroke="#181114" stroke-width="18"/>
+  <path d="M450 378 L450 528" stroke="#f4d7a2" stroke-width="28" stroke-linecap="round"/>
+  <path d="M386 454 L514 454" stroke="#f4d7a2" stroke-width="28" stroke-linecap="round"/>
+  <path d="M164 1012 L252 866 L340 1012 Z" fill="#160a0f"/>
+  <path d="M282 1012 L410 758 L538 1012 Z" fill="#1c0c13"/>
+  <path d="M476 1012 L596 804 L716 1012 Z" fill="#160a0f"/>
+  <path d="M104 1094 H796" stroke="#5b1623" stroke-width="4" stroke-dasharray="8 10"/>
+  <text x="90" y="138" fill="#f7efe4" font-size="74" font-family="Georgia, serif" letter-spacing="6">CRIMSON ABBEY</text>
+  <text x="92" y="196" fill="#d4b99d" font-size="24" font-family="Arial, sans-serif" letter-spacing="5">WHERE PRAYER AND BLOOD SHARE THE SAME HALL</text>
+  <text x="92" y="1144" fill="#f2c47d" font-size="32" font-family="Arial, sans-serif" letter-spacing="4">GOTHIC HORROR</text>
+  <text x="92" y="1190" fill="#efe3d7" font-size="22" font-family="Arial, sans-serif">Candles burn low. The confession arrived years too late.</text>
+</svg>

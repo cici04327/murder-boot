@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1300" viewBox="0 0 900 1300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#08111d"/>
+      <stop offset="58%" stop-color="#193043"/>
+      <stop offset="100%" stop-color="#3b1524"/>
+    </linearGradient>
+    <linearGradient id="moonGlow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f3f6ff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#9cc9ff" stop-opacity="0.1"/>
+    </linearGradient>
+    <filter id="blurGlow">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+  <rect width="900" height="1300" fill="url(#bg)"/>
+  <circle cx="678" cy="238" r="132" fill="url(#moonGlow)"/>
+  <circle cx="678" cy="238" r="162" fill="#cfe2ff" opacity="0.18" filter="url(#blurGlow)"/>
+  <g opacity="0.42" stroke="#97b8d8" stroke-width="3">
+    <path d="M96 78 L154 160"/>
+    <path d="M206 48 L264 132"/>
+    <path d="M326 66 L384 148"/>
+    <path d="M436 36 L494 122"/>
+    <path d="M544 72 L602 154"/>
+    <path d="M740 88 L798 172"/>
+  </g>
+  <path d="M132 980 L132 590 L246 590 L246 490 L362 490 L362 418 L540 418 L540 500 L654 500 L654 610 L762 610 L762 980 Z" fill="#111d2a"/>
+  <rect x="216" y="658" width="48" height="64" fill="#f7cc7c"/>
+  <rect x="306" y="592" width="48" height="64" fill="#f7cc7c"/>
+  <rect x="396" y="592" width="48" height="64" fill="#f7cc7c"/>
+  <rect x="486" y="592" width="48" height="64" fill="#f7cc7c"/>
+  <rect x="576" y="658" width="48" height="64" fill="#f7cc7c"/>
+  <rect x="306" y="714" width="48" height="64" fill="#f7cc7c"/>
+  <rect x="486" y="714" width="48" height="64" fill="#f7cc7c"/>
+  <path d="M448 290 C390 326 368 420 410 472 C356 506 348 586 402 646 C474 628 526 574 530 504 C584 454 574 348 520 294 C508 348 474 362 448 290 Z" fill="#e8effd" opacity="0.92"/>
+  <circle cx="446" cy="434" r="11" fill="#142130"/>
+  <circle cx="498" cy="434" r="11" fill="#142130"/>
+  <path d="M390 1024 C446 894 602 852 726 898 L748 980 L154 980 Z" fill="#0b1118"/>
+  <text x="88" y="144" fill="#f2f4f6" font-size="78" font-family="Georgia, serif" letter-spacing="7">GHOST HOTEL</text>
+  <text x="90" y="206" fill="#b8cad7" font-size="24" font-family="Arial, sans-serif" letter-spacing="6">A ROOM KEY NEVER CHECKED OUT</text>
+  <text x="92" y="1128" fill="#f7cc7c" font-size="32" font-family="Arial, sans-serif" letter-spacing="4">MURDER MYSTERY</text>
+  <text x="92" y="1176" fill="#e5e8eb" font-size="22" font-family="Arial, sans-serif">Storm. Corridor. Ledger. The last guest is still inside.</text>
+</svg>

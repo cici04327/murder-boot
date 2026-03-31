@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0c1f26"/>
+      <stop offset="55%" stop-color="#174a5b"/>
+      <stop offset="100%" stop-color="#123238"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#ffeb9b"/>
+      <stop offset="100%" stop-color="#ffeb9b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <circle cx="360" cy="282" r="146" fill="url(#halo)" opacity="0.75"/>
+  <path d="M150 640l82-240 82 170 62-120 64 120 78-180 52 250z" fill="#0e1721"/>
+  <path d="M198 444h324" stroke="#f7d980" stroke-opacity="0.24" stroke-width="8"/>
+  <circle cx="360" cy="316" r="104" fill="none" stroke="#f7d980" stroke-width="6" stroke-dasharray="8 12"/>
+  <path d="M292 316h136M360 248v136M316 272l88 88M404 272l-88 88" stroke="#f7d980" stroke-width="10" stroke-linecap="round" opacity="0.9"/>
+  <g fill="#f7d980">
+    <circle cx="196" cy="160" r="4"/><circle cx="250" cy="220" r="4"/><circle cx="530" cy="188" r="4"/>
+    <circle cx="588" cy="270" r="4"/><circle cx="132" cy="288" r="4"/><circle cx="574" cy="388" r="4"/>
+  </g>
+  <text x="54" y="94" fill="#d8e7c7" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">MAGIC CAMPUS</text>
+  <text x="54" y="810" fill="#f9fff1" font-size="72" font-weight="700" font-family="Microsoft YaHei, sans-serif">魔法学院</text>
+  <text x="56" y="864" fill="#dcecb9" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">MAGIC ACADEMY</text>
+  <text x="56" y="906" fill="#eef8de" opacity="0.9" font-size="22" font-family="Microsoft YaHei, sans-serif">新学期第一夜，学院里最会惹事的一群人又碰头了。</text>
+</svg>

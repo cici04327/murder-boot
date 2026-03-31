@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#091018"/>
+      <stop offset="55%" stop-color="#1f2f43"/>
+      <stop offset="100%" stop-color="#0a1118"/>
+    </linearGradient>
+    <radialGradient id="moon" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f3f6ff"/>
+      <stop offset="100%" stop-color="#f3f6ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <circle cx="532" cy="184" r="96" fill="url(#moon)"/>
+  <path d="M160 690l94-302h212l94 302z" fill="#0c1824" stroke="#d5b26a" stroke-opacity="0.22" stroke-width="4"/>
+  <path d="M360 250l34 58h68l-34 58 34 58h-68l-34 58-34-58h-68l34-58-34-58h68z" fill="#d9b46d"/>
+  <path d="M360 354v206" stroke="#d9b46d" stroke-width="18" stroke-linecap="round"/>
+  <path d="M312 470h96" stroke="#d9b46d" stroke-width="16" stroke-linecap="round"/>
+  <path d="M188 742c76-24 126-60 172-118 46 58 96 94 172 118" fill="none" stroke="#d9b46d" stroke-opacity="0.42" stroke-width="5"/>
+  <text x="54" y="94" fill="#d8c08e" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">TACTICAL BATTLE</text>
+  <text x="54" y="810" fill="#fff7e8" font-size="72" font-weight="700" font-family="Microsoft YaHei, sans-serif">黑暗骑士</text>
+  <text x="56" y="864" fill="#d8c08e" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">DARK KNIGHT</text>
+  <text x="56" y="906" fill="#f3e5c3" opacity="0.9" font-size="22" font-family="Microsoft YaHei, sans-serif">王城危机四伏，阵营与誓言都在同一夜被重新洗牌。</text>
+</svg>

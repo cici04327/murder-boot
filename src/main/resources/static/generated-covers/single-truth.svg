@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#14070b"/>
+      <stop offset="55%" stop-color="#391017"/>
+      <stop offset="100%" stop-color="#12060a"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <rect x="110" y="170" width="500" height="520" rx="20" fill="#261115" stroke="#f0c8c8" stroke-opacity="0.2" stroke-width="4"/>
+  <g fill="#f7ede7">
+    <rect x="150" y="218" width="136" height="110" rx="8"/>
+    <rect x="312" y="218" width="156" height="92" rx="8"/>
+    <rect x="490" y="218" width="82" height="126" rx="8"/>
+    <rect x="176" y="402" width="110" height="136" rx="8"/>
+    <rect x="330" y="380" width="178" height="132" rx="8"/>
+  </g>
+  <g stroke="#c91d35" stroke-width="5" opacity="0.9">
+    <line x1="218" y1="272" x2="396" y2="266"/>
+    <line x1="396" y1="266" x2="530" y2="282"/>
+    <line x1="396" y1="266" x2="230" y2="468"/>
+    <line x1="530" y1="282" x2="420" y2="446"/>
+    <line x1="230" y1="468" x2="420" y2="446"/>
+  </g>
+  <g fill="#f6d9b8">
+    <circle cx="218" cy="272" r="12"/><circle cx="396" cy="266" r="12"/><circle cx="530" cy="282" r="12"/>
+    <circle cx="230" cy="468" r="12"/><circle cx="420" cy="446" r="12"/>
+  </g>
+  <circle cx="510" cy="610" r="86" fill="none" stroke="#e8f0ff" stroke-width="16"/>
+  <rect x="566" y="666" width="82" height="22" rx="11" transform="rotate(44 566 666)" fill="#e8f0ff"/>
+  <circle cx="510" cy="610" r="48" fill="none" stroke="#e8f0ff" stroke-width="8" opacity="0.52"/>
+  <text x="54" y="94" fill="#efb8b8" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">THE ONLY TRUTH</text>
+  <text x="54" y="810" fill="#fff3f0" font-size="64" font-weight="700" font-family="Microsoft YaHei, sans-serif">真相只有一个</text>
+  <text x="56" y="864" fill="#efc0c0" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">ONLY ONE ANSWER</text>
+  <text x="56" y="906" fill="#f9dede" opacity="0.9" font-size="22" font-family="Microsoft YaHei, sans-serif">每个人都在提供证据，也都在掩饰自己的动机。</text>
+</svg>

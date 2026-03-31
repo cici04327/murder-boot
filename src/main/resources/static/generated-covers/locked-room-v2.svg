@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1300" viewBox="0 0 900 1300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b1116"/>
+      <stop offset="50%" stop-color="#182734"/>
+      <stop offset="100%" stop-color="#090d12"/>
+    </linearGradient>
+    <linearGradient id="door" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2d3f54"/>
+      <stop offset="100%" stop-color="#121b24"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="1300" fill="url(#bg)"/>
+  <rect x="226" y="196" width="448" height="804" rx="22" fill="url(#door)" stroke="#71809d" stroke-width="4"/>
+  <rect x="268" y="242" width="364" height="712" rx="12" fill="none" stroke="#44566e" stroke-width="3"/>
+  <circle cx="594" cy="620" r="18" fill="#c8a772"/>
+  <path d="M452 402 C398 402 354 446 354 500 C354 554 398 598 452 598 C506 598 550 554 550 500 C550 446 506 402 452 402 Z M452 452 C478 452 500 474 500 500 C500 526 478 548 452 548 C426 548 404 526 404 500 C404 474 426 452 452 452 Z" fill="#0d1318"/>
+  <rect x="426" y="552" width="52" height="158" rx="26" fill="#0d1318"/>
+  <circle cx="186" cy="312" r="84" fill="none" stroke="#d0dae7" stroke-width="10" opacity="0.42"/>
+  <path d="M186 312 L186 258" stroke="#d0dae7" stroke-width="8" stroke-linecap="round" opacity="0.42"/>
+  <path d="M186 312 L232 334" stroke="#d0dae7" stroke-width="8" stroke-linecap="round" opacity="0.42"/>
+  <path d="M118 1008 C238 894 354 852 450 852 C546 852 662 894 782 1008" fill="none" stroke="#e8d1a0" stroke-width="4" opacity="0.45"/>
+  <path d="M110 1010 L790 1010" stroke="#16202a" stroke-width="86"/>
+  <path d="M130 1026 L772 1026" stroke="#2a3644" stroke-width="6" stroke-dasharray="16 18"/>
+  <text x="90" y="144" fill="#eff6fd" font-size="74" font-family="Georgia, serif" letter-spacing="6">LOCKED ROOM</text>
+  <text x="92" y="200" fill="#b4c3d4" font-size="24" font-family="Arial, sans-serif" letter-spacing="5">A CLOSED DOOR DOES NOT PROMISE A SIMPLE ANSWER</text>
+  <text x="92" y="1146" fill="#f1c97b" font-size="32" font-family="Arial, sans-serif" letter-spacing="4">CLASSIC WHODUNIT</text>
+  <text x="92" y="1192" fill="#e6edf5" font-size="22" font-family="Arial, sans-serif">One impossible timeline. One room that should have stayed silent.</text>
+</svg>

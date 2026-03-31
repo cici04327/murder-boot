@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1300" viewBox="0 0 900 1300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#100c28"/>
+      <stop offset="54%" stop-color="#23215f"/>
+      <stop offset="100%" stop-color="#09111f"/>
+    </linearGradient>
+    <radialGradient id="portal" cx="50%" cy="44%" r="44%">
+      <stop offset="0%" stop-color="#9ef9f6"/>
+      <stop offset="58%" stop-color="#5d95ff" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#5d95ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="1300" fill="url(#bg)"/>
+  <circle cx="450" cy="448" r="194" fill="url(#portal)"/>
+  <circle cx="450" cy="448" r="162" fill="none" stroke="#d7e6ff" stroke-width="4" opacity="0.82"/>
+  <circle cx="450" cy="448" r="126" fill="none" stroke="#8ceef0" stroke-width="3" stroke-dasharray="10 12" opacity="0.78"/>
+  <path d="M226 964 L294 668 L362 964 Z" fill="#14152b"/>
+  <path d="M344 964 L432 518 L520 964 Z" fill="#191c37"/>
+  <path d="M492 964 L570 612 L648 964 Z" fill="#14152b"/>
+  <rect x="414" y="444" width="72" height="148" fill="#1b2042"/>
+  <path d="M394 584 H506" stroke="#8ceef0" stroke-width="8"/>
+  <path d="M244 312 L252 292 L260 312 L280 320 L260 328 L252 348 L244 328 L224 320 Z" fill="#fff3ab"/>
+  <path d="M674 244 L684 218 L694 244 L720 254 L694 264 L684 290 L674 264 L648 254 Z" fill="#fff3ab"/>
+  <path d="M710 424 L716 408 L722 424 L738 430 L722 436 L716 452 L710 436 L694 430 Z" fill="#fff3ab"/>
+  <path d="M184 506 L190 490 L196 506 L212 512 L196 518 L190 534 L184 518 L168 512 Z" fill="#fff3ab"/>
+  <text x="90" y="144" fill="#f5f8ff" font-size="74" font-family="Georgia, serif" letter-spacing="6">MAGIC ACADEMY</text>
+  <text x="92" y="200" fill="#cbd7f2" font-size="24" font-family="Arial, sans-serif" letter-spacing="5">THE NEW TERM STARTS WITH A SPELL NO ONE WAS MEANT TO SEE</text>
+  <text x="92" y="1146" fill="#ffd98d" font-size="32" font-family="Arial, sans-serif" letter-spacing="4">LIGHTHEARTED FANTASY</text>
+  <text x="92" y="1192" fill="#ebeffa" font-size="22" font-family="Arial, sans-serif">Problem students, glowing runes, and one spectacular campus disaster.</text>
+</svg>

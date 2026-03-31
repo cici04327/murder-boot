@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1300" viewBox="0 0 900 1300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0d1730"/>
+      <stop offset="54%" stop-color="#1f3c68"/>
+      <stop offset="100%" stop-color="#0b1424"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f3d49a"/>
+      <stop offset="100%" stop-color="#c99135"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="1300" fill="url(#bg)"/>
+  <circle cx="450" cy="232" r="112" fill="#f5e7c6" opacity="0.92"/>
+  <path d="M156 1010 H744" stroke="#1a2840" stroke-width="124" stroke-linecap="round"/>
+  <path d="M196 930 H704" stroke="#d2a45a" stroke-width="16" stroke-linecap="round"/>
+  <path d="M238 930 L300 818 L362 930" fill="#182843"/>
+  <path d="M362 930 L450 748 L538 930" fill="#1f3151"/>
+  <path d="M538 930 L600 818 L662 930" fill="#182843"/>
+  <path d="M206 790 H694" stroke="#d2a45a" stroke-width="14" stroke-linecap="round"/>
+  <path d="M224 790 L294 700 L364 790" fill="#243b60"/>
+  <path d="M374 790 L450 634 L526 790" fill="#2c4875"/>
+  <path d="M536 790 L606 700 L676 790" fill="#243b60"/>
+  <path d="M124 430 C194 374 278 374 348 430" fill="none" stroke="#f3d49a" stroke-width="10" opacity="0.5"/>
+  <path d="M554 382 C634 326 712 338 778 402" fill="none" stroke="#f3d49a" stroke-width="10" opacity="0.5"/>
+  <circle cx="220" cy="984" r="22" fill="url(#gold)"/>
+  <circle cx="680" cy="984" r="22" fill="url(#gold)"/>
+  <text x="90" y="144" fill="#f7f5ef" font-size="74" font-family="Georgia, serif" letter-spacing="6">DREAM OF TANG</text>
+  <text x="92" y="200" fill="#dde6f2" font-size="24" font-family="Arial, sans-serif" letter-spacing="5">A GOLDEN CITY HIDES ITS OLDEST CASE BENEATH THE LANTERNS</text>
+  <text x="92" y="1146" fill="#f1d08d" font-size="32" font-family="Arial, sans-serif" letter-spacing="4">ANCIENT MYSTERY</text>
+  <text x="92" y="1192" fill="#eef3f8" font-size="22" font-family="Arial, sans-serif">Chang'an glows at night. So do the secrets no court can bury.</text>
+</svg>

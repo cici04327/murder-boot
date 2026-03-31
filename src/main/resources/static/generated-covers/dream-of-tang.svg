@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2b0811"/>
+      <stop offset="50%" stop-color="#7e1323"/>
+      <stop offset="100%" stop-color="#3a0813"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#f7d68b"/>
+      <stop offset="100%" stop-color="#d7a94d"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <circle cx="360" cy="214" r="102" fill="#f7d68b" opacity="0.9"/>
+  <path d="M102 654h516v88H102z" fill="#24060d"/>
+  <path d="M140 654l70-82h300l70 82z" fill="#24060d" stroke="url(#gold)" stroke-width="5"/>
+  <path d="M186 572l44-54h260l44 54z" fill="#24060d" stroke="url(#gold)" stroke-width="4"/>
+  <path d="M230 518l34-42h192l34 42z" fill="#24060d" stroke="url(#gold)" stroke-width="4"/>
+  <g stroke="url(#gold)" stroke-width="8" stroke-linecap="round">
+    <line x1="250" y1="654" x2="250" y2="486"/><line x1="360" y1="654" x2="360" y2="476"/><line x1="470" y1="654" x2="470" y2="486"/>
+  </g>
+  <g fill="#f7d68b">
+    <circle cx="156" cy="352" r="24"/><circle cx="564" cy="352" r="24"/>
+    <rect x="150" y="352" width="12" height="102" rx="6"/><rect x="558" y="352" width="12" height="102" rx="6"/>
+  </g>
+  <text x="54" y="94" fill="#f8d998" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">ANCIENT CHANG'AN</text>
+  <text x="54" y="810" fill="#fff6e4" font-size="72" font-weight="700" font-family="Microsoft YaHei, sans-serif">梦回唐朝</text>
+  <text x="56" y="864" fill="#f4d291" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">DREAM OF TANG</text>
+  <text x="56" y="906" fill="#f9e4ba" opacity="0.9" font-size="22" font-family="Microsoft YaHei, sans-serif">盛唐灯火之下，旧案与朝局在长安城中一同翻涌。</text>
+</svg>

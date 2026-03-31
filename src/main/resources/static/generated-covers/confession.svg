@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2b1732"/>
+      <stop offset="45%" stop-color="#80405a"/>
+      <stop offset="100%" stop-color="#f08e68"/>
+    </linearGradient>
+    <linearGradient id="sun" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffe7b5"/>
+      <stop offset="100%" stop-color="#ffb17d"/>
+    </linearGradient>
+  </defs>
+  <rect width="720" height="960" fill="url(#bg)"/>
+  <circle cx="510" cy="252" r="108" fill="url(#sun)" opacity="0.92"/>
+  <path d="M0 580c160 70 356 72 720-28v408H0z" fill="#45224e"/>
+  <path d="M0 660c170 40 392 24 720-46" fill="none" stroke="#f3c1a4" stroke-opacity="0.32" stroke-width="4"/>
+  <rect x="170" y="348" width="380" height="238" rx="16" fill="#fff2e3" opacity="0.96"/>
+  <path d="M170 348l190 150 190-150" fill="none" stroke="#d98b82" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M210 540c62-36 104-54 150-64 40-10 80-10 148 0" fill="none" stroke="#d58f85" stroke-width="6" stroke-linecap="round"/>
+  <path d="M228 564c88-22 178-24 264 0" fill="none" stroke="#d58f85" stroke-width="6" stroke-linecap="round"/>
+  <text x="54" y="94" fill="#ffe6d3" font-size="26" letter-spacing="5" font-family="Microsoft YaHei, sans-serif">EMOTIONAL STORY</text>
+  <text x="54" y="810" fill="#fff7ef" font-size="72" font-weight="700" font-family="Microsoft YaHei, sans-serif">告白</text>
+  <text x="56" y="864" fill="#ffe7d2" font-size="28" letter-spacing="3" font-family="Arial, sans-serif">CONFESSION</text>
+  <text x="56" y="906" fill="#fff2e6" opacity="0.92" font-size="22" font-family="Microsoft YaHei, sans-serif">那些没有来得及说出口的话，终于等到了被听见的时刻。</text>
+</svg>

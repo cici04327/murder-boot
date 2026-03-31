@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1300" viewBox="0 0 900 1300">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#16253a"/>
+      <stop offset="50%" stop-color="#47708a"/>
+      <stop offset="100%" stop-color="#d58d67"/>
+    </linearGradient>
+    <linearGradient id="photo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fff9ed"/>
+      <stop offset="100%" stop-color="#dfd5c4"/>
+    </linearGradient>
+  </defs>
+  <rect width="900" height="1300" fill="url(#bg)"/>
+  <circle cx="672" cy="226" r="92" fill="#ffdba6" opacity="0.82"/>
+  <path d="M102 714 C240 664 360 642 468 652 C590 664 684 704 798 776 L798 1046 L102 1046 Z" fill="#24313b" opacity="0.78"/>
+  <path d="M128 764 H774" stroke="#f3e4bc" stroke-width="6"/>
+  <path d="M198 764 V1046" stroke="#f3e4bc" stroke-width="6"/>
+  <path d="M706 764 V1046" stroke="#f3e4bc" stroke-width="6"/>
+  <circle cx="262" cy="786" r="44" fill="none" stroke="#141920" stroke-width="10"/>
+  <circle cx="364" cy="786" r="44" fill="none" stroke="#141920" stroke-width="10"/>
+  <path d="M262 786 L314 734 L392 734 L364 786" fill="none" stroke="#141920" stroke-width="10" stroke-linejoin="round"/>
+  <rect x="118" y="206" width="198" height="250" fill="url(#photo)" transform="rotate(-6 217 331)"/>
+  <rect x="566" y="248" width="214" height="274" fill="url(#photo)" transform="rotate(7 673 385)"/>
+  <rect x="164" y="252" width="106" height="120" fill="#d3b28e"/>
+  <rect x="604" y="300" width="138" height="140" fill="#7d9eb4"/>
+  <path d="M604 432 C650 392 700 392 742 432" fill="#b5715a"/>
+  <text x="90" y="144" fill="#f7fbff" font-size="74" font-family="Georgia, serif" letter-spacing="6">FLEETING YEARS</text>
+  <text x="92" y="200" fill="#dce6ef" font-size="24" font-family="Arial, sans-serif" letter-spacing="5">THE PAST STAYS QUIET UNTIL ONE PHOTO STARTS TALKING</text>
+  <text x="92" y="1146" fill="#ffe0a1" font-size="32" font-family="Arial, sans-serif" letter-spacing="4">YOUTHFUL MEMORIES</text>
+  <text x="92" y="1192" fill="#f9efe3" font-size="22" font-family="Arial, sans-serif">Old platforms, summer wind, and the choices no one could take back.</text>
+</svg>
