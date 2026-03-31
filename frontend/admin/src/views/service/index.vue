@@ -130,22 +130,52 @@
           </div>
 
           <!-- 输入框（进行中才显示） -->
-          <div v-if="currentSession.status === 1" class="chat-input">
-            <el-input
-              v-model="inputMsg"
-              placeholder="输入回复内容..."
-              type="textarea"
-              :rows="2"
-              resize="none"
-              @keydown.enter.prevent="handleSend"
-            />
-            <el-button type="primary" @click="handleSend" :disabled="!inputMsg.trim()">
-              <el-icon><Promotion /></el-icon>
-              发送
-            </el-button>
+          <div v-if="currentSession.status === 1" class="chat-input-area">
+            <!-- 快捷话语栏 -->
+            <div class="quick-replies-bar">
+              <div class="quick-replies-scroll">
+                <el-tag
+                  v-for="(phrase, idx) in quickPhrases"
+                  :key="idx"
+                  class="quick-phrase-tag"
+                  @click="insertPhrase(phrase.text)"
+                  size="small"
+                  type="info"
+                  effect="plain"
+                  style="cursor:pointer"
+                >{{ phrase.label }}</el-tag>
+                <el-button
+                  size="small"
+                  type="primary"
+                  link
+                  @click="showQuickPhraseDialog = true"
+                  style="flex-shrink:0; font-size:12px;"
+                >
+                  <el-icon style="margin-right:2px"><Setting /></el-icon>管理
+                </el-button>
+              </div>
+            </div>
+
+            <!-- 输入行 -->
+            <div class="chat-input">
+              <el-input
+                v-model="inputMsg"
+                placeholder="输入回复内容... (Enter发送，Shift+Enter换行)"
+                type="textarea"
+                :rows="2"
+                resize="none"
+                @keydown.enter.exact.prevent="handleSend"
+                @keydown.shift.enter.exact="() => {}"
+              />
+              <el-button type="primary" @click="handleSend" :disabled="!inputMsg.trim()">
+                <el-icon><Promotion /></el-icon>
+                发送
+              </el-button>
+            </div>
           </div>
 
           <!-- 已结束时的评价显示 -->
+
           <div v-if="currentSession.status === 2 && currentSession.rating" class="session-rating">
             <span>用户评价：</span>
             <el-rate :model-value="currentSession.rating" disabled />
@@ -164,12 +194,49 @@
       </div>
     </div>
   </div>
+
+  <!-- 快捷话语管理弹窗 -->
+  <el-dialog v-model="showQuickPhraseDialog" title="快捷话语管理" width="560px" :close-on-click-modal="false">
+    <div class="quick-phrase-manager">
+      <!-- 新增表单 -->
+      <div class="quick-phrase-add">
+        <el-input v-model="newPhraseLabel" placeholder="话语标签（如：欢迎语）" style="width:140px" size="small" />
+        <el-input v-model="newPhraseText" placeholder="话语内容（点击后填入输入框）" style="flex:1" size="small" />
+        <el-button type="primary" size="small" @click="addPhrase" :disabled="!newPhraseLabel.trim() || !newPhraseText.trim()">
+          <el-icon><Plus /></el-icon>添加
+        </el-button>
+      </div>
+
+      <!-- 已有话语列表 -->
+      <div class="quick-phrase-list">
+        <div
+          v-for="(phrase, idx) in quickPhrases"
+          :key="idx"
+          class="quick-phrase-item"
+        >
+          <div class="phrase-item-content">
+            <el-input v-model="phrase.label" size="small" style="width:130px" placeholder="标签" />
+            <el-input v-model="phrase.text" size="small" style="flex:1" placeholder="内容" />
+          </div>
+          <el-button type="danger" size="small" link @click="removePhrase(idx)">
+            <el-icon><Delete /></el-icon>
+          </el-button>
+        </div>
+        <el-empty v-if="quickPhrases.length === 0" description="暂无快捷话语" :image-size="48" />
+      </div>
+    </div>
+    <template #footer>
+      <el-button @click="showQuickPhraseDialog = false">取消</el-button>
+      <el-button type="primary" @click="savePhrases">保存</el-button>
+    </template>
+  </el-dialog>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { User, Phone, CircleClose, Promotion, Service } from '@element-plus/icons-vue'
+import { User, Phone, CircleClose, Promotion, Service, Setting, Plus, Delete } from '@element-plus/icons-vue'
 import { listSessions, acceptSession, sendAdminMessage, closeSessionByAdmin, getSessionMessages, countWaiting } from '@/api/service'
 
 const listLoading = ref(false)
@@ -185,26 +252,99 @@ const accepting = ref(false)
 const waitingCount = ref(0)
 const messagesRef = ref(null)
 
+// 快捷话语
+const STORAGE_KEY = 'admin-quick-phrases'
+const defaultPhrases = [
+  { label: '欢迎语', text: '您好，欢迎联系客服，请问有什么可以帮助您？😊' },
+  { label: '稍等', text: '请稍等，我马上为您查询。' },
+  { label: '感谢', text: '感谢您的耐心等待！' },
+  { label: '无法预约', text: '非常抱歉，该场次暂时无法预约，建议您选择其他时间段。' },
+  { label: '退款说明', text: '退款将在3-5个工作日内原路返回，请您耐心等待。' },
+  { label: '满意结束', text: '感谢您的咨询，祝您游戏愉快！如有其他问题欢迎随时联系。👋' },
+]
+const loadPhrases = () => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY)
+    return saved ? JSON.parse(saved) : defaultPhrases
+  } catch { return defaultPhrases }
+}
+const quickPhrases = ref(loadPhrases())
+const showQuickPhraseDialog = ref(false)
+const newPhraseLabel = ref('')
+const newPhraseText = ref('')
+
+const insertPhrase = (text) => {
+  inputMsg.value = text
+}
+
+const addPhrase = () => {
+  if (!newPhraseLabel.value.trim() || !newPhraseText.value.trim()) return
+  quickPhrases.value.push({ label: newPhraseLabel.value.trim(), text: newPhraseText.value.trim() })
+  newPhraseLabel.value = ''
+  newPhraseText.value = ''
+}
+
+const removePhrase = (idx) => {
+  quickPhrases.value.splice(idx, 1)
+}
+
+const savePhrases = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(quickPhrases.value))
+  showQuickPhraseDialog.value = false
+  ElMessage.success('快捷话语已保存')
+}
+
 // WebSocket
 let ws = null
+let wsHeartbeat = null      // 心跳定时器引用
+let wsReconnectTimer = null // 重连定时器引用
+let isUnmounted = false     // 组件是否已卸载
+
 const adminUserStr = localStorage.getItem('admin-user')
 const adminUserObj = adminUserStr ? JSON.parse(adminUserStr) : null
 const adminId = adminUserObj?.id || adminUserObj?.userId || null
-console.log('客服中心 adminId:', adminId, 'adminUser:', adminUserObj)
+
+// 播放新消息提示音
+const playNotifySound = () => {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const oscillator = ctx.createOscillator()
+    const gainNode = ctx.createGain()
+    oscillator.connect(gainNode)
+    gainNode.connect(ctx.destination)
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(880, ctx.currentTime)
+    gainNode.gain.setValueAtTime(0.3, ctx.currentTime)
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+    oscillator.start(ctx.currentTime)
+    oscillator.stop(ctx.currentTime + 0.5)
+  } catch (e) { /* 浏览器不支持则忽略 */ }
+}
 
 const connectWs = () => {
-  if (!adminId) return
+  if (!adminId || isUnmounted) return
+
+  // 清除旧连接，防止叠加
+  if (ws && ws.readyState !== WebSocket.CLOSED) {
+    ws.onclose = null // 先移除 onclose，避免触发重连
+    ws.close()
+  }
+  // 清除旧心跳
+  if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null }
+
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
   const wsUrl = `${protocol}//${location.host}/api/ws/service?adminId=${adminId}&role=admin`
   ws = new WebSocket(wsUrl)
 
   ws.onmessage = (event) => {
+    if (event.data === 'pong') return
     try {
       const data = JSON.parse(event.data)
       if (data.type === 'new_service_session') {
         // 新会话进来，刷新列表并更新等待数
         loadSessions()
         loadWaitingCount()
+        playNotifySound()
         ElMessage({
           message: `📞 用户「${data.userName || '用户'}」发起了人工客服请求，请及时处理！`,
           type: 'warning',
@@ -223,9 +363,12 @@ const connectWs = () => {
             createTime: new Date(data.createTime).getTime()
           })
           scrollToBottom()
+          // 用户消息才播放提示音
+          if (data.senderType === 'user') playNotifySound()
         } else {
           // 其他会话有新消息，刷新列表
           loadSessions()
+          if (data.senderType === 'user') playNotifySound()
         }
       } else if (data.type === 'session_closed') {
         loadSessions()
@@ -236,15 +379,26 @@ const connectWs = () => {
     } catch (e) { /* 忽略解析错误 */ }
   }
 
-  ws.onclose = () => {
-    // 5秒后重连
-    setTimeout(connectWs, 5000)
+  ws.onopen = () => {
+    // 连接成功后启动心跳
+    if (wsHeartbeat) clearInterval(wsHeartbeat)
+    wsHeartbeat = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send('ping')
+      } else {
+        clearInterval(wsHeartbeat)
+        wsHeartbeat = null
+      }
+    }, 30000)
   }
 
-  // 心跳
-  setInterval(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) ws.send('ping')
-  }, 30000)
+  ws.onclose = () => {
+    if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null }
+    // 组件未卸载则5秒后重连
+    if (!isUnmounted) {
+      wsReconnectTimer = setTimeout(connectWs, 5000)
+    }
+  }
 }
 
 const loadSessions = async () => {
@@ -355,16 +509,26 @@ const formatMsgTime = (ts) => {
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
 }
 
+let waitingCountTimer = null
+
 onMounted(() => {
   loadSessions()
   loadWaitingCount()
   connectWs()
   // 每30秒刷新等待数
-  const timer = setInterval(loadWaitingCount, 30000)
-  onUnmounted(() => {
-    clearInterval(timer)
-    if (ws) ws.close()
-  })
+  waitingCountTimer = setInterval(loadWaitingCount, 30000)
+})
+
+onUnmounted(() => {
+  isUnmounted = true
+  // 清除等待数刷新定时器
+  if (waitingCountTimer) { clearInterval(waitingCountTimer); waitingCountTimer = null }
+  // 清除重连定时器
+  if (wsReconnectTimer) { clearTimeout(wsReconnectTimer); wsReconnectTimer = null }
+  // 清除心跳定时器
+  if (wsHeartbeat) { clearInterval(wsHeartbeat); wsHeartbeat = null }
+  // 关闭WebSocket
+  if (ws) { ws.onclose = null; ws.close(); ws = null }
 })
 </script>
 
@@ -558,10 +722,43 @@ onMounted(() => {
   color: #fff;
 }
 
-.chat-input {
-  padding: 16px;
+.chat-input-area {
   background: #fff;
   border-top: 1px solid #ebeef5;
+}
+
+/* 快捷话语栏 */
+.quick-replies-bar {
+  padding: 8px 16px 6px;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.quick-replies-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+}
+
+.quick-replies-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.quick-phrase-tag {
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.quick-phrase-tag:hover {
+  background: #ecf5ff;
+  border-color: #409eff;
+  color: #409eff;
+}
+
+.chat-input {
+  padding: 12px 16px 16px;
   display: flex;
   gap: 10px;
   align-items: flex-end;
@@ -569,6 +766,52 @@ onMounted(() => {
 
 .chat-input .el-textarea {
   flex: 1;
+}
+
+/* 快捷话语管理弹窗 */
+.quick-phrase-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quick-phrase-add {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.quick-phrase-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.quick-phrase-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #fafafa;
+  border: 1px solid #ebeef5;
+  border-radius: 6px;
+  transition: box-shadow 0.2s;
+}
+
+.quick-phrase-item:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.phrase-item-content {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
 .session-rating {

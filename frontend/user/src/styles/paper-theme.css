@@ -400,6 +400,46 @@ body.paper-mode .el-alert {
   border: 1px solid rgba(15, 23, 42, 0.06) !important;
 }
 
+body.paper-mode .el-alert .el-alert__title {
+  color: #303133 !important;
+  font-weight: 600 !important;
+}
+
+body.paper-mode .el-alert .el-alert__description {
+  color: #606266 !important;
+}
+
+body.paper-mode .el-alert--error .el-alert__title {
+  color: #c0392b !important;
+}
+
+body.paper-mode .el-alert--error .el-alert__description {
+  color: #606266 !important;
+}
+
+body.paper-mode .el-alert .el-alert__icon {
+  color: inherit !important;
+}
+
+/* 弹窗内文字颜色 */
+body.paper-mode .el-dialog {
+  background: #ffffff !important;
+}
+
+body.paper-mode .el-dialog .el-dialog__title {
+  color: #303133 !important;
+}
+
+body.paper-mode .el-dialog .el-form-item__label {
+  color: #606266 !important;
+}
+
+body.paper-mode .el-dialog span,
+body.paper-mode .el-dialog p,
+body.paper-mode .el-dialog div {
+  color: #303133;
+}
+
 body.paper-mode .el-divider__text,
 body.paper-mode .el-divider {
   background: #ffffff !important;

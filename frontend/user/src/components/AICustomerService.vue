@@ -109,7 +109,7 @@
             class="quick-tag" 
             v-for="tag in quickTags" 
             :key="tag.id"
-            @click="askQuestion(tag.question)"
+            @click="tag.action ? tag.action() : askQuestion(tag.question)"
           >
             <span class="tag-icon">{{ tag.icon }}</span>
             <span class="tag-text">{{ tag.label }}</span>
@@ -251,10 +251,10 @@
           </div>
           <div class="quick-questions-tabs">
             <el-radio-group v-model="questionCategory" size="small">
-              <el-radio-button label="hot">🔥 热门</el-radio-button>
-              <el-radio-button label="reservation">📅 预约</el-radio-button>
-              <el-radio-button label="payment">💰 支付</el-radio-button>
-              <el-radio-button label="account">👤 账户</el-radio-button>
+              <el-radio-button value="hot">🔥 热门</el-radio-button>
+              <el-radio-button value="reservation">📅 预约</el-radio-button>
+              <el-radio-button value="payment">💰 支付</el-radio-button>
+              <el-radio-button value="account">👤 账户</el-radio-button>
             </el-radio-group>
           </div>
           <div class="quick-questions-list">
@@ -369,6 +369,42 @@ const currentSessionId = ref(null)
 const humanSessionId = ref(null)  // 当前人工客服会话ID
 const isHumanMode = ref(false)    // 是否处于人工客服模式
 let serviceWs = null              // 客服WebSocket连接
+let serviceWsHeartbeat = null     // 心跳定时器
+
+// ========== 无操作自动结束对话 ==========
+let inactivityTimer = null
+const INACTIVITY_TIMEOUT = 3 * 60 * 1000 // 3分钟
+
+const resetInactivityTimer = () => {
+  if (inactivityTimer) clearTimeout(inactivityTimer)
+  if (!isOpen.value) return
+  inactivityTimer = setTimeout(() => {
+    if (isOpen.value && messages.value.length > 0) {
+      addAIMessage(
+        '<div class="kb-answer"><p>⏰ 您已超过 <strong>3分钟</strong> 未进行对话，本次会话已自动结束。</p><p>如需继续咨询，请重新发起对话～ 🎭</p></div>',
+        [], false
+      )
+      // 如果处于人工客服模式，也一并关闭
+      if (isHumanMode.value && humanSessionId.value) {
+        isHumanMode.value = false
+        humanSessionId.value = null
+        connectionStatus.value = '在线服务中'
+        if (serviceWs) { serviceWs.close(); serviceWs = null }
+      }
+      // 延迟1秒后关闭窗口
+      setTimeout(() => {
+        isOpen.value = false
+      }, 3000)
+    }
+  }, INACTIVITY_TIMEOUT)
+}
+
+const clearInactivityTimer = () => {
+  if (inactivityTimer) {
+    clearTimeout(inactivityTimer)
+    inactivityTimer = null
+  }
+}
 
 // 转人工客服
 const transferToHuman = async () => {
@@ -474,11 +510,13 @@ const connectServiceWs = (sessionId, userId) => {
   }
 
   // 心跳保活
-  const heartbeat = setInterval(() => {
+  if (serviceWsHeartbeat) clearInterval(serviceWsHeartbeat)
+  serviceWsHeartbeat = setInterval(() => {
     if (serviceWs && serviceWs.readyState === WebSocket.OPEN) {
       serviceWs.send('ping')
     } else {
-      clearInterval(heartbeat)
+      clearInterval(serviceWsHeartbeat)
+      serviceWsHeartbeat = null
     }
   }, 30000)
 }
@@ -515,7 +553,7 @@ const quickTags = ref([
   { id: 3, icon: '🎫', label: '优惠', question: '有什么优惠活动？' },
   { id: 4, icon: '🏪', label: '门店', question: '如何查找附近的门店？' },
   { id: 5, icon: '👥', label: '拼车', question: '可以拼车组队吗？' },
-  { id: 6, icon: '👤', label: '人工', question: '转人工客服' }
+  { id: 6, icon: '👤', label: '人工', question: '转人工客服', action: () => transferToHuman() }
 ])
 
 // 快捷问题列表（按分类）
@@ -671,6 +709,7 @@ const knowledgeBase = {
 const toggleChat = () => {
   isOpen.value = true
   unreadCount.value = 0
+  resetInactivityTimer()
   if (messages.value.length === 0) {
     setTimeout(() => {
       const greeting = getGreeting()
@@ -679,8 +718,14 @@ const toggleChat = () => {
   }
 }
 
-const closeChat = () => { isOpen.value = false }
-const minimizeChat = () => { isOpen.value = false }
+const closeChat = () => {
+  isOpen.value = false
+  clearInactivityTimer()
+}
+const minimizeChat = () => {
+  isOpen.value = false
+  clearInactivityTimer()
+}
 
 const clearHistory = () => {
   ElMessageBox.confirm('确定要清空聊天记录吗？', '提示', {
@@ -704,6 +749,7 @@ const sendMessage = async () => {
   addUserMessage(userMessage)
   inputMessage.value = ''
   showQuickQuestions.value = false
+  resetInactivityTimer()
 
   // 检测转人工关键词（优先处理）
   const transferKeywords = ['转人工', '人工客服', '转客服', '人工服务', '真人客服', '联系客服', '转接人工']
@@ -1102,6 +1148,13 @@ onUnmounted(() => {
   saveCurrentSession()
   // 停止语音
   window.speechSynthesis?.cancel()
+  // 清除无操作计时器
+  clearInactivityTimer()
+  // 清除心跳定时器
+  if (serviceWsHeartbeat) {
+    clearInterval(serviceWsHeartbeat)
+    serviceWsHeartbeat = null
+  }
   // 关闭客服WebSocket
   if (serviceWs) {
     serviceWs.close()

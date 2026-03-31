@@ -687,6 +687,8 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 8px;
   width: 100%;
+  position: relative;
+  z-index: 2;
 }
 
 .action-btn {

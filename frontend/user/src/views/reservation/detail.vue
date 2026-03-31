@@ -227,7 +227,7 @@
     <el-dialog v-model="showRescheduleDialog" title="申请改期" width="460px" :close-on-click-modal="false">
       <el-form label-width="110px">
         <el-form-item label="当前预约时间">
-          <span style="color: #909399;">{{ reservation?.reservationTime }}</span>
+          <span style="color: #303133; font-weight: 500;">{{ reservation?.reservationTime }}</span>
         </el-form-item>
 
         <!-- 改期规则说明 -->
@@ -275,6 +275,7 @@
             :closable="false"
             description="距开局不足24小时，已超过最晚改期时间。如有特殊情况请直接联系门店。"
             show-icon
+            class="reschedule-alert"
           />
         </el-form-item>
       </el-form>
@@ -563,13 +564,6 @@ const confirmReschedule = async () => {
   }
 }
 
-const handleReview = () => {
-  router.push({
-    path: `/script/${reservation.value.scriptId}`,
-    query: { review: true, reservationId: reservation.value.id }
-  })
-}
-
 const goToScript = () => {
   if (reservation.value?.scriptId) {
     router.push(`/script/${reservation.value.scriptId}`)
@@ -831,8 +825,8 @@ onBeforeUnmount(() => {
 
 /* 改期规则样式 */
 .reschedule-rules {
-  background: linear-gradient(135deg, rgba(17, 27, 47, 0.95), rgba(12, 19, 35, 0.92));
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
   border-radius: 8px;
   padding: 12px 16px;
   width: 100%;
@@ -841,7 +835,7 @@ onBeforeUnmount(() => {
 .rule-title {
   font-size: 13px;
   font-weight: 600;
-  color: #f2f6ff;
+  color: #303133;
   margin-bottom: 10px;
 }
 
@@ -850,7 +844,7 @@ onBeforeUnmount(() => {
   align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  color: #b8c7e2;
+  color: #606266;
   margin-bottom: 6px;
   line-height: 1.5;
 }
@@ -860,7 +854,7 @@ onBeforeUnmount(() => {
 }
 
 .rule-item strong {
-  color: #f2f6ff;
+  color: #303133;
 }
 
 .rule-icon {
@@ -871,6 +865,18 @@ onBeforeUnmount(() => {
 
 .rule-warn {
   color: #f56c6c;
+}
+
+.reschedule-alert :deep(.el-alert__title) {
+  color: #c0392b;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.reschedule-alert :deep(.el-alert__description) {
+  color: #606266;
+  font-size: 13px;
+  margin-top: 4px;
 }
 
 .muted-text {

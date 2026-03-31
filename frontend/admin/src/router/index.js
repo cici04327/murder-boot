@@ -151,12 +151,6 @@ const routes = [
         component: () => import('@/views/script/schedule.vue'),
         meta: { title: '排期管理', icon: 'Calendar', roles: ['admin', 'store'] }
       },
-      {
-        path: 'ai-schedule',
-        name: 'AiDmSchedule',
-        component: () => import('@/views/script/ai-schedule.vue'),
-        meta: { title: 'AI智能分配DM', icon: 'MagicStick', roles: ['admin', 'store'] }
-      },
     ]
   },
   {
@@ -341,7 +335,13 @@ const routes = [
         path: 'index',
         name: 'ServiceCenter',
         component: () => import('@/views/service/index.vue'),
-        meta: { title: '客服中心', icon: 'Service', roles: ['admin'] }
+        meta: { title: '在线客服', icon: 'Service', roles: ['admin'] }
+      },
+      {
+        path: 'knowledge',
+        name: 'KnowledgeBase',
+        component: () => import('@/views/service/knowledge.vue'),
+        meta: { title: '知识库管理', icon: 'Collection', roles: ['admin'] }
       }
     ]
   }
