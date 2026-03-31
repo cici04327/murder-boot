@@ -54,6 +54,26 @@ public class KnowledgeBase implements Serializable {
     private Integer status;
 
     /**
+     * 是否FAQ：1是 0否
+     */
+    private Integer isFaq;
+
+    /**
+     * FAQ展示问题，为空时默认使用title
+     */
+    private String faqQuestion;
+
+    /**
+     * 命中次数
+     */
+    private Integer hitCount;
+
+    /**
+     * 最后命中时间
+     */
+    private LocalDateTime lastHitTime;
+
+    /**
      * 逻辑删除
      */
     @TableLogic

@@ -340,7 +340,7 @@ import {
   CopyDocument, Microphone, Loading, RefreshRight, 
   ArrowDown, Sunny
 } from '@element-plus/icons-vue'
-import { submitFeedback as submitFeedbackAPI, sendMessage as sendAIMessage } from '@/api/ai'
+import { submitFeedback as submitFeedbackAPI, sendMessage as sendAIMessage, getFrequentQuestions as getFrequentQuestionsAPI } from '@/api/ai'
 import request from '@/utils/request'
 import { useUserStore } from '@/store/user'
 
@@ -580,9 +580,59 @@ const quickQuestions = ref([
   { id: 16, label: '🔔 如何关闭通知？', question: '如何关闭消息通知？', category: 'account' }
 ])
 
+const FAQ_CATEGORY_MAP = {
+  reservation: 'reservation',
+  group: 'reservation',
+  refund: 'payment',
+  payment: 'payment',
+  coupon: 'payment',
+  points: 'payment',
+  vip: 'payment',
+  account: 'account',
+  system: 'account'
+}
+
+const faqIconByCategory = (category) => {
+  const iconMap = {
+    reservation: '📅',
+    refund: '🔄',
+    payment: '💳',
+    coupon: '🎫',
+    points: '⭐',
+    vip: '👑',
+    account: '👤',
+    system: '🛠️',
+    store: '🏪',
+    group: '👥'
+  }
+  return iconMap[category] || '💡'
+}
+
+const loadFrequentQuestions = async () => {
+  try {
+    const res = await getFrequentQuestionsAPI()
+    const faqList = res?.data || []
+    if (!faqList.length) return
+
+    const dynamicHotQuestions = faqList.slice(0, 6).map((item, index) => ({
+      id: 1000 + index,
+      label: `${faqIconByCategory(item.category)} ${item.question}`,
+      question: item.question,
+      category: FAQ_CATEGORY_MAP[item.category] || 'hot'
+    }))
+
+    const staticQuestions = quickQuestions.value.filter(q => q.id < 1000 && q.category !== 'hot')
+    quickQuestions.value = [...dynamicHotQuestions, ...staticQuestions]
+  } catch (error) {
+    console.error('加载常见问题失败:', error)
+  }
+}
+
 // 过滤后的快捷问题
 const filteredQuickQuestions = computed(() => {
-  return quickQuestions.value.filter(q => q.category === questionCategory.value)
+  const result = quickQuestions.value.filter(q => q.category === questionCategory.value)
+  if (result.length > 0) return result
+  return quickQuestions.value.filter(q => q.category === 'hot').slice(0, 6)
 })
 
 // 知识库
@@ -1129,6 +1179,7 @@ const scrollToBottom = () => {
 onMounted(() => {
   // 加载历史会话
   loadSessions()
+  loadFrequentQuestions()
   
   // 初始化会话ID
   if (!currentSessionId.value) {

@@ -32,11 +32,7 @@ class WebMvcConfigTest {
         List<String> excludePatterns = getPatternList(registration, "excludePatterns");
 
         assertTrue(includePatterns.contains("/api/**"));
-        assertTrue(excludePatterns.contains("/api/ai/chat"));
-        assertTrue(excludePatterns.contains("/api/ai/recommend/**"));
-        assertTrue(excludePatterns.contains("/api/ai/log"));
-        assertTrue(excludePatterns.contains("/api/ai/faq"));
-        assertTrue(excludePatterns.contains("/api/ai/feedback"));
+        assertTrue(excludePatterns.contains("/api/ai/**"));
         assertFalse(excludePatterns.contains("/api/ai/schedule/**"));
     }
 

@@ -2,7 +2,9 @@ package com.murder.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.murder.entity.AiConversationLog;
 import com.murder.entity.KnowledgeBase;
+import com.murder.mapper.AiConversationLogMapper;
 import com.murder.service.AIService;
 import com.murder.service.KnowledgeBaseService;
 import lombok.extern.slf4j.Slf4j;
@@ -47,6 +49,9 @@ public class AIServiceImpl implements AIService {
     @Autowired(required = false)
     private KnowledgeBaseService knowledgeBaseService;
 
+    @Autowired(required = false)
+    private AiConversationLogMapper aiConversationLogMapper;
+
     public AIServiceImpl(RestTemplate restTemplate, ObjectMapper objectMapper) {
         this.restTemplate = restTemplate;
         this.objectMapper = objectMapper;
@@ -61,6 +66,9 @@ public class AIServiceImpl implements AIService {
     public Map<String, Object> chat(String message, String sessionId, List<Map<String, Object>> history, Map<String, Object> context) {
         log.info("AI对话: provider={}, message={}", aiProvider, message);
 
+        Map<String, Object> runtimeContext = context == null ? new HashMap<>() : new HashMap<>(context);
+        runtimeContext.put("_sessionId", sessionId);
+
         // 优先检测转人工意图，直接返回转接标记，不调用 AI 接口
         if (TRANSFER_KEYWORDS.stream().anyMatch(message::contains)) {
             log.info("检测到转人工意图，直接返回转接响应");
@@ -70,26 +78,35 @@ public class AIServiceImpl implements AIService {
             response.put("actions", Arrays.asList(Map.of("label", "点击转接人工客服", "type", "transfer")));
             response.put("triggerTransfer", true);
             response.put("timestamp", System.currentTimeMillis());
+            saveConversationLog(sessionId, message, (String) response.get("reply"), runtimeContext, 1);
             return response;
         }
 
         try {
-            // 根据不同的AI提供商调用不同的API
+            Map<String, Object> response;
             switch (aiProvider.toLowerCase()) {
                 case "openai":
-                    return chatWithOpenAI(message, history, context);
+                    response = chatWithOpenAI(message, history, runtimeContext);
+                    break;
                 case "openrouter":
-                    return chatWithOpenRouter(message, history, context);
+                    response = chatWithOpenRouter(message, history, runtimeContext);
+                    break;
                 case "deepseek":
-                    return chatWithDeepSeek(message, history, context);
+                    response = chatWithDeepSeek(message, history, runtimeContext);
+                    break;
                 case "wenxin":
-                    return chatWithWenxin(message, history, context);
+                    response = chatWithWenxin(message, history, runtimeContext);
+                    break;
                 case "tongyi":
-                    return chatWithTongyi(message, history, context);
+                    response = chatWithTongyi(message, history, runtimeContext);
+                    break;
                 case "mock":
                 default:
-                    return chatWithMock(message, history, context);
+                    response = chatWithMock(message, history, runtimeContext);
+                    break;
             }
+            saveConversationLog(sessionId, message, (String) response.get("reply"), runtimeContext, 0);
+            return response;
         } catch (Exception e) {
             log.error("AI对话失败", e);
             return createErrorResponse("AI服务暂时不可用");
@@ -476,13 +493,12 @@ public class AIServiceImpl implements AIService {
         try {
             List<KnowledgeBase> results = new ArrayList<>();
 
-            // 1. 先按问题内容检索（最多4条）
             List<KnowledgeBase> queryResults = knowledgeBaseService.search(message, 4);
             results.addAll(queryResults);
 
-            // 2. 再按当前页面补充检索（最多2条，去重）
+            String page = null;
             if (context != null) {
-                String page = (String) context.get("page");
+                page = (String) context.get("page");
                 if (page != null && !page.isBlank()) {
                     List<KnowledgeBase> pageResults = knowledgeBaseService.searchByPage(page, 2);
                     Set<Long> existIds = results.stream()
@@ -495,6 +511,10 @@ public class AIServiceImpl implements AIService {
             }
 
             if (results.isEmpty()) return "";
+
+            String sessionId = context != null ? (String) context.get("_sessionId") : null;
+            Long userId = extractUserId(context);
+            knowledgeBaseService.recordHitLog(sessionId, userId, message, page, results);
             return knowledgeBaseService.buildContextBlock(results);
         } catch (Exception e) {
             log.warn("RAG知识检索失败，降级为无检索模式: {}", e.getMessage());
@@ -817,6 +837,50 @@ public class AIServiceImpl implements AIService {
         return response;
     }
 
+    private Long extractUserId(Map<String, Object> context) {
+        if (context == null) {
+            return null;
+        }
+        Object userInfoObj = context.get("userInfo");
+        if (!(userInfoObj instanceof Map)) {
+            return null;
+        }
+        Object idObj = ((Map<?, ?>) userInfoObj).get("id");
+        if (idObj instanceof Number) {
+            return ((Number) idObj).longValue();
+        }
+        if (idObj instanceof String) {
+            try {
+                return Long.parseLong((String) idObj);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private void saveConversationLog(String sessionId, String question, String answer, Map<String, Object> context, Integer isTransferred) {
+        if (aiConversationLogMapper == null || (question == null && answer == null)) {
+            return;
+        }
+        try {
+            String page = context != null ? (String) context.get("page") : null;
+            AiConversationLog logItem = AiConversationLog.builder()
+                    .userId(extractUserId(context))
+                    .sessionId(sessionId)
+                    .question(question)
+                    .answer(answer)
+                    .page(page)
+                    .isTransferred(isTransferred == null ? 0 : isTransferred)
+                    .provider(aiProvider)
+                    .model(model)
+                    .build();
+            aiConversationLogMapper.insert(logItem);
+        } catch (Exception e) {
+            log.warn("记录AI对话日志失败: {}", e.getMessage());
+        }
+    }
+
     @Override
     public Map<String, Object> getRecommendation(String type) {
         // TODO: 根据用户偏好和历史记录生成个性化推荐
@@ -828,18 +892,30 @@ public class AIServiceImpl implements AIService {
 
     @Override
     public void logConversation(Map<String, Object> params) {
-        // TODO: 记录对话到数据库，用于分析和优化
-        log.info("记录对话: {}", params);
+        if (params == null) {
+            return;
+        }
+        Map<String, Object> context = params.get("context") instanceof Map ? (Map<String, Object>) params.get("context") : new HashMap<>();
+        String sessionId = params.get("sessionId") instanceof String ? (String) params.get("sessionId") : null;
+        String question = params.get("question") instanceof String ? (String) params.get("question") : (String) params.get("message");
+        String answer = params.get("answer") instanceof String ? (String) params.get("answer") : null;
+        Integer isTransferred = params.get("isTransferred") instanceof Number ? ((Number) params.get("isTransferred")).intValue() : 0;
+        saveConversationLog(sessionId, question, answer, context, isTransferred);
     }
 
     @Override
     public List<Map<String, Object>> getFrequentQuestions() {
-        // TODO: 从数据库查询常见问题
-        List<Map<String, Object>> faq = new ArrayList<>();
-        faq.add(Map.of("question", "如何预约剧本？", "category", "预约"));
-        faq.add(Map.of("question", "如何申请退款？", "category", "退款"));
-        faq.add(Map.of("question", "支持哪些支付方式？", "category", "支付"));
-        return faq;
+        if (knowledgeBaseService != null) {
+            List<Map<String, Object>> faq = knowledgeBaseService.getFaqList(8);
+            if (faq != null && !faq.isEmpty()) {
+                return faq;
+            }
+        }
+        List<Map<String, Object>> fallback = new ArrayList<>();
+        fallback.add(Map.of("question", "如何预约剧本？", "category", "reservation"));
+        fallback.add(Map.of("question", "如何申请退款？", "category", "refund"));
+        fallback.add(Map.of("question", "支持哪些支付方式？", "category", "payment"));
+        return fallback;
     }
 
     @Override

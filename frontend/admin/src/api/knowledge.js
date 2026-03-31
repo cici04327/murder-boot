@@ -3,6 +3,9 @@ import request from '@/utils/request'
 /** 获取知识库列表 */
 export const getKnowledgeList = (params) => request.get('/admin/knowledge/list', { params })
 
+/** 获取知识库统计 */
+export const getKnowledgeStats = () => request.get('/admin/knowledge/stats')
+
 /** 新增知识条目 */
 export const addKnowledge = (data) => request.post('/admin/knowledge', data)
 

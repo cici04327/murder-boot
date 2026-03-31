@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS `ai_knowledge_base` (
     `keywords`    VARCHAR(500)          COMMENT '关键词（逗号分隔）',
     `priority`    INT          NOT NULL DEFAULT 5 COMMENT '优先级(1-10)，越大越优先',
     `status`      INT          NOT NULL DEFAULT 1 COMMENT '状态: 1启用 0禁用',
+    `is_faq`      INT          NOT NULL DEFAULT 0 COMMENT '是否FAQ: 1是 0否',
+    `faq_question` VARCHAR(255)         COMMENT 'FAQ展示问题',
+    `hit_count`   INT          NOT NULL DEFAULT 0 COMMENT '命中次数',
+    `last_hit_time` DATETIME            COMMENT '最后命中时间',
     `is_deleted`  INT          NOT NULL DEFAULT 0 COMMENT '逻辑删除',
     `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -279,6 +283,108 @@ DM评分：
 - 核销码无法使用
 - 其他紧急情况',
 '人工客服,客服,联系,电话,转人工,在线客服,投诉', 10);
+
+-- 历史版本兼容：补充新增字段（兼容不支持 ADD COLUMN IF NOT EXISTS 的 MySQL）
+SET @db_name = DATABASE();
+
+SET @sql = IF(
+    EXISTS (
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @db_name
+          AND TABLE_NAME = 'ai_knowledge_base'
+          AND COLUMN_NAME = 'is_faq'
+    ),
+    'SELECT 1',
+    'ALTER TABLE `ai_knowledge_base` ADD COLUMN `is_faq` INT NOT NULL DEFAULT 0 COMMENT ''是否FAQ: 1是 0否'''
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS (
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @db_name
+          AND TABLE_NAME = 'ai_knowledge_base'
+          AND COLUMN_NAME = 'faq_question'
+    ),
+    'SELECT 1',
+    'ALTER TABLE `ai_knowledge_base` ADD COLUMN `faq_question` VARCHAR(255) NULL COMMENT ''FAQ展示问题'''
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS (
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @db_name
+          AND TABLE_NAME = 'ai_knowledge_base'
+          AND COLUMN_NAME = 'hit_count'
+    ),
+    'SELECT 1',
+    'ALTER TABLE `ai_knowledge_base` ADD COLUMN `hit_count` INT NOT NULL DEFAULT 0 COMMENT ''命中次数'''
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS (
+        SELECT 1
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = @db_name
+          AND TABLE_NAME = 'ai_knowledge_base'
+          AND COLUMN_NAME = 'last_hit_time'
+    ),
+    'SELECT 1',
+    'ALTER TABLE `ai_knowledge_base` ADD COLUMN `last_hit_time` DATETIME NULL COMMENT ''最后命中时间'''
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- FAQ初始化：常见问题默认展示到用户端快捷问题中
+UPDATE `ai_knowledge_base` SET `is_faq` = 1, `faq_question` = '如何预约剧本杀？' WHERE `title` = '预约剧本杀流程';
+UPDATE `ai_knowledge_base` SET `is_faq` = 1, `faq_question` = '如何申请退款？' WHERE `title` = '退款规则';
+UPDATE `ai_knowledge_base` SET `is_faq` = 1, `faq_question` = '支持哪些支付方式？' WHERE `title` = '支付方式说明';
+UPDATE `ai_knowledge_base` SET `is_faq` = 1, `faq_question` = 'VIP会员有什么特权？' WHERE `title` = 'VIP会员等级与权益';
+UPDATE `ai_knowledge_base` SET `is_faq` = 1, `faq_question` = '积分可以提现吗？' WHERE `title` = '积分规则';
+UPDATE `ai_knowledge_base` SET `is_faq` = 1, `faq_question` = '人数不够可以拼团吗？' WHERE `title` = '拼团功能说明';
+
+CREATE TABLE IF NOT EXISTS `ai_knowledge_hit_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` BIGINT NULL COMMENT '用户ID',
+    `session_id` VARCHAR(100) NULL COMMENT '会话ID',
+    `query` VARCHAR(500) NOT NULL COMMENT '用户问题',
+    `knowledge_id` BIGINT NOT NULL COMMENT '命中的知识ID',
+    `knowledge_title` VARCHAR(200) NOT NULL COMMENT '命中的知识标题',
+    `category` VARCHAR(50) NULL COMMENT '知识分类',
+    `page` VARCHAR(255) NULL COMMENT '命中时页面',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_knowledge_id` (`knowledge_id`),
+    INDEX `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI知识库命中日志';
+
+CREATE TABLE IF NOT EXISTS `ai_conversation_log` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` BIGINT NULL COMMENT '用户ID',
+    `session_id` VARCHAR(100) NULL COMMENT '会话ID',
+    `question` TEXT NULL COMMENT '用户问题',
+    `answer` TEXT NULL COMMENT 'AI回答',
+    `page` VARCHAR(255) NULL COMMENT '页面路径',
+    `is_transferred` INT NOT NULL DEFAULT 0 COMMENT '是否转人工',
+    `provider` VARCHAR(50) NULL COMMENT 'AI提供商',
+    `model` VARCHAR(100) NULL COMMENT '模型名称',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_session_id` (`session_id`),
+    INDEX `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI对话日志';
 
 -- 查询验证
 SELECT COUNT(*) AS total_knowledge, category, COUNT(*) AS count_per_category

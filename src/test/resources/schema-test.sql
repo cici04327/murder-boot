@@ -359,3 +359,48 @@ CREATE TABLE IF NOT EXISTS review (
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- AI知识库表
+CREATE TABLE IF NOT EXISTS ai_knowledge_base (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    category VARCHAR(50) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    keywords VARCHAR(500),
+    priority INT NOT NULL DEFAULT 5,
+    status INT NOT NULL DEFAULT 1,
+    is_faq INT NOT NULL DEFAULT 0,
+    faq_question VARCHAR(255),
+    hit_count INT NOT NULL DEFAULT 0,
+    last_hit_time DATETIME,
+    is_deleted INT NOT NULL DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI知识命中日志表
+CREATE TABLE IF NOT EXISTS ai_knowledge_hit_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT,
+    session_id VARCHAR(100),
+    query VARCHAR(500) NOT NULL,
+    knowledge_id BIGINT NOT NULL,
+    knowledge_title VARCHAR(200) NOT NULL,
+    category VARCHAR(50),
+    page VARCHAR(255),
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI对话日志表
+CREATE TABLE IF NOT EXISTS ai_conversation_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT,
+    session_id VARCHAR(100),
+    question TEXT,
+    answer TEXT,
+    page VARCHAR(255),
+    is_transferred INT DEFAULT 0,
+    provider VARCHAR(50),
+    model VARCHAR(100),
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);

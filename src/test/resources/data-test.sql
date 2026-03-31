@@ -56,3 +56,20 @@ INSERT INTO vip_package (id, name, level, duration_days, duration_type, original
 INSERT INTO feedback (id, user_id, name, contact, subject, message, status, is_deleted) VALUES
 (1, 1, '测试用户', '13800138000', 'platform', '这是一条测试留言，用于集成测试', 0, 0),
 (2, NULL, '游客用户', 'guest@test.com', 'feedback', '游客留言测试内容，用于集成测试', 0, 0);
+
+-- 插入AI知识库测试数据
+INSERT INTO ai_knowledge_base (id, category, title, content, keywords, priority, status, is_faq, faq_question, hit_count, is_deleted) VALUES
+(1, 'reservation', '预约剧本杀流程', '预约流程测试内容', '预约,下单', 10, 1, 1, '如何预约剧本杀？', 5, 0),
+(2, 'refund', '退款规则', '退款规则测试内容', '退款,取消', 9, 1, 1, '如何申请退款？', 3, 0),
+(3, 'payment', '支付方式说明', '仅支持支付宝支付', '支付,支付宝', 8, 1, 1, '支持哪些支付方式？', 2, 0),
+(4, 'vip', 'VIP会员等级与权益', 'VIP权益测试内容', 'VIP,会员', 7, 0, 0, NULL, 0, 0);
+
+-- 插入AI知识命中日志测试数据
+INSERT INTO ai_knowledge_hit_log (id, user_id, session_id, query, knowledge_id, knowledge_title, category, page) VALUES
+(1, 1, 'session_test_1', '如何预约剧本杀？', 1, '预约剧本杀流程', 'reservation', '/script'),
+(2, 1, 'session_test_1', '如何申请退款？', 2, '退款规则', 'refund', '/reservation/detail/1'),
+(3, 1, 'session_test_2', '支持哪些支付方式？', 3, '支付方式说明', 'payment', '/payment/1');
+
+-- 插入AI对话日志测试数据
+INSERT INTO ai_conversation_log (id, user_id, session_id, question, answer, page, is_transferred, provider, model) VALUES
+(1, 1, 'session_test_1', '如何预约剧本杀？', '请先选择剧本和门店后下单。', '/script', 0, 'mock', 'test-model');

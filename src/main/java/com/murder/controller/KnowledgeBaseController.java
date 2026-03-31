@@ -1,5 +1,6 @@
 package com.murder.controller;
 
+import com.murder.common.result.PageResult;
 import com.murder.common.result.Result;
 import com.murder.entity.KnowledgeBase;
 import com.murder.service.KnowledgeBaseService;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * AI知识库管理接口（管理端）
@@ -24,12 +26,19 @@ public class KnowledgeBaseController {
     private KnowledgeBaseService knowledgeBaseService;
 
     /**
-     * 查询所有知识条目
+     * 分页查询知识条目
      */
     @GetMapping("/list")
-    @Operation(summary = "查询所有知识条目")
-    public Result<List<KnowledgeBase>> list() {
-        return Result.success(knowledgeBaseService.listAll());
+    @Operation(summary = "分页查询知识条目")
+    public Result<PageResult<KnowledgeBase>> list(
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer status) {
+        log.info("分页查询知识条目: page={}, pageSize={}, category={}, keyword={}, status={}",
+                page, pageSize, category, keyword, status);
+        return Result.success(knowledgeBaseService.pageQuery(page, pageSize, category, keyword, status));
     }
 
     /**
@@ -86,5 +95,14 @@ public class KnowledgeBaseController {
             @RequestParam(defaultValue = "5") int topK) {
         log.info("测试RAG检索: query={}, topK={}", query, topK);
         return Result.success(knowledgeBaseService.search(query, topK));
+    }
+
+    /**
+     * 查询知识库统计
+     */
+    @GetMapping("/stats")
+    @Operation(summary = "查询知识库统计")
+    public Result<Map<String, Object>> stats() {
+        return Result.success(knowledgeBaseService.getStatistics());
     }
 }
