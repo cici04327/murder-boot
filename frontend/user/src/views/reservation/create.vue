@@ -373,10 +373,10 @@
                   <div class="status-card warning" v-if="form.playerCount < selectedScript.playerCount">
                     <div class="status-icon">🎭</div>
                     <div class="status-content">
-                      <div class="status-title">人数不足，将自动发起拼单</div>
+                      <div class="status-title">人数不足，支付后将自动发起拼单</div>
                       <div class="status-desc">
                         还差 <strong>{{ selectedScript.playerCount - form.playerCount }}</strong> 人，
-                        提交后系统将自动在拼单大厅发起组队，等待其他玩家加入
+                        支付后系统将自动在拼单大厅发起组队，等待其他玩家加入
                       </div>
                     </div>
                   </div>
@@ -1115,16 +1115,15 @@ const handleSubmit = async () => {
         const res = await createReservation(reservationData)
         if (res.code === 1 || res.code === 200) {
           const reservationId = res.data?.id || res.data
-          const autoGroupId = res.data?.groupId
-          if (needGroup.value && autoGroupId) {
+          if (needGroup.value) {
             ElMessage.success({
-              message: `预约成功！已自动发起拼单，还差${selectedScript.value.playerCount - form.playerCount}人`,
+              message: `预约成功！支付完成后将自动发起拼单，还差${selectedScript.value.playerCount - form.playerCount}人`,
               duration: 4000
             })
           } else {
             ElMessage.success('预约成功！')
           }
-          router.push(`/reservation/confirm/${reservationId}`)
+          router.push(`/reservation/confirm/${reservationId}?needGroup=${needGroup.value ? 1 : 0}`)
         }
       } catch (error) {
         console.error('创建预约失败:', error)

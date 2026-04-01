@@ -50,7 +50,7 @@
               <el-radio-button label="day">日视图</el-radio-button>
               <el-radio-button label="week">周视图</el-radio-button>
             </el-radio-group>
-            <el-button @click="batchDialogVisible = true">📆 批量生成</el-button>
+            <el-button @click="showBatchDialog">📆 批量生成</el-button>
             <el-button type="primary" @click="showAddDialog">
               <el-icon><Plus /></el-icon> 新增排期
             </el-button>
@@ -428,6 +428,30 @@
           />
         </el-form-item>
 
+        <el-form-item label="主持 DM">
+          <el-select
+            v-model="batchForm.dmId"
+            placeholder="选择主持 DM（可不选）"
+            clearable
+            style="width:100%"
+            :loading="dmLoading"
+          >
+            <el-option :value="null" label="暂不分配" />
+            <el-option
+              v-for="dm in dmOptions"
+              :key="dm.id"
+              :label="dm.name"
+              :value="dm.id"
+            >
+              <div style="display:flex;align-items:center;gap:8px">
+                <el-avatar :size="24" :src="dm.avatar">🎭</el-avatar>
+                <span>{{ dm.name }}</span>
+                <el-rate :model-value="Number(dm.rating)" disabled size="small" style="margin-left:auto" />
+              </div>
+            </el-option>
+          </el-select>
+        </el-form-item>
+
         <el-form-item label="时间段" required>
           <div class="batch-slots-header" v-if="batchForm.scriptId">
             <el-alert type="success" :closable="false" show-icon style="margin-bottom:10px">
@@ -460,11 +484,31 @@
             </el-form-item>
           </el-col>
         </el-row>
+
+        <el-alert v-if="batchPrecheckLoading" type="info" :closable="false" show-icon style="margin-top: 8px;"
+          title="正在检查房间 / DM 冲突..." />
+
+        <div v-else-if="batchPrecheck" class="batch-precheck-box" :class="batchPrecheck.hasConflict ? 'has-conflict' : 'no-conflict'">
+          <div class="batch-precheck-summary">
+            <span>{{ batchPrecheck.message }}</span>
+            <span v-if="batchPrecheck.totalCount > 0">总计 {{ batchPrecheck.totalCount }} 个时段</span>
+          </div>
+          <div v-if="batchPrecheck.hasConflict && batchPrecheck.conflicts?.length" class="batch-precheck-list">
+            <div v-for="(item, idx) in batchPrecheck.conflicts.slice(0, 8)" :key="`${item.scheduleDate}-${item.startTime}-${idx}`" class="batch-precheck-item">
+              <span>📅 {{ item.scheduleDate }} {{ formatTime(item.startTime) }}-{{ formatTime(item.endTime) }}</span>
+              <el-tag size="small" type="danger">{{ item.reason }}</el-tag>
+            </div>
+            <div v-if="batchPrecheck.conflicts.length > 8" class="batch-precheck-more">
+              仅展示前 8 条，实际共 {{ batchPrecheck.conflicts.length }} 条冲突
+            </div>
+          </div>
+        </div>
       </el-form>
 
       <template #footer>
         <el-button @click="batchDialogVisible = false">取消</el-button>
-        <el-button type="primary" :loading="batchSubmitting" @click="handleBatchGenerate">
+        <el-button type="primary" :loading="batchSubmitting || batchPrecheckLoading" @click="handleBatchGenerate"
+          :disabled="batchPrecheckLoading || batchPrecheck?.hasConflict">
           🚀 开始生成
         </el-button>
       </template>
@@ -483,6 +527,7 @@ import {
   updateScheduleStatus,
   deleteSchedule,
   generateSchedules,
+  precheckGenerateSchedules,
   checkScheduleConflict
 } from '@/api/schedule'
 import { getDmList } from '@/api/dm'
@@ -967,7 +1012,7 @@ const handleDropdown = async (cmd, row) => {
 
 // =================== 批量生成 ===================
 const batchForm = reactive({
-  scriptId: null, roomId: null, dateRange: [],
+  scriptId: null, roomId: null, dmId: null, dateRange: [],
   timeSlots: [{ start: '10:00', end: '14:00' }],
   maxPlayers: 6
 })
@@ -980,17 +1025,86 @@ const batchPreviewCount = computed(() => {
   return days * batchForm.timeSlots.filter(s => s.start && s.end).length
 })
 
+const batchPrecheck = ref(null)
+const batchPrecheckLoading = ref(false)
+let batchPrecheckTimer = null
+
 const addTimeSlot = () => batchForm.timeSlots.push({ start: '14:00', end: '18:00' })
 const removeTimeSlot = (idx) => { if (batchForm.timeSlots.length > 1) batchForm.timeSlots.splice(idx, 1) }
+
+const showBatchDialog = async () => {
+  if (!storeId.value) { ElMessage.warning('请先选择门店'); return }
+  Object.assign(batchForm, {
+    scriptId: null,
+    roomId: null,
+    dmId: null,
+    dateRange: [],
+    timeSlots: [{ start: '10:00', end: '14:00' }],
+    maxPlayers: 6
+  })
+  batchPrecheck.value = null
+  await loadDmOptions(storeId.value)
+  batchDialogVisible.value = true
+}
+
+const triggerBatchPrecheck = () => {
+  if (!batchDialogVisible.value) return
+  const hasBasicParams = storeId.value && batchForm.scriptId && batchForm.roomId &&
+    batchForm.dateRange && batchForm.dateRange.length === 2 &&
+    batchForm.timeSlots.some(s => s.start && s.end)
+  if (!hasBasicParams) {
+    batchPrecheck.value = null
+    return
+  }
+
+  clearTimeout(batchPrecheckTimer)
+  batchPrecheckTimer = setTimeout(async () => {
+    batchPrecheckLoading.value = true
+    try {
+      const timeSlots = batchForm.timeSlots.filter(s => s.start && s.end).map(s => `${s.start}:00-${s.end}:00`)
+      const res = await precheckGenerateSchedules({
+        storeId: storeId.value,
+        scriptId: batchForm.scriptId,
+        roomId: batchForm.roomId,
+        dmId: batchForm.dmId,
+        startDate: batchForm.dateRange[0],
+        endDate: batchForm.dateRange[1],
+        timeSlots,
+        maxPlayers: batchForm.maxPlayers
+      })
+      if (res.code === 1 || res.code === 200) {
+        batchPrecheck.value = res.data || null
+      }
+    } catch (e) {
+      batchPrecheck.value = null
+    } finally {
+      batchPrecheckLoading.value = false
+    }
+  }, 400)
+}
+
+watch(() => [
+  batchDialogVisible.value,
+  storeId.value,
+  batchForm.scriptId,
+  batchForm.roomId,
+  batchForm.dmId,
+  batchForm.dateRange?.[0],
+  batchForm.dateRange?.[1],
+  batchForm.maxPlayers,
+  JSON.stringify(batchForm.timeSlots)
+], triggerBatchPrecheck)
 
 const handleBatchGenerate = async () => {
   if (!batchForm.scriptId || !batchForm.roomId) { ElMessage.error('请选择剧本和房间'); return }
   if (!batchForm.dateRange || batchForm.dateRange.length !== 2) { ElMessage.error('请选择日期范围'); return }
+  if (batchPrecheck.value?.hasConflict) { ElMessage.error('存在房间或DM冲突，请先调整后再生成'); return }
   batchSubmitting.value = true
   try {
     const timeSlots = batchForm.timeSlots.filter(s => s.start && s.end).map(s => `${s.start}:00-${s.end}:00`)
     const res = await generateSchedules({
       storeId: storeId.value, scriptId: batchForm.scriptId, roomId: batchForm.roomId,
+      dmId: batchForm.dmId,
       startDate: batchForm.dateRange[0], endDate: batchForm.dateRange[1],
       timeSlots, maxPlayers: batchForm.maxPlayers
     })

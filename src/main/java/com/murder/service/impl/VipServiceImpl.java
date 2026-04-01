@@ -320,15 +320,15 @@ public class VipServiceImpl implements VipService {
     }
 
     private String getVipNotifyUrl() {
-        return replacePath(alipayConfig.getNotifyUrl(), "/api/vip/payment/notify");
+        return replacePath(alipayConfig.getSanitizedNotifyUrl(), "/api/vip/payment/notify");
     }
 
     private String getVipReturnUrl() {
-        return replacePath(alipayConfig.getReturnUrl(), "/api/vip/payment/return");
+        return replacePath(alipayConfig.getSanitizedReturnUrl(), "/api/vip/payment/return");
     }
 
     private String getVipResultUrl() {
-        String resultUrl = alipayConfig.getResultUrl();
+        String resultUrl = alipayConfig.getSanitizedResultUrl();
         if (!StringUtils.hasText(resultUrl)) {
             return "http://localhost:3001/vip";
         }
@@ -344,16 +344,17 @@ public class VipServiceImpl implements VipService {
     }
 
     private String replacePath(String sourceUrl, String targetPath) {
-        if (!StringUtils.hasText(sourceUrl)) {
+        String sanitizedUrl = alipayConfig.sanitizeUrl(sourceUrl);
+        if (!StringUtils.hasText(sanitizedUrl)) {
             return "http://localhost:8080" + targetPath;
         }
         try {
-            return UriComponentsBuilder.fromUriString(sourceUrl)
+            return UriComponentsBuilder.fromUriString(sanitizedUrl)
                     .replacePath(targetPath)
                     .build()
                     .toUriString();
         } catch (Exception e) {
-            log.warn("替换VIP支付回调地址失败，sourceUrl={}, targetPath={}", sourceUrl, targetPath, e);
+            log.warn("替换VIP支付回调地址失败，sourceUrl={}, targetPath={}", sanitizedUrl, targetPath, e);
             return "http://localhost:8080" + targetPath;
         }
     }

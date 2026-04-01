@@ -122,6 +122,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addViewControllers(ViewControllerRegistry registry) {
         // 首页重定向
         registry.addViewController("/").setViewName("forward:/index.html");
+        // 支付相关前端 history 路由回退，避免浏览器直达或支付回跳时出现 404
+        registry.addViewController("/payment/result").setViewName("forward:/index.html");
+        registry.addViewController("/payment/*").setViewName("forward:/index.html");
+        registry.addViewController("/vip").setViewName("forward:/index.html");
     }
     
     @Override

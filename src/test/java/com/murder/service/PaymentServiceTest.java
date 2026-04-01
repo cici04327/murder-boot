@@ -6,6 +6,7 @@ import com.murder.mapper.ReservationMapper;
 import com.murder.service.impl.PaymentServiceImpl;
 import com.murder.common.config.AlipayConfig;
 import com.alipay.api.AlipayClient;
+import com.alipay.api.request.AlipayTradePagePayRequest;
 import com.alipay.api.response.AlipayTradePagePayResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,6 +67,11 @@ class PaymentServiceTest {
         BaseContext.setCurrentId(999L);
         BaseContext.setStoreId(1L);
 
+        when(alipayConfig.sanitizeUrl(anyString())).thenAnswer(invocation -> {
+            String value = invocation.getArgument(0);
+            return value == null ? null : value.replaceAll("\\s+", "").trim();
+        });
+
         testReservation = new Reservation();
         testReservation.setId(1L);
         testReservation.setOrderNo("TEST202601010001");
@@ -95,6 +101,8 @@ class PaymentServiceTest {
         @DisplayName("alipay支付 - mock模式成功")
         void createPayment_Alipay_MockMode_Success() throws Exception {
             when(reservationMapper.selectById(1L)).thenReturn(testReservation);
+            when(alipayConfig.getSanitizedNotifyUrl()).thenReturn("https://1350b4ae.r3.cpolar.top/api/reservation/payment/notify");
+            when(alipayConfig.getSanitizedReturnUrl()).thenReturn("https://1350b4ae.r3.cpolar.top/api/reservation/payment/return");
             AlipayTradePagePayResponse response = mock(AlipayTradePagePayResponse.class);
             when(alipayClient.pageExecute(any())).thenReturn(response);
             when(response.getBody()).thenReturn("<form id='alipay'>pay</form>");
@@ -104,6 +112,24 @@ class PaymentServiceTest {
             assertEquals("<form id='alipay'>pay</form>", result);
         }
 
+        @Test
+        @DisplayName("创建支付 - 自动清洗回调URL中的空格")
+        void createPayment_SanitizeCallbackUrls() throws Exception {
+            when(reservationMapper.selectById(1L)).thenReturn(testReservation);
+            when(alipayConfig.getSanitizedNotifyUrl()).thenReturn("https://1350b4ae.r3.cpolar.top /api/reservation/payment/notify");
+            when(alipayConfig.getSanitizedReturnUrl()).thenReturn("https://1350b4ae.r3.cpolar.top  /api/reservation/payment/return");
+
+            AlipayTradePagePayResponse response = mock(AlipayTradePagePayResponse.class);
+            ArgumentCaptor<AlipayTradePagePayRequest> requestCaptor = ArgumentCaptor.forClass(AlipayTradePagePayRequest.class);
+            when(alipayClient.pageExecute(requestCaptor.capture())).thenReturn(response);
+            when(response.getBody()).thenReturn("<form id='alipay'>pay</form>");
+
+            paymentService.createPayment(1L, "alipay");
+
+            AlipayTradePagePayRequest captured = requestCaptor.getValue();
+            assertEquals("https://1350b4ae.r3.cpolar.top/api/reservation/payment/notify", captured.getNotifyUrl());
+            assertEquals("https://1350b4ae.r3.cpolar.top/api/reservation/payment/return", captured.getReturnUrl());
+        }
 
         @Test
         @DisplayName("创建支付 - 预约不存在")

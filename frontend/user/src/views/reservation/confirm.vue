@@ -3,7 +3,7 @@
     <el-result
       icon="success"
       title="预约提交成功"
-      :sub-title="reservation?.groupId ? '人数不足已自动发起拼团，请尽快支付并分享拼团给朋友' : '请尽快完成支付，到店时向门店出示核销码'"
+      :sub-title="needGroup ? '请先完成支付，支付成功后系统会自动为你发起或加入拼团' : '请尽快完成支付，到店时向门店出示核销码'"
     >
       <template #extra>
         <el-card class="reservation-info">
@@ -39,12 +39,12 @@
             </div>
           </div>
 
-          <div class="group-panel" v-if="reservation?.groupId">
-            <div class="group-panel-title">拼团已自动发起</div>
+          <div class="group-panel" v-if="needGroup">
+            <div class="group-panel-title">支付后自动处理拼团</div>
             <div class="group-panel-desc">
-              当前预约人数不足完整开团，系统已经为该场次生成拼团。你可以前往拼团页查看进度，并把链接分享给好友一起上车。
+              当前预约人数不足完整开团。请先完成支付，系统会在支付成功后自动为该场次发起或加入拼团；若已有可复用拼团，也会自动帮你并入。
             </div>
-            <el-button type="warning" plain @click="handleViewGroup">查看拼团</el-button>
+            <el-button v-if="reservation?.groupId" type="warning" plain @click="handleViewGroup">查看当前拼团</el-button>
           </div>
 
           <div class="actions">
@@ -68,6 +68,7 @@ const router = useRouter()
 
 const loading = ref(false)
 const reservation = ref(null)
+const needGroup = ref(route.query.needGroup === '1')
 
 const getStatusType = (status) => {
   const map = { 1: 'warning', 2: 'success', 3: 'info', 4: 'danger' }
@@ -84,6 +85,9 @@ const loadReservation = async () => {
   try {
     const res = await getReservationDetail(route.params.id)
     reservation.value = res.data || null
+    if (!needGroup.value && reservation.value?.groupId) {
+      needGroup.value = true
+    }
   } finally {
     loading.value = false
   }

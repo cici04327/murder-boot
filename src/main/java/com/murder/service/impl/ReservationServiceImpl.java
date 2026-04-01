@@ -200,11 +200,6 @@ public class ReservationServiceImpl implements ReservationService {
             couponService.useCoupon(reservationDTO.getUserCouponId(), reservation.getId());
         }
 
-        GroupOrder autoCreatedGroup = createGroupOrderIfNeeded(reservation);
-        if (autoCreatedGroup != null) {
-            reservation.setGroupId(autoCreatedGroup.getId());
-        }
-
         try {
             sendReservationSuccessNotification(reservation);
         } catch (Exception e) {
@@ -870,20 +865,26 @@ public class ReservationServiceImpl implements ReservationService {
                 ? ""
                 : reservation.getReservationTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
 
-        boolean isGrouping = reservation.getGroupId() != null;
+        boolean mayNeedGroup = false;
+        if (scriptService != null && reservation.getScriptId() != null && reservation.getPlayerCount() != null) {
+            try {
+                com.murder.entity.Script script = scriptService.getById(reservation.getScriptId());
+                mayNeedGroup = script != null && script.getPlayerCount() != null
+                        && reservation.getPlayerCount() < script.getPlayerCount();
+            } catch (Exception e) {
+                log.debug("判断预约是否需要拼团失败: reservationId={}", reservation.getId(), e);
+            }
+        }
 
         String title;
         String content;
 
-        if (isGrouping) {
-            // 人数不足，进入拼团等待状态
-            title = "预约提交成功，等待拼团";
+        if (mayNeedGroup) {
+            title = "预约提交成功，请尽快支付";
             content = String.format(
-                    "您的预约已提交，预约编号：%s，预约时间：%s。" +
-                    "当前场次人数尚未满员，系统已为您自动发起拼团，待人数凑齐后将正式成团并通知您完成支付，请耐心等待。",
+                    "您的预约已提交，预约编号：%s，预约时间：%s。请先完成支付；若当前场次人数不足，系统将在支付成功后自动为您发起或加入拼团，并在成团后通知您。",
                     reservation.getOrderNo(), reservationTime);
         } else {
-            // 人数已满，直接预约成功
             title = "预约成功通知";
             content = String.format(
                     "您已成功预约，预约编号：%s，预约时间：%s，请前往「我的预约」完成支付，支付后请准时到场。",
@@ -1211,13 +1212,9 @@ public class ReservationServiceImpl implements ReservationService {
 
         if (moveCreatorGroup) {
             syncCreatorGroupAfterReschedule(linkedGroup, reservation);
-        } else {
-            GroupOrder autoCreatedGroup = createGroupOrderIfNeeded(reservation);
+        } else if (Integer.valueOf(1).equals(reservation.getPayStatus()) && groupOrderService != null) {
+            GroupOrder autoCreatedGroup = groupOrderService.ensureAutoGroupForPaidReservation(reservation);
             if (autoCreatedGroup != null && !autoCreatedGroup.getId().equals(reservation.getGroupId())) {
-                Reservation groupUpdate = new Reservation();
-                groupUpdate.setId(reservation.getId());
-                groupUpdate.setGroupId(autoCreatedGroup.getId());
-                reservationMapper.updateById(groupUpdate);
                 reservation.setGroupId(autoCreatedGroup.getId());
             }
         }
@@ -1405,11 +1402,7 @@ public class ReservationServiceImpl implements ReservationService {
     }
 
     private int resolveActiveGroupNeedCount(Reservation reservation, int requiredPlayers, Long groupId, int currentCount) {
-        if (reservation == null || reservation.getScheduleId() == null) {
-            return Math.max(currentCount, requiredPlayers);
-        }
-        int outsidePlayers = countActivePlayersOutsideGroupForSchedule(reservation.getScheduleId(), groupId);
-        return Math.max(currentCount, requiredPlayers - outsidePlayers);
+        return Math.max(currentCount, requiredPlayers);
     }
 
     private int countActivePlayersOutsideGroupForSchedule(Long scheduleId, Long groupId) {

@@ -138,6 +138,14 @@
           评价订单
         </el-button>
         <el-button
+          v-if="canRefund"
+          type="warning"
+          size="large"
+          @click="handleRefund"
+        >
+          申请退款
+        </el-button>
+        <el-button
           v-if="reservation.status < 3 && reservation.status !== 4 && !isCheckedIn"
           type="warning"
           size="large"
@@ -359,6 +367,15 @@ const isCheckedIn = computed(() => {
     || Number(reservation.value.status) === 3
 })
 
+const canRefund = computed(() => {
+  if (!reservation.value) return false
+  return Number(reservation.value.payStatus) === 1
+    && Number(reservation.value.status) < 3
+    && Number(reservation.value.status) !== 4
+    && !isCheckedIn.value
+    && (!reservation.value.refundStatus || reservation.value.refundStatus === 0 || reservation.value.refundStatus === 3)
+})
+
 const timeline = computed(() => {
   if (!reservation.value) return []
 
@@ -493,6 +510,14 @@ const handleReview = () => {
 
 const handlePay = () => {
   router.push(`/payment/${reservation.value.id}`)
+}
+
+const handleRefund = () => {
+  if (!reservation.value?.id) return
+  router.push({
+    path: '/reservation/refund',
+    query: { id: reservation.value.id }
+  })
 }
 
 const handleCancel = () => {

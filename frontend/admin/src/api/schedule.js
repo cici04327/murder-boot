@@ -81,6 +81,15 @@ export const generateSchedules = (data) => {
   })
 }
 
+// 批量生成前预检查（房间 / DM 冲突）
+export const precheckGenerateSchedules = (data) => {
+  return request({
+    url: '/script/schedule/generate/precheck',
+    method: 'post',
+    data
+  })
+}
+
 // 更新排期
 export const updateSchedule = (data) => {
   return request({

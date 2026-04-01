@@ -10,6 +10,7 @@ import com.alipay.api.response.AlipayTradeRefundResponse;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.common.config.AlipayConfig;
 import com.murder.common.context.BaseContext;
+import com.murder.entity.GroupOrder;
 import com.murder.entity.Reservation;
 import com.murder.mapper.ReservationMapper;
 import com.murder.service.CouponService;
@@ -18,6 +19,7 @@ import com.murder.service.ScriptScheduleService;
 import com.murder.service.StoreEmployeeOperationLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -58,6 +60,10 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Autowired(required = false)
     private ScriptScheduleService scriptScheduleService;
+
+    @Autowired(required = false)
+    @Lazy
+    private com.murder.service.GroupOrderService groupOrderService;
 
     @Autowired(required = false)
     private StoreEmployeeOperationLogService storeEmployeeOperationLogService;
@@ -108,8 +114,8 @@ public class PaymentServiceImpl implements PaymentService {
     private String createAlipayPayment(Reservation reservation) {
         try {
             AlipayTradePagePayRequest request = new AlipayTradePagePayRequest();
-            request.setNotifyUrl(alipayConfig.getNotifyUrl());
-            request.setReturnUrl(alipayConfig.getReturnUrl());
+            request.setNotifyUrl(getPaymentNotifyUrl());
+            request.setReturnUrl(getPaymentReturnUrl());
 
             AlipayTradePagePayModel model = new AlipayTradePagePayModel();
             model.setOutTradeNo(reservation.getOrderNo());
@@ -230,7 +236,7 @@ public class PaymentServiceImpl implements PaymentService {
     }
 
     private String buildResultRedirect(Reservation reservation, boolean success, String message) {
-        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(alipayConfig.getResultUrl())
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(getPaymentResultUrl())
                 .queryParam("success", success);
         if (reservation != null) {
             builder.queryParam("reservationId", reservation.getId());
@@ -240,6 +246,52 @@ public class PaymentServiceImpl implements PaymentService {
             builder.queryParam("message", message);
         }
         return builder.build().encode().toUriString();
+    }
+
+    private String getPaymentNotifyUrl() {
+        return replacePath(alipayConfig.getSanitizedNotifyUrl(), "/api/reservation/payment/notify");
+    }
+
+    private String getPaymentReturnUrl() {
+        return replacePath(alipayConfig.getSanitizedReturnUrl(), "/api/reservation/payment/return");
+    }
+
+    private String getPaymentResultUrl() {
+        String resultUrl = alipayConfig.getSanitizedResultUrl();
+        if (StringUtils.hasText(resultUrl)) {
+            try {
+                return UriComponentsBuilder.fromUriString(resultUrl)
+                        .replacePath("/payment/result")
+                        .replaceQuery(null)
+                        .build()
+                        .toUriString();
+            } catch (Exception e) {
+                log.warn("构建预约支付结果跳转地址失败，将基于returnUrl推导: {}", resultUrl, e);
+            }
+        }
+
+        String returnUrl = alipayConfig.getSanitizedReturnUrl();
+        if (StringUtils.hasText(returnUrl)) {
+            return replacePath(returnUrl, "/payment/result");
+        }
+        return "http://localhost:3001/payment/result";
+    }
+
+    private String replacePath(String sourceUrl, String targetPath) {
+        String sanitizedUrl = alipayConfig.sanitizeUrl(sourceUrl);
+        if (!StringUtils.hasText(sanitizedUrl)) {
+            return "http://localhost:8080" + targetPath;
+        }
+        try {
+            return UriComponentsBuilder.fromUriString(sanitizedUrl)
+                    .replacePath(targetPath)
+                    .replaceQuery(null)
+                    .build()
+                    .toUriString();
+        } catch (Exception e) {
+            log.warn("替换预约支付地址失败，sourceUrl={}, targetPath={}", sanitizedUrl, targetPath, e);
+            return "http://localhost:8080" + targetPath;
+        }
     }
 
     @Override
@@ -540,6 +592,8 @@ public class PaymentServiceImpl implements PaymentService {
             AlipayTradeRefundRequest request = new AlipayTradeRefundRequest();
             AlipayTradeRefundModel model = new AlipayTradeRefundModel();
             model.setOutTradeNo(reservation.getOrderNo());
+            // 退款请求号：支付宝要求必填，用订单号+时间戳保证唯一
+            model.setOutRequestNo(reservation.getOrderNo() + "_R" + System.currentTimeMillis());
             model.setRefundAmount(refundAmount.toString());
             model.setRefundReason(StringUtils.hasText(refundReason) ? refundReason : "预约退款");
             request.setBizModel(model);
@@ -587,6 +641,22 @@ public class PaymentServiceImpl implements PaymentService {
             reservation.setCheckInCode(generateCheckInCode());
         }
         reservationMapper.updateById(reservation);
+        ensureAutoGroupAfterPayment(reservation);
+    }
+
+    private void ensureAutoGroupAfterPayment(Reservation reservation) {
+        if (reservation == null || groupOrderService == null) {
+            return;
+        }
+        try {
+            GroupOrder groupOrder = groupOrderService.ensureAutoGroupForPaidReservation(reservation);
+            if (groupOrder != null && !groupOrder.getId().equals(reservation.getGroupId())) {
+                reservation.setGroupId(groupOrder.getId());
+            }
+        } catch (Exception e) {
+            log.error("支付成功后自动处理拼团失败: reservationId={}, orderNo={}",
+                    reservation.getId(), reservation.getOrderNo(), e);
+        }
     }
 
     private void refundCouponQuietly(Long reservationId) {

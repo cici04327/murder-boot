@@ -97,7 +97,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, CreditCard } from '@element-plus/icons-vue'
-import { getReservationDetail, createPayment } from '@/api/reservation'
+import { getReservationDetail, createPayment, queryPaymentStatus } from '@/api/reservation'
 
 const route = useRoute()
 const router = useRouter()
@@ -234,7 +234,23 @@ const handlePay = async () => {
     }
   } catch (error) {
     console.error('支付失败:', error)
-    ElMessage.error(error.response?.data?.msg || '支付失败，请重试')
+    const errorMsg = error?.message || error.response?.data?.msg || '支付失败，请重试'
+
+    if (errorMsg.includes('订单已支付')) {
+      try {
+        const statusRes = await queryPaymentStatus(route.params.id)
+        if ((statusRes.code === 1 || statusRes.code === 200) && Number(statusRes.data) === 1) {
+          ElMessage.success('该订单已支付，正在为您刷新订单状态')
+          await loadReservation()
+          router.replace(`/payment/result?success=true&reservationId=${route.params.id}&message=${encodeURIComponent('订单已支付')}`)
+          return
+        }
+      } catch (statusError) {
+        console.warn('查询支付状态失败:', statusError)
+      }
+    }
+
+    ElMessage.error(errorMsg)
   } finally {
     paying.value = false
   }

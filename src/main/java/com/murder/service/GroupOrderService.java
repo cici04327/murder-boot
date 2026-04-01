@@ -35,6 +35,11 @@ public interface GroupOrderService extends IService<GroupOrder> {
      * 自动拼团时优先复用同场次的活动拼团，避免重复开团
      */
     GroupOrder createOrAttachAutoGroup(GroupOrder groupOrder, Reservation reservation, Long userId);
+
+    /**
+     * 已支付预约在人数不足时自动发起或加入拼团
+     */
+    GroupOrder ensureAutoGroupForPaidReservation(Reservation reservation);
     
     /**
      * 加入拼单

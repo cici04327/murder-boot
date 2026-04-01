@@ -6,6 +6,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.StringUtils;
 
 /**
  * 支付宝配置
@@ -48,10 +49,29 @@ public class AlipayConfig {
     // 是否使用模拟支付（开发测试用）
     private Boolean mockPayment = true;
 
+    public String getSanitizedNotifyUrl() {
+        return sanitizeUrl(notifyUrl);
+    }
+
+    public String getSanitizedReturnUrl() {
+        return sanitizeUrl(returnUrl);
+    }
+
+    public String getSanitizedResultUrl() {
+        return sanitizeUrl(resultUrl);
+    }
+
+    public String sanitizeUrl(String url) {
+        if (!StringUtils.hasText(url)) {
+            return url;
+        }
+        return url.replaceAll("\\s+", "").trim();
+    }
+
     @Bean
     public AlipayClient alipayClient() {
         return new DefaultAlipayClient(
-                gatewayUrl,
+                sanitizeUrl(gatewayUrl),
                 appId,
                 privateKey,
                 format,

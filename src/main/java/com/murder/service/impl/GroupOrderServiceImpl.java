@@ -15,6 +15,7 @@ import com.murder.mapper.GroupOrderMapper;
 import com.murder.mapper.ReservationMapper;
 import com.murder.mapper.ScriptCategoryMapper;
 import com.murder.mapper.ScriptMapper;
+import com.murder.mapper.StoreMapper;
 import com.murder.mapper.UserMapper;
 import com.murder.service.CouponService;
 import com.murder.service.GroupOrderService;
@@ -50,6 +51,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     private final ReservationMapper reservationMapper;
     private final ScriptMapper scriptMapper;
     private final ScriptCategoryMapper scriptCategoryMapper;
+    private final StoreMapper storeMapper;
     private final PaymentService paymentService;
     private final NotificationService notificationService;
     private final CouponService couponService;
@@ -178,7 +180,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
                     map.put("storeName", group.getStoreName());
                     map.put("playTime", group.getPlayTime());
                     map.put("currentCount", group.getCurrentCount());
-                    map.put("needCount", group.getNeedCount());
+                    map.put("needCount", resolveTargetPlayerCount(group));
                     map.put("playerCount", group.getPlayerCount());
                     map.put("price", group.getPrice());
                     map.put("genderRequirement", group.getGenderRequirement());
@@ -259,6 +261,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         if (groupOrder.getCurrentCount() == null || groupOrder.getCurrentCount() < 1) {
             groupOrder.setCurrentCount(1);
         }
+        groupOrder.setNeedCount(resolveTargetPlayerCount(groupOrder));
 
         this.save(groupOrder);
 
@@ -301,6 +304,44 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public GroupOrder ensureAutoGroupForPaidReservation(Reservation reservation) {
+        if (reservation == null || reservation.getId() == null || reservation.getUserId() == null) {
+            return null;
+        }
+        if (!Integer.valueOf(1).equals(reservation.getPayStatus())) {
+            return null;
+        }
+        if (reservation.getGroupId() != null) {
+            refreshGroupStatus(reservation.getGroupId());
+            return this.getById(reservation.getGroupId());
+        }
+
+        GroupOrder groupDraft = buildAutoGroupDraft(reservation);
+        if (groupDraft == null) {
+            return null;
+        }
+
+        GroupOrder reusableGroup = findReusableAutoGroup(groupDraft);
+        if (reusableGroup != null) {
+            attachReservationToExistingGroup(reusableGroup, reservation, reservation.getUserId(), groupDraft);
+            return this.getById(reusableGroup.getId());
+        }
+
+        int requiredPlayers = resolveTargetPlayerCount(groupDraft);
+        int paidPlayers = countPaidPlayersForSession(reservation);
+        if (paidPlayers >= requiredPlayers) {
+            return null;
+        }
+
+        int currentCount = resolveJoinCount(reservation.getPlayerCount());
+        groupDraft.setCurrentCount(currentCount);
+        groupDraft.setNeedCount(Math.max(requiredPlayers, currentCount));
+        groupDraft.setDescription(buildAutoGroupDescription(currentCount, groupDraft.getNeedCount()));
+        return createGroup(groupDraft, reservation.getUserId());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean joinGroup(Long groupId, Long userId, Integer joinCount) {
         GroupOrder group = this.getById(groupId);
         if (group == null) {
@@ -322,7 +363,8 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         }
 
         int actualJoinCount = (joinCount == null || joinCount < 1) ? 1 : joinCount;
-        if (group.getCurrentCount() + actualJoinCount > group.getNeedCount()) {
+        int targetPlayerCount = resolveTargetPlayerCount(group);
+        if (group.getCurrentCount() + actualJoinCount > targetPlayerCount) {
             throw new RuntimeException("剩余名额不足");
         }
 
@@ -472,7 +514,8 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     }
 
     private void checkAndUpdateGroupStatus(GroupOrder group) {
-        if (group.getCurrentCount() < group.getNeedCount() || group.getStatus() != 1) {
+        int targetPlayerCount = resolveTargetPlayerCount(group);
+        if (group.getCurrentCount() < targetPlayerCount || group.getStatus() != 1) {
             return;
         }
 
@@ -991,12 +1034,6 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             return Math.max(currentCount, fallbackNeedCount);
         }
 
-        if (reservation != null && reservation.getScheduleId() != null) {
-            Long groupId = existingGroup != null ? existingGroup.getId() : reservation.getGroupId();
-            int outsidePlayers = countActivePlayersOutsideGroup(reservation.getScheduleId(), groupId);
-            return Math.max(currentCount, requiredPlayers - outsidePlayers);
-        }
-
         return Math.max(currentCount, requiredPlayers);
     }
 
@@ -1021,6 +1058,65 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         return count;
     }
 
+    private GroupOrder buildAutoGroupDraft(Reservation reservation) {
+        if (reservation == null || reservation.getUserId() == null || reservation.getScriptId() == null
+                || reservation.getStoreId() == null || reservation.getReservationTime() == null) {
+            return null;
+        }
+
+        Script script = scriptMapper.selectById(reservation.getScriptId());
+        if (script == null || script.getPlayerCount() == null || reservation.getPlayerCount() == null) {
+            return null;
+        }
+        if (reservation.getPlayerCount() >= script.getPlayerCount()) {
+            return null;
+        }
+
+        GroupOrder groupOrder = new GroupOrder();
+        groupOrder.setScriptId(reservation.getScriptId());
+        groupOrder.setScriptName(script.getName());
+        groupOrder.setStoreId(reservation.getStoreId());
+        groupOrder.setStoreName(resolveStoreName(reservation.getStoreId()));
+        groupOrder.setPlayTime(reservation.getReservationTime());
+        groupOrder.setCurrentCount(resolveJoinCount(reservation.getPlayerCount()));
+        groupOrder.setNeedCount(script.getPlayerCount());
+        groupOrder.setPlayerCount(script.getPlayerCount());
+        groupOrder.setPrice(script.getPrice());
+        groupOrder.setNewbieWelcome(1);
+        groupOrder.setReservationId(reservation.getId());
+        return groupOrder;
+    }
+
+    private int countPaidPlayersForSession(Reservation reservation) {
+        if (reservation == null) {
+            return 0;
+        }
+
+        LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Reservation::getIsDeleted, 0)
+                .eq(Reservation::getPayStatus, 1)
+                .ne(Reservation::getStatus, 4)
+                .eq(Reservation::getScriptId, reservation.getScriptId())
+                .eq(Reservation::getStoreId, reservation.getStoreId())
+                .eq(Reservation::getReservationTime, reservation.getReservationTime());
+        if (reservation.getScheduleId() != null) {
+            wrapper.eq(Reservation::getScheduleId, reservation.getScheduleId());
+        }
+
+        List<Reservation> reservations = reservationMapper.selectList(wrapper);
+        return reservations.stream()
+                .mapToInt(item -> resolveJoinCount(item.getPlayerCount()))
+                .sum();
+    }
+
+    private String resolveStoreName(Long storeId) {
+        if (storeId == null || storeMapper == null) {
+            return "";
+        }
+        com.murder.entity.Store store = storeMapper.selectById(storeId);
+        return store != null && StringUtils.hasText(store.getName()) ? store.getName() : "";
+    }
+
     private String buildAutoGroupDescription(int currentCount, int needCount) {
         int remaining = Math.max(0, needCount - currentCount);
         return remaining > 0
@@ -1030,6 +1126,19 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
     private int resolveJoinCount(Integer count) {
         return count != null && count > 0 ? count : 1;
+    }
+
+    private int resolveTargetPlayerCount(GroupOrder group) {
+        if (group == null) {
+            return 1;
+        }
+        if (group.getPlayerCount() != null && group.getPlayerCount() > 0) {
+            return Math.max(resolveJoinCount(group.getCurrentCount()), group.getPlayerCount());
+        }
+        if (group.getNeedCount() != null && group.getNeedCount() > 0) {
+            return Math.max(resolveJoinCount(group.getCurrentCount()), group.getNeedCount());
+        }
+        return Math.max(1, resolveJoinCount(group.getCurrentCount()));
     }
 
     private int resolveRequiredPlayers(GroupOrder group, ScriptSchedule schedule) {
@@ -1061,7 +1170,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         map.put("storeName", group.getStoreName());
         map.put("playTime", group.getPlayTime());
         map.put("currentCount", group.getCurrentCount());
-        map.put("needCount", group.getNeedCount());
+        map.put("needCount", resolveTargetPlayerCount(group));
         map.put("playerCount", group.getPlayerCount());
         map.put("price", group.getPrice());
         map.put("genderRequirement", group.getGenderRequirement());
@@ -1089,7 +1198,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         map.put("storeName", group.getStoreName());
         map.put("playTime", group.getPlayTime());
         map.put("currentCount", group.getCurrentCount());
-        map.put("needCount", group.getNeedCount());
+        map.put("needCount", resolveTargetPlayerCount(group));
         map.put("playerCount", group.getPlayerCount());
         map.put("price", group.getPrice());
         map.put("genderRequirement", group.getGenderRequirement());
@@ -1132,8 +1241,12 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
                 .gt(GroupOrder::getCreateTime, now.minusHours(GROUP_TIMEOUT_HOURS))
                 .and(query -> query
                         .isNull(GroupOrder::getPlayTime)
-                        .or()
-                        .gt(GroupOrder::getPlayTime, now.plusHours(GROUP_FORMATION_LEAD_HOURS)));
+                        .or(active -> active
+                                .isNull(GroupOrder::getReservationId)
+                                .gt(GroupOrder::getPlayTime, now.plusHours(GROUP_FORMATION_LEAD_HOURS)))
+                        .or(active -> active
+                                .isNotNull(GroupOrder::getReservationId)
+                                .gt(GroupOrder::getPlayTime, now)));
     }
 
     private void validateGroupTimeline(GroupOrder groupOrder, LocalDateTime now) {
@@ -1144,7 +1257,11 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             throw new RuntimeException("开车时间必须晚于当前时间");
         }
 
-        LocalDateTime expireTime = resolveGroupExpireTime(now, groupOrder.getPlayTime());
+        if (isAutoReservationGroup(groupOrder)) {
+            return;
+        }
+
+        LocalDateTime expireTime = resolveGroupExpireTime(now, groupOrder.getPlayTime(), false);
         if (expireTime == null || !expireTime.isAfter(now)) {
             throw new RuntimeException(String.format("该场次距离开场不足%d小时，暂时不能发起拼团", GROUP_FORMATION_LEAD_HOURS));
         }
@@ -1163,6 +1280,10 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         this.updateById(group);
         handleGroupFailed(group, buildExpiredReason(group));
         return true;
+    }
+
+    private boolean isAutoReservationGroup(GroupOrder group) {
+        return group != null && group.getReservationId() != null;
     }
 
     private boolean isGroupExpired(GroupOrder group, LocalDateTime now) {
@@ -1184,10 +1305,10 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         if (group == null) {
             return null;
         }
-        return resolveGroupExpireTime(group.getCreateTime(), group.getPlayTime());
+        return resolveGroupExpireTime(group.getCreateTime(), group.getPlayTime(), isAutoReservationGroup(group));
     }
 
-    private LocalDateTime resolveGroupExpireTime(LocalDateTime createTime, LocalDateTime playTime) {
+    private LocalDateTime resolveGroupExpireTime(LocalDateTime createTime, LocalDateTime playTime, boolean autoReservationGroup) {
         if (createTime == null) {
             return null;
         }
@@ -1197,7 +1318,9 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             return timeoutExpireTime;
         }
 
-        LocalDateTime playTimeDeadline = playTime.minusHours(GROUP_FORMATION_LEAD_HOURS);
+        LocalDateTime playTimeDeadline = autoReservationGroup
+                ? playTime
+                : playTime.minusHours(GROUP_FORMATION_LEAD_HOURS);
         return playTimeDeadline.isBefore(timeoutExpireTime) ? playTimeDeadline : timeoutExpireTime;
     }
 
@@ -1210,9 +1333,13 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
         LocalDateTime timeoutExpireTime = createTime.plusHours(GROUP_TIMEOUT_HOURS);
         if (playTime != null) {
-            LocalDateTime playTimeDeadline = playTime.minusHours(GROUP_FORMATION_LEAD_HOURS);
+            LocalDateTime playTimeDeadline = isAutoReservationGroup(group)
+                    ? playTime
+                    : playTime.minusHours(GROUP_FORMATION_LEAD_HOURS);
             if (!playTimeDeadline.isAfter(timeoutExpireTime)) {
-                return String.format("距离开场不足%d小时仍未成团，系统自动关闭", GROUP_FORMATION_LEAD_HOURS);
+                return isAutoReservationGroup(group)
+                        ? "拼单在开场前仍未成团，系统自动关闭"
+                        : String.format("距离开场不足%d小时仍未成团，系统自动关闭", GROUP_FORMATION_LEAD_HOURS);
             }
         }
         return String.format("拼单%d小时内未成团，系统自动关闭", GROUP_TIMEOUT_HOURS);
@@ -1220,8 +1347,15 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
 
     private String buildExpiredActionMessage(GroupOrder group) {
         LocalDateTime playTime = group != null ? group.getPlayTime() : null;
-        if (playTime != null && !playTime.minusHours(GROUP_FORMATION_LEAD_HOURS).isAfter(LocalDateTime.now())) {
-            return String.format("该拼单距离开场不足%d小时，已自动关闭", GROUP_FORMATION_LEAD_HOURS);
+        if (playTime != null) {
+            LocalDateTime deadline = isAutoReservationGroup(group)
+                    ? playTime
+                    : playTime.minusHours(GROUP_FORMATION_LEAD_HOURS);
+            if (!deadline.isAfter(LocalDateTime.now())) {
+                return isAutoReservationGroup(group)
+                        ? "该拼单已到开场时间仍未成团，已自动关闭"
+                        : String.format("该拼单距离开场不足%d小时，已自动关闭", GROUP_FORMATION_LEAD_HOURS);
+            }
         }
         return "该拼单已超过成团时限，已自动关闭";
     }

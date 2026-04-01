@@ -227,7 +227,7 @@ import { ref, onMounted, onActivated, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import EmptyState from '@/components/EmptyState.vue'
 import { ElMessage } from 'element-plus'
-import { getMyReservations, cancelReservation } from '@/api/reservation'
+import { getMyReservations, cancelReservation, queryPaymentStatus } from '@/api/reservation'
 
 const router = useRouter()
 
@@ -311,6 +311,48 @@ const handleSizeChange = (newSize) => {
   loadReservations()
 }
 
+const syncDisplayedPaymentStatus = async (items) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    return items || []
+  }
+
+  const unpaidItems = items.filter(item => Number(item?.payStatus) === 0 && item?.id)
+  if (unpaidItems.length === 0) {
+    return items
+  }
+
+  const statusResults = await Promise.allSettled(
+    unpaidItems.map(item => queryPaymentStatus(item.id))
+  )
+
+  const paidIdSet = new Set()
+  statusResults.forEach((result, index) => {
+    if (result.status === 'fulfilled') {
+      const response = result.value
+      if ((response.code === 1 || response.code === 200) && Number(response.data) === 1) {
+        paidIdSet.add(unpaidItems[index].id)
+      }
+    }
+  })
+
+  if (paidIdSet.size === 0) {
+    return items
+  }
+
+  return items
+    .map(item => {
+      if (!paidIdSet.has(item.id)) {
+        return item
+      }
+      return {
+        ...item,
+        payStatus: 1,
+        status: Number(item.status) === 1 ? 2 : item.status
+      }
+    })
+    .filter(item => activeTab.value !== '0' || Number(item.payStatus) === 0)
+}
+
 const loadReservations = async () => {
   loading.value = true
   try {
@@ -327,13 +369,20 @@ const loadReservations = async () => {
 
     const res = await getMyReservations(params)
     if (res.data) {
+      let items = []
+      let totalCount = 0
+
       if (Array.isArray(res.data)) {
-        reservations.value = res.data
-        total.value = res.data.length
+        items = res.data
+        totalCount = res.data.length
       } else {
-        reservations.value = res.data.records || res.data.list || []
-        total.value = res.data.total || 0
+        items = res.data.records || res.data.list || []
+        totalCount = res.data.total || 0
       }
+
+      const syncedItems = await syncDisplayedPaymentStatus(items)
+      reservations.value = syncedItems
+      total.value = activeTab.value === '0' ? syncedItems.length : totalCount
     }
   } catch (error) {
     ElMessage.error(error.message || '加载预约列表失败')

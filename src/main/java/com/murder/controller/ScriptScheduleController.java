@@ -116,10 +116,35 @@ public class ScriptScheduleController {
         @SuppressWarnings("unchecked")
         List<String> timeSlots = (List<String>) params.get("timeSlots");
         Integer maxPlayers = Integer.valueOf(params.get("maxPlayers").toString());
+        Long dmId = params.get("dmId") == null || params.get("dmId").toString().isBlank()
+                ? null
+                : Long.valueOf(params.get("dmId").toString());
 
-        log.info("批量生成排期: storeId={}, scriptId={}, {} - {}", storeId, scriptId, startDate, endDate);
-        scriptScheduleService.generateSchedules(storeId, scriptId, roomId, startDate, endDate, timeSlots, maxPlayers);
+        log.info("批量生成排期: storeId={}, scriptId={}, roomId={}, dmId={}, {} - {}", storeId, scriptId, roomId, dmId, startDate, endDate);
+        scriptScheduleService.generateSchedules(storeId, scriptId, roomId, startDate, endDate, timeSlots, maxPlayers, dmId);
         return Result.success("生成成功");
+    }
+
+    /**
+     * 批量生成预检查
+     */
+    @PostMapping("/generate/precheck")
+    @Operation(summary = "批量生成排期预检查")
+    public Result<Map<String, Object>> precheckGenerate(@RequestBody Map<String, Object> params) {
+        Long storeId = Long.valueOf(params.get("storeId").toString());
+        Long scriptId = Long.valueOf(params.get("scriptId").toString());
+        Long roomId = Long.valueOf(params.get("roomId").toString());
+        LocalDate startDate = LocalDate.parse(params.get("startDate").toString());
+        LocalDate endDate = LocalDate.parse(params.get("endDate").toString());
+        @SuppressWarnings("unchecked")
+        List<String> timeSlots = (List<String>) params.get("timeSlots");
+        Integer maxPlayers = Integer.valueOf(params.get("maxPlayers").toString());
+        Long dmId = params.get("dmId") == null || params.get("dmId").toString().isBlank()
+                ? null
+                : Long.valueOf(params.get("dmId").toString());
+
+        return Result.success(scriptScheduleService.precheckGenerateSchedules(
+                storeId, scriptId, roomId, startDate, endDate, timeSlots, maxPlayers, dmId));
     }
 
     /**

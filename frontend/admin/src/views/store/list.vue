@@ -18,8 +18,8 @@
           <template #default="{ row }">
             <el-image
               v-if="row.images"
-              :src="row.images.split(',')[0]"
-              :preview-src-list="row.images.split(',')"
+              :src="getImageList(row.images)[0]"
+              :preview-src-list="getImageList(row.images)"
               fit="cover"
               style="width: 60px; height: 60px; border-radius: 4px; cursor: pointer;"
             />
@@ -136,12 +136,12 @@
               </el-button>
             </el-upload>
             <div v-if="formData.images" style="display: flex; gap: 10px; flex-wrap: wrap;">
-              <div v-for="(img, index) in formData.images.split(',')" :key="index" style="position: relative;">
+              <div v-for="(img, index) in getImageList(formData.images)" :key="index" style="position: relative;">
                 <el-image
                   :src="img"
                   fit="cover"
                   style="width: 100px; height: 100px; border-radius: 4px;"
-                  :preview-src-list="formData.images.split(',')"
+                  :preview-src-list="getImageList(formData.images)"
                   :initial-index="index"
                 />
                 <el-button
@@ -345,6 +345,33 @@ const formRules = {
   name: [{ required: true, message: '请输入门店名称', trigger: 'blur' }],
   phone: [{ required: true, message: '请输入联系电话', trigger: 'blur' }],
   address: [{ required: true, message: '请输入门店地址', trigger: 'blur' }]
+}
+
+const normalizeImageUrl = (url) => {
+  if (!url) return ''
+  const trimmed = String(url).trim()
+  if (!trimmed) return ''
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed
+  }
+  if (trimmed.startsWith('/upload/') || trimmed.startsWith('/uploads/')) {
+    return trimmed
+  }
+  if (trimmed.startsWith('upload/')) {
+    return `/${trimmed}`
+  }
+  if (trimmed.startsWith('uploads/')) {
+    return `/${trimmed}`
+  }
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`
+}
+
+const getImageList = (images) => {
+  if (!images) return []
+  return String(images)
+    .split(',')
+    .map(item => normalizeImageUrl(item))
+    .filter(Boolean)
 }
 
 const fetchData = async () => {

@@ -117,7 +117,7 @@ body {
 
 .paper-mode-toggle {
   position: fixed;
-  right: 20px;
+  left: 20px;
   bottom: 24px;
   z-index: 4000;
   display: inline-flex;
@@ -158,7 +158,7 @@ body {
 
 @media (max-width: 768px) {
   .paper-mode-toggle {
-    right: 14px;
+    left: 14px;
     bottom: 18px;
     padding: 10px 14px;
     font-size: 12px;

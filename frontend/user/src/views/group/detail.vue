@@ -198,10 +198,15 @@ const canJoin = computed(() => {
   return true
 })
 
+// 计算已占座位数量（每个成员可能占多个座位）
+const takenSeats = computed(() => {
+  return members.value.reduce((sum, m) => sum + (m.joinCount || 1), 0)
+})
+
 // 计算空座位数量
 const emptySeats = computed(() => {
   if (!group.value) return 0
-  return Math.max(0, group.value.needCount - group.value.currentCount)
+  return Math.max(0, group.value.needCount - takenSeats.value)
 })
 
 const joinBtnText = computed(() => {

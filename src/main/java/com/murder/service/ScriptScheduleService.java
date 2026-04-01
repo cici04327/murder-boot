@@ -64,9 +64,9 @@ public interface ScriptScheduleService {
     /**
      * 批量生成排期（根据模板）
      */
-    void generateSchedules(Long storeId, Long scriptId, Long roomId, 
+    void generateSchedules(Long storeId, Long scriptId, Long roomId,
                            LocalDate startDate, LocalDate endDate,
-                           List<String> timeSlots, Integer maxPlayers);
+                           List<String> timeSlots, Integer maxPlayers, Long dmId);
 
     /**
      * 增加排期已预约人数（预约创建时调用）
@@ -93,4 +93,11 @@ public interface ScriptScheduleService {
      */
     Map<String, Object> checkConflict(Long storeId, Long roomId, String scheduleDate,
                                       String startTime, String endTime, Long excludeId);
+
+    /**
+     * 批量生成排期前预检查（房间冲突 / DM 冲突）
+     */
+    Map<String, Object> precheckGenerateSchedules(Long storeId, Long scriptId, Long roomId,
+                                                  LocalDate startDate, LocalDate endDate,
+                                                  List<String> timeSlots, Integer maxPlayers, Long dmId);
 }

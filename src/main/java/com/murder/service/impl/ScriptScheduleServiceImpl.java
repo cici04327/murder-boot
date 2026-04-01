@@ -2,12 +2,17 @@ package com.murder.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.murder.common.context.BaseContext;
+import com.murder.common.exception.BaseException;
 import com.murder.entity.Dm;
+import com.murder.entity.GroupOrder;
+import com.murder.entity.Reservation;
 import com.murder.entity.Script;
 import com.murder.entity.ScriptSchedule;
 import com.murder.entity.Store;
 import com.murder.entity.StoreRoom;
 import com.murder.mapper.DmMapper;
+import com.murder.mapper.GroupOrderMapper;
+import com.murder.mapper.ReservationMapper;
 import com.murder.mapper.ScriptMapper;
 import com.murder.mapper.ScriptScheduleMapper;
 import com.murder.mapper.StoreMapper;
@@ -51,6 +56,12 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
 
     @Autowired
     private StoreRoomMapper storeRoomMapper;
+
+    @Autowired(required = false)
+    private ReservationMapper reservationMapper;
+
+    @Autowired(required = false)
+    private GroupOrderMapper groupOrderMapper;
 
     @Override
     public List<ScriptSchedule> listByStoreAndDate(Long storeId, LocalDate scheduleDate) {
@@ -168,17 +179,19 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
         });
 
         fillDmInfo(list);
+        fillEffectiveCurrentPlayers(list);
     }
 
     @Override
     public void add(ScriptSchedule schedule) {
-        // 检查时间冲突
+        validateDmAssignment(schedule);
         checkTimeConflict(schedule);
+        checkDmConflict(schedule);
         schedule.setCurrentPlayers(0);
         schedule.setStatus(1);
         schedule.setIsDeleted(0);
         scriptScheduleMapper.insert(schedule);
-        log.info("新增剧本排期: storeId={}, scriptId={}, date={}", 
+        log.info("新增剧本排期: storeId={}, scriptId={}, date={}",
                 schedule.getStoreId(), schedule.getScriptId(), schedule.getScheduleDate());
     }
 
@@ -192,10 +205,11 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
 
     @Override
     public void update(ScriptSchedule schedule) {
-        // 编辑时也检查冲突（排除自身）
+        validateDmAssignment(schedule);
         if (schedule.getRoomId() != null && schedule.getScheduleDate() != null
                 && schedule.getStartTime() != null && schedule.getEndTime() != null) {
             checkTimeConflictExcludeSelf(schedule);
+            checkDmConflictExcludeSelf(schedule);
         }
         scriptScheduleMapper.updateById(schedule);
         log.info("更新剧本排期: id={}", schedule.getId());
@@ -282,10 +296,64 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
     }
 
     @Override
+    public Map<String, Object> precheckGenerateSchedules(Long storeId, Long scriptId, Long roomId,
+                                                         LocalDate startDate, LocalDate endDate,
+                                                         List<String> timeSlots, Integer maxPlayers, Long dmId) {
+        List<Map<String, Object>> conflicts = new ArrayList<>();
+        int totalCount = 0;
+        int validCount = 0;
+
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            for (String timeSlot : timeSlots) {
+                String[] times = timeSlot.split("-");
+                if (times.length != 2) {
+                    continue;
+                }
+                totalCount++;
+                LocalTime startTime = LocalTime.parse(times[0].trim());
+                LocalTime endTime = LocalTime.parse(times[1].trim());
+
+                List<String> reasons = new ArrayList<>();
+                if (hasRoomConflict(storeId, roomId, currentDate, startTime, endTime, null)) {
+                    reasons.add("房间冲突");
+                }
+                if (dmId != null && hasDmConflict(dmId, currentDate, startTime, endTime, null)) {
+                    reasons.add("DM冲突");
+                }
+
+                if (reasons.isEmpty()) {
+                    validCount++;
+                    continue;
+                }
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("scheduleDate", currentDate.toString());
+                item.put("startTime", startTime.toString());
+                item.put("endTime", endTime.toString());
+                item.put("reason", String.join("、", reasons));
+                conflicts.add(item);
+            }
+            currentDate = currentDate.plusDays(1);
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("totalCount", totalCount);
+        result.put("validCount", validCount);
+        result.put("conflictCount", conflicts.size());
+        result.put("hasConflict", !conflicts.isEmpty());
+        result.put("conflicts", conflicts);
+        result.put("message", conflicts.isEmpty()
+                ? "未发现冲突，可直接批量生成"
+                : String.format("预计可生成 %d 个，冲突 %d 个", validCount, conflicts.size()));
+        return result;
+    }
+
+    @Override
     @Transactional
     public void generateSchedules(Long storeId, Long scriptId, Long roomId,
                                    LocalDate startDate, LocalDate endDate,
-                                   List<String> timeSlots, Integer maxPlayers) {
+                                   List<String> timeSlots, Integer maxPlayers, Long dmId) {
         List<ScriptSchedule> schedules = new ArrayList<>();
         
         LocalDate currentDate = startDate;
@@ -303,6 +371,7 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
                             .maxPlayers(maxPlayers)
                             .currentPlayers(0)
                             .status(1)
+                            .dmId(dmId)
                             .isDeleted(0)
                             .build();
                     schedules.add(schedule);
@@ -464,6 +533,134 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
     /**
      * 编辑时检查冲突（排除自身）
      */
+    private void fillEffectiveCurrentPlayers(List<ScriptSchedule> schedules) {
+        if (schedules == null || schedules.isEmpty() || reservationMapper == null) {
+            return;
+        }
+
+        List<Long> scheduleIds = schedules.stream()
+                .map(ScriptSchedule::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (scheduleIds.isEmpty()) {
+            return;
+        }
+
+        LambdaQueryWrapper<Reservation> reservationWrapper = new LambdaQueryWrapper<>();
+        reservationWrapper.in(Reservation::getScheduleId, scheduleIds)
+                .eq(Reservation::getIsDeleted, 0)
+                .ne(Reservation::getStatus, 4);
+        List<Reservation> reservations = reservationMapper.selectList(reservationWrapper);
+        if (reservations == null || reservations.isEmpty()) {
+            return;
+        }
+
+        Map<Long, Integer> standalonePlayersBySchedule = new HashMap<>();
+        Map<Long, List<Long>> activeGroupIdsBySchedule = new HashMap<>();
+        Map<Long, GroupOrder> activeGroupMap = loadActiveGroupMap(reservations);
+
+        for (Reservation reservation : reservations) {
+            Long scheduleId = reservation.getScheduleId();
+            if (scheduleId == null) continue;
+            Long groupId = reservation.getGroupId();
+            GroupOrder activeGroup = groupId != null ? activeGroupMap.get(groupId) : null;
+            if (activeGroup != null) {
+                activeGroupIdsBySchedule.computeIfAbsent(scheduleId, key -> new ArrayList<>());
+                List<Long> ids = activeGroupIdsBySchedule.get(scheduleId);
+                if (!ids.contains(groupId)) {
+                    ids.add(groupId);
+                }
+                continue;
+            }
+            standalonePlayersBySchedule.merge(scheduleId, resolvePlayerCount(reservation.getPlayerCount()), Integer::sum);
+        }
+
+        for (ScriptSchedule schedule : schedules) {
+            if (schedule.getId() == null) continue;
+            int effectivePlayers = standalonePlayersBySchedule.getOrDefault(schedule.getId(), 0);
+            List<Long> groupIds = activeGroupIdsBySchedule.getOrDefault(schedule.getId(), Collections.emptyList());
+            for (Long groupId : groupIds) {
+                GroupOrder group = activeGroupMap.get(groupId);
+                if (group != null) {
+                    effectivePlayers += resolvePlayerCount(group.getCurrentCount());
+                }
+            }
+            schedule.setCurrentPlayers(Math.max(resolvePlayerCount(schedule.getCurrentPlayers()), effectivePlayers));
+        }
+    }
+
+    private Map<Long, GroupOrder> loadActiveGroupMap(List<Reservation> reservations) {
+        if (groupOrderMapper == null || reservations == null || reservations.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<Long> groupIds = reservations.stream()
+                .map(Reservation::getGroupId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (groupIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        LocalDateTime now = LocalDateTime.now();
+        Map<Long, GroupOrder> map = new HashMap<>();
+        groupOrderMapper.selectBatchIds(groupIds).forEach(group -> {
+            if (group != null && isActiveGroupForDisplay(group, now)) {
+                map.put(group.getId(), group);
+            }
+        });
+        return map;
+    }
+
+    private boolean isActiveGroupForDisplay(GroupOrder group, LocalDateTime now) {
+        if (group == null || !Integer.valueOf(1).equals(group.getStatus())) {
+            return false;
+        }
+        if (group.getCreateTime() != null && group.getCreateTime().isBefore(now.minusHours(24))) {
+            return false;
+        }
+        return group.getPlayTime() == null || group.getPlayTime().isAfter(now.plusHours(2));
+    }
+
+    private int resolvePlayerCount(Integer count) {
+        return count != null && count > 0 ? count : 0;
+    }
+
+    private boolean hasRoomConflict(Long storeId, Long roomId, LocalDate scheduleDate,
+                                    LocalTime startTime, LocalTime endTime, Long excludeId) {
+        LambdaQueryWrapper<ScriptSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ScriptSchedule::getStoreId, storeId)
+                .eq(ScriptSchedule::getRoomId, roomId)
+                .eq(ScriptSchedule::getScheduleDate, scheduleDate)
+                .eq(ScriptSchedule::getIsDeleted, 0)
+                .ne(ScriptSchedule::getStatus, 2)
+                .and(w -> w
+                        .lt(ScriptSchedule::getStartTime, endTime)
+                        .gt(ScriptSchedule::getEndTime, startTime)
+                );
+        if (excludeId != null) {
+            wrapper.ne(ScriptSchedule::getId, excludeId);
+        }
+        return scriptScheduleMapper.selectCount(wrapper) > 0;
+    }
+
+    private boolean hasDmConflict(Long dmId, LocalDate scheduleDate,
+                                  LocalTime startTime, LocalTime endTime, Long excludeId) {
+        LambdaQueryWrapper<ScriptSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ScriptSchedule::getDmId, dmId)
+                .eq(ScriptSchedule::getScheduleDate, scheduleDate)
+                .eq(ScriptSchedule::getIsDeleted, 0)
+                .ne(ScriptSchedule::getStatus, 2)
+                .and(w -> w
+                        .lt(ScriptSchedule::getStartTime, endTime)
+                        .gt(ScriptSchedule::getEndTime, startTime)
+                );
+        if (excludeId != null) {
+            wrapper.ne(ScriptSchedule::getId, excludeId);
+        }
+        return scriptScheduleMapper.selectCount(wrapper) > 0;
+    }
+
     private void checkTimeConflictExcludeSelf(ScriptSchedule schedule) {
         LambdaQueryWrapper<ScriptSchedule> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(ScriptSchedule::getStoreId, schedule.getStoreId())
@@ -472,14 +669,12 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
                .eq(ScriptSchedule::getIsDeleted, 0)
                .ne(ScriptSchedule::getId, schedule.getId())
                .and(w -> w
-                   .between(ScriptSchedule::getStartTime, schedule.getStartTime(), schedule.getEndTime())
-                   .or().between(ScriptSchedule::getEndTime, schedule.getStartTime(), schedule.getEndTime())
-                   .or().le(ScriptSchedule::getStartTime, schedule.getStartTime())
-                       .ge(ScriptSchedule::getEndTime, schedule.getEndTime())
+                   .lt(ScriptSchedule::getStartTime, schedule.getEndTime())
+                   .gt(ScriptSchedule::getEndTime, schedule.getStartTime())
                );
         Long count = scriptScheduleMapper.selectCount(wrapper);
         if (count > 0) {
-            throw new RuntimeException("该房间在此时段已有排期，请选择其他时间");
+            throw new BaseException("该房间在此时段已有排期，请选择其他时间");
         }
     }
 
@@ -493,17 +688,67 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
                .eq(ScriptSchedule::getScheduleDate, schedule.getScheduleDate())
                .eq(ScriptSchedule::getIsDeleted, 0)
                .and(w -> w
-                   .between(ScriptSchedule::getStartTime, schedule.getStartTime(), schedule.getEndTime())
-                   .or()
-                   .between(ScriptSchedule::getEndTime, schedule.getStartTime(), schedule.getEndTime())
-                   .or()
-                   .le(ScriptSchedule::getStartTime, schedule.getStartTime())
-                   .ge(ScriptSchedule::getEndTime, schedule.getEndTime())
+                   .lt(ScriptSchedule::getStartTime, schedule.getEndTime())
+                   .gt(ScriptSchedule::getEndTime, schedule.getStartTime())
                );
-        
+
         Long count = scriptScheduleMapper.selectCount(wrapper);
         if (count > 0) {
-            throw new RuntimeException("该房间在此时段已有排期，请选择其他时间");
+            throw new BaseException("该房间在此时段已有排期，请选择其他时间");
+        }
+    }
+
+    private void checkDmConflict(ScriptSchedule schedule) {
+        if (schedule.getDmId() == null || schedule.getScheduleDate() == null
+                || schedule.getStartTime() == null || schedule.getEndTime() == null) {
+            return;
+        }
+        LambdaQueryWrapper<ScriptSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ScriptSchedule::getDmId, schedule.getDmId())
+               .eq(ScriptSchedule::getScheduleDate, schedule.getScheduleDate())
+               .eq(ScriptSchedule::getIsDeleted, 0)
+               .ne(ScriptSchedule::getStatus, 2)
+               .and(w -> w
+                   .lt(ScriptSchedule::getStartTime, schedule.getEndTime())
+                   .gt(ScriptSchedule::getEndTime, schedule.getStartTime())
+               );
+        Long count = scriptScheduleMapper.selectCount(wrapper);
+        if (count > 0) {
+            throw new BaseException("所选DM在该时段已有排期，请选择其他DM或调整时间");
+        }
+    }
+
+    private void checkDmConflictExcludeSelf(ScriptSchedule schedule) {
+        if (schedule.getDmId() == null || schedule.getScheduleDate() == null
+                || schedule.getStartTime() == null || schedule.getEndTime() == null) {
+            return;
+        }
+        LambdaQueryWrapper<ScriptSchedule> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ScriptSchedule::getDmId, schedule.getDmId())
+               .eq(ScriptSchedule::getScheduleDate, schedule.getScheduleDate())
+               .eq(ScriptSchedule::getIsDeleted, 0)
+               .ne(ScriptSchedule::getStatus, 2)
+               .ne(ScriptSchedule::getId, schedule.getId())
+               .and(w -> w
+                   .lt(ScriptSchedule::getStartTime, schedule.getEndTime())
+                   .gt(ScriptSchedule::getEndTime, schedule.getStartTime())
+               );
+        Long count = scriptScheduleMapper.selectCount(wrapper);
+        if (count > 0) {
+            throw new BaseException("所选DM在该时段已有排期，请选择其他DM或调整时间");
+        }
+    }
+
+    private void validateDmAssignment(ScriptSchedule schedule) {
+        if (schedule.getDmId() == null || dmMapper == null) {
+            return;
+        }
+        Dm dm = dmMapper.selectById(schedule.getDmId());
+        if (dm == null || Integer.valueOf(1).equals(dm.getIsDeleted()) || !Integer.valueOf(1).equals(dm.getStatus())) {
+            throw new BaseException("所选DM不存在或不可用");
+        }
+        if (schedule.getStoreId() != null && dm.getStoreId() != null && !Objects.equals(schedule.getStoreId(), dm.getStoreId())) {
+            throw new BaseException("所选DM不属于当前门店");
         }
     }
 }

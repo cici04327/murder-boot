@@ -66,8 +66,20 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // API 请求使用网络优先策略
+  // 支付、预约等实时性要求高的接口不走缓存，避免显示旧状态
+  const nonCacheApiPrefixes = [
+    '/api/reservation/page',
+    '/api/reservation/payment/',
+    '/api/reservation/'
+  ]
   if (url.pathname.startsWith('/api/')) {
+    const shouldBypassCache = nonCacheApiPrefixes.some(prefix => url.pathname.startsWith(prefix))
+
+    if (shouldBypassCache) {
+      event.respondWith(fetch(request))
+      return
+    }
+
     event.respondWith(
       fetch(request)
         .then((response) => {
