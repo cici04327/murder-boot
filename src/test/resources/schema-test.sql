@@ -404,3 +404,312 @@ CREATE TABLE IF NOT EXISTS ai_conversation_log (
     model VARCHAR(100),
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 文章表（字段与 Article 实体类完全对齐）
+CREATE TABLE IF NOT EXISTS article (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    summary VARCHAR(500),
+    content TEXT,
+    cover_image VARCHAR(255),
+    category INT DEFAULT 0,
+    category_name VARCHAR(50),
+    author_id BIGINT,
+    author_name VARCHAR(50),
+    view_count INT DEFAULT 0,
+    like_count INT DEFAULT 0,
+    favorite_count INT DEFAULT 0,
+    comment_count INT DEFAULT 0,
+    status INT DEFAULT 1,
+    is_top INT DEFAULT 0,
+    is_recommended INT DEFAULT 0,
+    publish_time DATETIME,
+    create_user BIGINT,
+    update_user BIGINT,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 文章点赞表
+CREATE TABLE IF NOT EXISTS article_like (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    article_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 文章收藏表
+CREATE TABLE IF NOT EXISTS article_favorite (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    article_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 文章评论表
+CREATE TABLE IF NOT EXISTS article_comment (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    article_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    content VARCHAR(1000) NOT NULL,
+    parent_id BIGINT DEFAULT 0,
+    like_count INT DEFAULT 0,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 文章评论点赞表
+CREATE TABLE IF NOT EXISTS article_comment_like (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    comment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 门店员工表（字段与 StoreEmployee 实体类完全对齐）
+CREATE TABLE IF NOT EXISTS store_employee (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    store_id BIGINT NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    phone VARCHAR(20),
+    avatar VARCHAR(255),
+    position INT DEFAULT 2,
+    join_date DATE,
+    salary DECIMAL(10,2),
+    staff_role VARCHAR(50) DEFAULT 'STORE_STAFF',
+    permission_codes VARCHAR(500),
+    dm_id BIGINT,
+    login_account VARCHAR(50),
+    login_password VARCHAR(100),
+    status INT DEFAULT 1,
+    last_login_time DATETIME,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 门店员工操作日志表
+CREATE TABLE IF NOT EXISTS store_employee_operation_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    employee_id BIGINT,
+    store_id BIGINT,
+    operation_type VARCHAR(50),
+    operation_desc VARCHAR(500),
+    target_id BIGINT,
+    target_type VARCHAR(50),
+    ip VARCHAR(50),
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 拼团表
+CREATE TABLE IF NOT EXISTS group_order (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    creator_id BIGINT NOT NULL,
+    script_id BIGINT,
+    script_name VARCHAR(100),
+    store_id BIGINT,
+    store_name VARCHAR(100),
+    need_count INT DEFAULT 4,
+    player_count INT DEFAULT 4,
+    current_count INT DEFAULT 0,
+    status INT DEFAULT 1,
+    play_time DATETIME,
+    price DECIMAL(10,2),
+    description VARCHAR(500),
+    check_in_code VARCHAR(20),
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 拼团成员表
+CREATE TABLE IF NOT EXISTS group_member (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    group_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    join_count INT DEFAULT 1,
+    is_creator INT DEFAULT 0,
+    status INT DEFAULT 1,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户登录日志表
+CREATE TABLE IF NOT EXISTS user_login_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    login_ip VARCHAR(50),
+    login_device VARCHAR(100),
+    login_type INT DEFAULT 1,
+    status INT DEFAULT 1,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 脚本收藏表
+CREATE TABLE IF NOT EXISTS script_favorite (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    script_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 热榜表
+CREATE TABLE IF NOT EXISTS hot_ranking (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    target_id BIGINT NOT NULL,
+    target_type VARCHAR(50) NOT NULL,
+    score DECIMAL(10,2) DEFAULT 0,
+    rank_position INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户设置表
+CREATE TABLE IF NOT EXISTS user_settings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    notification_enabled INT DEFAULT 1,
+    privacy_mode INT DEFAULT 0,
+    language VARCHAR(20) DEFAULT 'zh-CN',
+    theme VARCHAR(20) DEFAULT 'dark',
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户地址表
+CREATE TABLE IF NOT EXISTS user_address (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    name VARCHAR(50),
+    phone VARCHAR(20),
+    province VARCHAR(50),
+    city VARCHAR(50),
+    district VARCHAR(50),
+    detail VARCHAR(200),
+    is_default INT DEFAULT 0,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户积分记录表
+CREATE TABLE IF NOT EXISTS user_points_record (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    points INT NOT NULL,
+    type INT NOT NULL,
+    description VARCHAR(200),
+    related_id BIGINT,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户浏览历史表
+CREATE TABLE IF NOT EXISTS user_browse_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    target_id BIGINT NOT NULL,
+    target_type VARCHAR(50) NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 推荐日志表
+CREATE TABLE IF NOT EXISTS recommendation_log (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT,
+    script_id BIGINT,
+    score DECIMAL(10,4),
+    reason VARCHAR(200),
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 用户偏好表
+CREATE TABLE IF NOT EXISTS user_preference (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL UNIQUE,
+    preferred_categories VARCHAR(500),
+    preferred_player_counts VARCHAR(100),
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 私信表
+CREATE TABLE IF NOT EXISTS dm_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    sender_id BIGINT NOT NULL,
+    receiver_id BIGINT NOT NULL,
+    content TEXT,
+    is_read INT DEFAULT 0,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 剧本评价表
+CREATE TABLE IF NOT EXISTS script_review (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    script_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    rating INT DEFAULT 5,
+    content VARCHAR(1000),
+    status INT DEFAULT 1,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 剧本角色表
+CREATE TABLE IF NOT EXISTS script_role (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    script_id BIGINT NOT NULL,
+    name VARCHAR(50) NOT NULL,
+    description VARCHAR(500),
+    gender INT DEFAULT 0,
+    avatar VARCHAR(255),
+    sort INT DEFAULT 0,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 剧本标签表
+CREATE TABLE IF NOT EXISTS script_tag (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    script_id BIGINT NOT NULL,
+    tag VARCHAR(50) NOT NULL,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- AI排期任务表
+CREATE TABLE IF NOT EXISTS ai_schedule_task (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    task_name VARCHAR(100),
+    status INT DEFAULT 0,
+    result TEXT,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 客服会话表
+CREATE TABLE IF NOT EXISTS service_session (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT,
+    status INT DEFAULT 1,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 客服消息表
+CREATE TABLE IF NOT EXISTS service_message (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    session_id BIGINT NOT NULL,
+    sender_id BIGINT,
+    sender_type INT DEFAULT 1,
+    content TEXT,
+    is_deleted INT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP
+);
