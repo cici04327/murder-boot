@@ -20,7 +20,10 @@ import org.junit.platform.suite.api.SuiteDisplayName;
         ScriptIntegrationTest.class,
         StoreIntegrationTest.class,
         UserIntegrationTest.class,
-        VipIntegrationTest.class
+        VipIntegrationTest.class,
+        GroupIntegrationTest.class,
+        ArticleIntegrationTest.class,
+        StoreEmployeeIntegrationTest.class
 })
 public class IntegrationTestSuite {
     // 测试套件类，无需实现任何方法

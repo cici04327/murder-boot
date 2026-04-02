@@ -176,6 +176,9 @@ class StoreEmployeeServiceTest {
         @Test
         @DisplayName("更新员工 - 成功")
         void testUpdate_Success() {
+            // update() 内部先 selectById 检查员工是否存在，需要 mock
+            when(employeeMapper.selectById(1L)).thenReturn(testEmployee);
+            when(employeeMapper.selectOne(any())).thenReturn(null); // validateLoginAccountUnique 无重复
             when(employeeMapper.updateById(any(StoreEmployee.class))).thenReturn(1);
             ArgumentCaptor<StoreEmployee> employeeCaptor = ArgumentCaptor.forClass(StoreEmployee.class);
 

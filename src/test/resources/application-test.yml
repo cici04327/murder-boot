@@ -5,7 +5,7 @@ spring:
   datasource:
     # 使用H2内存数据库进行测试
     driver-class-name: org.h2.Driver
-    url: jdbc:h2:mem:testdb-${random.uuid};MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;IGNORECASE=TRUE;NON_KEYWORDS=USER,VALUE
+    url: jdbc:h2:mem:testdb-${random.uuid};MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE;IGNORECASE=TRUE;NON_KEYWORDS=USER,VALUE;MYSQL_COMPATIBLE_GRANTS=TRUE
     username: sa
     password: 
   
