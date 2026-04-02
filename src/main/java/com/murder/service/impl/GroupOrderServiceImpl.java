@@ -201,7 +201,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
     }
 
     @Override
-    public Map<String, Object> getDetailWithMembers(Long id) {
+    public Map<String, Object> getDetailWithMembers(Long id, Long userId) {
         GroupOrder group = this.getById(id);
         if (group == null) {
             return null;
@@ -217,6 +217,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
                 "时空旅者", "月光猎人", "风暴使者", "深渊行者", "光明守护"
         };
 
+        boolean hasJoined = false;
         int index = 0;
         for (GroupMember member : members) {
             Map<String, Object> anonymousMember = new HashMap<>();
@@ -233,9 +234,15 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             anonymousMember.put("avatar", null);
             anonymousMember.put("nickname", roleName);
             anonymousMembers.add(anonymousMember);
+
+            // 判断当前用户是否已加入
+            if (userId != null && userId.equals(member.getUserId())) {
+                hasJoined = true;
+            }
             index++;
         }
         result.put("members", anonymousMembers);
+        result.put("hasJoined", hasJoined);
 
         return result;
     }
@@ -387,7 +394,107 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
         this.updateById(group);
 
         checkAndUpdateGroupStatus(group);
+
+        // 通知已有成员：又来了一位新玩家
+        notifyExistingMembersOnJoin(group, userId, actualJoinCount);
+
         return true;
+    }
+
+    /**
+     * 新成员加入时通知已有的其他成员
+     */
+    private void notifyExistingMembersOnJoin(GroupOrder group, Long newUserId, int joinCount) {
+        List<GroupMember> allMembers = getGroupMembers(group.getId());
+        List<Long> existingUserIds = new ArrayList<>();
+        for (GroupMember m : allMembers) {
+            if (m.getUserId() != null && !m.getUserId().equals(newUserId)) {
+                existingUserIds.add(m.getUserId());
+            }
+        }
+        if (existingUserIds.isEmpty()) {
+            return;
+        }
+
+        String playTimeText = formatPlayTime(group.getPlayTime());
+        int stillNeed = resolveTargetPlayerCount(group) - group.getCurrentCount();
+        String content = stillNeed <= 0
+                ? String.format("🎉 拼单《%s》人已到齐，马上成团！场次时间：%s，请留意成团通知。",
+                        group.getScriptName(), playTimeText)
+                : String.format("🎭 又来了 %d 位神秘玩家！拼单《%s》现在已有 %d 人，还差 %d 人就能成团，场次时间：%s。",
+                        joinCount, group.getScriptName(), group.getCurrentCount(), stillNeed, playTimeText);
+
+        try {
+            notificationService.sendToUsers(
+                    "拼单来新伙伴啦",
+                    content,
+                    2,
+                    "group",
+                    group.getId(),
+                    existingUserIds.toArray(new Long[0])
+            );
+        } catch (Exception e) {
+            log.warn("发送新成员加入通知失败: groupId={}", group.getId(), e);
+        }
+    }
+
+    /**
+     * 发送拼团即将截止提醒（开局前3小时）
+     * 由定时任务调用
+     */
+    @Override
+    public void sendDeadlineReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        // 查找 status=1，且 playTime 在 now+2h 到 now+3h 之间的拼单（即将截止但还没到2小时关闭线）
+        LocalDateTime deadlineStart = now.plusHours(GROUP_FORMATION_LEAD_HOURS);       // 2小时后
+        LocalDateTime deadlineEnd   = now.plusHours(GROUP_FORMATION_LEAD_HOURS + 1);  // 3小时后
+
+        LambdaQueryWrapper<GroupOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(GroupOrder::getStatus, 1)
+                .isNotNull(GroupOrder::getPlayTime)
+                .ge(GroupOrder::getPlayTime, deadlineStart)
+                .lt(GroupOrder::getPlayTime, deadlineEnd);
+
+        List<GroupOrder> groups = this.list(wrapper);
+        for (GroupOrder group : groups) {
+            try {
+                sendDeadlineReminderForGroup(group, now);
+            } catch (Exception e) {
+                log.error("发送拼单截止提醒失败: groupId={}", group.getId(), e);
+            }
+        }
+        if (!groups.isEmpty()) {
+            log.info("已发送拼单截止提醒: 共 {} 个拼单", groups.size());
+        }
+    }
+
+    private void sendDeadlineReminderForGroup(GroupOrder group, LocalDateTime now) {
+        List<GroupMember> members = getGroupMembers(group.getId());
+        List<Long> userIds = members.stream()
+                .filter(m -> m.getUserId() != null)
+                .map(GroupMember::getUserId)
+                .toList();
+        if (userIds.isEmpty()) {
+            return;
+        }
+
+        int stillNeed = resolveTargetPlayerCount(group) - group.getCurrentCount();
+        String playTimeText = formatPlayTime(group.getPlayTime());
+        String content = String.format(
+                "⚠️ 紧急提醒！拼单《%s》距开局仅剩约3小时，还差 %d 人成团。" +
+                "若1小时内仍未成团（即距开局前2小时），系统将自动退款。场次时间：%s。",
+                group.getScriptName(), stillNeed, playTimeText
+        );
+
+        notificationService.sendToUsers(
+                "拼单即将截止，快来组队！",
+                content,
+                2,
+                "group",
+                group.getId(),
+                userIds.toArray(new Long[0])
+        );
+        log.info("已发送截止提醒: groupId={}, memberCount={}, stillNeed={}", group.getId(), userIds.size(), stillNeed);
     }
 
     @Override
@@ -413,13 +520,97 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             throw new RuntimeException("您未参加该拼单");
         }
 
+        // 退出拼团成员
         member.setStatus(0);
         groupMemberMapper.updateById(member);
 
         group.setCurrentCount(group.getCurrentCount() - member.getJoinCount());
         group.setUpdateTime(LocalDateTime.now());
         this.updateById(group);
+
+        // 对退出者关联的预约进行退款或取消
+        handleMemberLeaveRefund(group, userId);
+
+        // 通知剩余成员有人退出，继续等待拼团
+        notifyRemainingMembersOnLeave(group, userId);
+
         return true;
+    }
+
+    /**
+     * 处理成员退出拼团时的退款逻辑：
+     * - 已支付 → 自动退款
+     * - 未支付 → 系统取消
+     */
+    private void handleMemberLeaveRefund(GroupOrder group, Long userId) {
+        // 查找该成员关联到此拼单的预约
+        LambdaQueryWrapper<Reservation> resWrapper = new LambdaQueryWrapper<>();
+        resWrapper.eq(Reservation::getGroupId, group.getId())
+                .eq(Reservation::getUserId, userId)
+                .eq(Reservation::getIsDeleted, 0)
+                .ne(Reservation::getStatus, 4);
+        List<Reservation> userReservations = reservationMapper.selectList(resWrapper);
+
+        String leaveReason = "用户主动退出拼单";
+        for (Reservation reservation : userReservations) {
+            try {
+                if (Integer.valueOf(1).equals(reservation.getPayStatus())) {
+                    // 已支付 → 退款
+                    paymentService.autoRefund(reservation.getId(), leaveReason);
+                    log.info("拼团成员退出，已发起退款: groupId={}, userId={}, reservationId={}",
+                            group.getId(), userId, reservation.getId());
+                } else if (!Integer.valueOf(4).equals(reservation.getStatus())) {
+                    // 未支付 → 取消预约
+                    cancelReservationBySystem(reservation, leaveReason);
+                    log.info("拼团成员退出，已取消未支付预约: groupId={}, userId={}, reservationId={}",
+                            group.getId(), userId, reservation.getId());
+                }
+            } catch (Exception e) {
+                log.error("处理退出拼团成员预约失败: groupId={}, userId={}, reservationId={}",
+                        group.getId(), userId, reservation.getId(), e);
+            }
+        }
+    }
+
+    /**
+     * 通知拼单剩余成员：有人退出，拼团继续等待中
+     * 若距开局前2小时内仍未成团，系统将自动退款
+     */
+    private void notifyRemainingMembersOnLeave(GroupOrder group, Long leavingUserId) {
+        List<GroupMember> remainingMembers = getGroupMembers(group.getId());
+        List<Long> remainingUserIds = new ArrayList<>();
+        for (GroupMember m : remainingMembers) {
+            if (m.getUserId() != null && !m.getUserId().equals(leavingUserId)) {
+                remainingUserIds.add(m.getUserId());
+            }
+        }
+        if (remainingUserIds.isEmpty()) {
+            return;
+        }
+
+        String playTimeText = formatPlayTime(group.getPlayTime());
+        int stillNeed = resolveTargetPlayerCount(group) - group.getCurrentCount();
+        String content = String.format(
+                "拼单《%s》有成员退出，当前已有 %d 人，还差 %d 人成团，场次时间：%s。" +
+                "请继续等待新成员加入，若距开局前2小时仍未成团，系统将自动退款。",
+                group.getScriptName(),
+                group.getCurrentCount(),
+                stillNeed,
+                playTimeText
+        );
+
+        try {
+            notificationService.sendToUsers(
+                    "拼单有人退出，继续等待中",
+                    content,
+                    2,
+                    "group",
+                    group.getId(),
+                    remainingUserIds.toArray(new Long[0])
+            );
+        } catch (Exception e) {
+            log.warn("发送拼单成员退出通知失败: groupId={}", group.getId(), e);
+        }
     }
 
     @Override
@@ -534,6 +725,7 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             createParticipantReservations(group, creatorReservation, activeMembers);
         }
 
+        generateCheckInCodesAfterGroupSuccess(group, creatorReservation, activeMembers);
         sendGroupSuccessNotifications(group, creatorReservation, activeMembers);
     }
 
@@ -657,11 +849,27 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             }
         }
 
+        LambdaQueryWrapper<Reservation> memberResWrapper = new LambdaQueryWrapper<>();
+        memberResWrapper.eq(Reservation::getGroupId, group.getId())
+                .eq(Reservation::getIsDeleted, 0)
+                .ne(Reservation::getStatus, 4);
+        List<Reservation> memberReservations = reservationMapper.selectList(memberResWrapper);
+        java.util.Map<Long, Reservation> userReservationMap = new java.util.HashMap<>();
+        for (Reservation r : memberReservations) {
+            if (r.getUserId() != null && r.getId() != null) {
+                userReservationMap.putIfAbsent(r.getUserId(), r);
+            }
+        }
+        if (creatorReservation != null && creatorReservation.getUserId() != null) {
+            userReservationMap.putIfAbsent(creatorReservation.getUserId(), creatorReservation);
+        }
+
         if (!creatorIds.isEmpty()) {
+            String creatorTitle = "拼单已成团";
+            String creatorContent = buildGroupSuccessContent(group, playTimeText, userReservationMap.get(creatorIds.get(0)), true);
             notificationService.sendToUsers(
-                    "拼单成团，请前往支付",
-                    String.format("🎉 好消息！您发起的拼单《%s》已成团，场次时间：%s。请尽快前往「我的预约」完成支付（30分钟内），逾期将自动取消。",
-                            group.getScriptName(), playTimeText),
+                    creatorTitle,
+                    creatorContent,
                     2,
                     "group",
                     group.getId(),
@@ -669,41 +877,102 @@ public class GroupOrderServiceImpl extends ServiceImpl<GroupOrderMapper, GroupOr
             );
         }
 
-        if (!participantIds.isEmpty()) {
-            // 查询各参与者对应的预约记录，推送时带上 reservationId，前端收到后可直接跳支付页
-            LambdaQueryWrapper<Reservation> memberResWrapper = new LambdaQueryWrapper<>();
-            memberResWrapper.eq(Reservation::getGroupId, group.getId())
-                    .eq(Reservation::getIsDeleted, 0)
-                    .ne(Reservation::getStatus, 4);
-            List<Reservation> memberReservations = reservationMapper.selectList(memberResWrapper);
-            java.util.Map<Long, Long> userReservationMap = new java.util.HashMap<>();
-            for (Reservation r : memberReservations) {
-                if (r.getUserId() != null && r.getId() != null) {
-                    userReservationMap.putIfAbsent(r.getUserId(), r.getId());
-                }
-            }
-
-            for (Long participantId : participantIds) {
-                Long memberReservationId = userReservationMap.get(participantId);
-                String participantContent = creatorReservation != null
-                        ? String.format("您参与的拼单《%s》已成团！系统已为您生成正式预约，请尽快前往「我的预约」完成支付（30分钟内）。场次时间：%s。",
-                                group.getScriptName(), playTimeText)
-                        : String.format("您参与的拼单《%s》已成团，场次时间：%s，请尽快联系门店确认正式预约。",
-                                group.getScriptName(), playTimeText);
-                try {
-                    notificationService.sendToUsers(
-                            "拼单成团，请前往支付",
-                            participantContent,
-                            2,
-                            "reservation",
-                            memberReservationId != null ? memberReservationId : group.getId(),
-                            participantId
-                    );
-                } catch (Exception e) {
-                    log.error("发送拼单成团通知失败: participantId={}", participantId, e);
-                }
+        for (Long participantId : participantIds) {
+            Reservation participantReservation = userReservationMap.get(participantId);
+            Long memberReservationId = participantReservation != null && participantReservation.getId() != null
+                    ? participantReservation.getId()
+                    : group.getId();
+            String title = isPaidReservation(participantReservation) ? "拼单已成团" : "拼单成团，请前往支付";
+            String participantContent = buildGroupSuccessContent(group, playTimeText, participantReservation, false);
+            try {
+                notificationService.sendToUsers(
+                        title,
+                        participantContent,
+                        2,
+                        "reservation",
+                        memberReservationId,
+                        participantId
+                );
+            } catch (Exception e) {
+                log.error("发送拼单成团通知失败: participantId={}", participantId, e);
             }
         }
+    }
+
+    private void generateCheckInCodesAfterGroupSuccess(GroupOrder group, Reservation creatorReservation, List<GroupMember> activeMembers) {
+        List<Reservation> reservations = new ArrayList<>();
+        if (creatorReservation != null) {
+            reservations.add(creatorReservation);
+        }
+
+        LambdaQueryWrapper<Reservation> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Reservation::getGroupId, group.getId())
+                .eq(Reservation::getIsDeleted, 0)
+                .ne(Reservation::getStatus, 4);
+        List<Reservation> linkedReservations = reservationMapper.selectList(wrapper);
+        for (Reservation reservation : linkedReservations) {
+            if (reservation == null || reservation.getId() == null) {
+                continue;
+            }
+            boolean alreadyAdded = reservations.stream().anyMatch(item -> item.getId().equals(reservation.getId()));
+            if (!alreadyAdded) {
+                reservations.add(reservation);
+            }
+        }
+
+        for (Reservation reservation : reservations) {
+            if (!isPaidReservation(reservation) || StringUtils.hasText(reservation.getCheckInCode())) {
+                continue;
+            }
+            Reservation update = new Reservation();
+            update.setId(reservation.getId());
+            update.setCheckInCode(generateCheckInCode());
+            reservationMapper.updateById(update);
+            reservation.setCheckInCode(update.getCheckInCode());
+        }
+    }
+
+    private String buildGroupSuccessContent(GroupOrder group, String playTimeText, Reservation reservation, boolean creator) {
+        boolean paid = isPaidReservation(reservation);
+        boolean hasCheckInCode = reservation != null && StringUtils.hasText(reservation.getCheckInCode());
+        int totalMembers = group.getCurrentCount() != null ? group.getCurrentCount() : 0;
+        String teamInfo = totalMembers > 0 ? String.format("（共 %d 人）", totalMembers) : "";
+
+        if (creator) {
+            if (paid) {
+                if (hasCheckInCode) {
+                    return String.format("🎉 好消息！您发起的拼单《%s》已成团%s，场次时间：%s。系统已为您生成核销码：%s，请到店后出示使用。",
+                            group.getScriptName(), teamInfo, playTimeText, reservation.getCheckInCode());
+                }
+                return String.format("🎉 好消息！您发起的拼单《%s》已成团%s，场次时间：%s。订单已支付成功，请前往「我的预约」查看最新状态。",
+                        group.getScriptName(), teamInfo, playTimeText);
+            }
+            return String.format("🎉 好消息！您发起的拼单《%s》已成团%s，场次时间：%s。请尽快前往「我的预约」完成支付（30分钟内），逾期将自动取消。",
+                    group.getScriptName(), teamInfo, playTimeText);
+        }
+
+        if (paid) {
+            if (hasCheckInCode) {
+                return String.format("您参与的拼单《%s》已成团%s，场次时间：%s。订单已支付成功，系统已为您生成核销码：%s，请前往「我的预约」查看。",
+                        group.getScriptName(), teamInfo, playTimeText, reservation.getCheckInCode());
+            }
+            return String.format("您参与的拼单《%s》已成团%s，场次时间：%s。订单已支付成功，请前往「我的预约」查看最新状态。",
+                    group.getScriptName(), teamInfo, playTimeText);
+        }
+        if (reservation != null) {
+            return String.format("您参与的拼单《%s》已成团%s！系统已为您生成正式预约，请尽快前往「我的预约」完成支付（30分钟内）。场次时间：%s。",
+                    group.getScriptName(), teamInfo, playTimeText);
+        }
+        return String.format("您参与的拼单《%s》已成团%s，场次时间：%s，请尽快联系门店确认正式预约。",
+                group.getScriptName(), teamInfo, playTimeText);
+    }
+
+    private boolean isPaidReservation(Reservation reservation) {
+        return reservation != null && Integer.valueOf(1).equals(reservation.getPayStatus());
+    }
+
+    private String generateCheckInCode() {
+        return String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
     }
 
     private void sendGroupFailedNotifications(GroupOrder group, String reason) {

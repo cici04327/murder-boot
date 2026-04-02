@@ -739,9 +739,8 @@ const loadCategories = async () => {
   }
 }
 
-// 立即预约
+// 立即预约 - 弹窗已统一移至预约创建页处理
 const handleReserve = () => {
-  // 跳转到场次选择页，而不是直接进预约创建页
   router.push({
     path: '/reservation/schedule',
     query: { scriptId: route.params.id }
@@ -2096,6 +2095,7 @@ onMounted(async () => {
 }
 
 /* 全部评价弹窗深色主题 */
+
 :deep(.all-reviews-dialog) {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
   border: 1px solid rgba(192, 57, 43, 0.4) !important;

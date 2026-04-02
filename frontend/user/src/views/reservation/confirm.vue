@@ -35,7 +35,9 @@
             <div class="check-in-title">到店核销码</div>
             <div class="check-in-code">{{ reservation?.checkInCode || '-' }}</div>
             <div class="check-in-desc">
-              {{ reservation?.payStatus === 1 ? '支付成功后可直接向门店出示此核销码' : '该核销码已生成，支付成功后即可使用' }}
+              {{ reservation?.groupId
+                ? (reservation?.checkInCode ? '当前订单已成团，核销码已生成，请到店后出示使用' : '该订单需在成团后生成核销码，请留意成团通知')
+                : (reservation?.payStatus === 1 ? '支付成功后可直接向门店出示此核销码' : '支付成功后将生成核销码') }}
             </div>
           </div>
 

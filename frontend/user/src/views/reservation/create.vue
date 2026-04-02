@@ -582,7 +582,8 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, h } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { getScriptList, getAvailableSchedules } from '@/api/script'
@@ -1063,6 +1064,89 @@ const getVipDiscountText = (level) => {
   return { 1: '9.5折', 2: '9折', 3: '8.5折', 4: '8折' }[level] || '专属折扣'
 }
 
+// 恐怖剧本注意事项弹窗
+const getHorrorSkipKey = (scriptId) => {
+  const uid = userStore.userInfo?.id || 'guest'
+  return `horror_skip_${scriptId}_${uid}`
+}
+
+const checkHorrorScript = () => {
+  if (!form.scriptId) return
+  const script = scripts.value.find(s => s.id === form.scriptId)
+  if (!script || script.type !== 1) return
+
+  const skipKey = getHorrorSkipKey(form.scriptId)
+  if (localStorage.getItem(skipKey) === 'true') return
+
+  // 用唯一 id 标识 checkbox，确保 confirm 时能读取 DOM 状态
+  const checkboxId = `horror-check-${Date.now()}`
+
+  const msgNode = h('div', { style: 'font-size:14px;color:#303133;' }, [
+    h('div', { style: 'text-align:center;margin-bottom:14px;' }, [
+      h('div', { style: 'font-size:44px;margin-bottom:8px;' }, '🩸'),
+      h('div', { style: 'font-size:16px;font-weight:700;color:#c0392b;margin-bottom:4px;' },
+        `《${script.name}》是恐怖类型剧本`),
+      h('div', { style: 'font-size:12px;color:#909399;' }, '预约前请仔细阅读以下注意事项'),
+    ]),
+    h('div', {
+      style: 'background:#fff5f5;border:1px solid #fbc4c4;border-radius:8px;padding:12px 16px;margin-bottom:14px;'
+    }, [
+      h('div', { style: 'display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;line-height:1.6;' }, [
+        h('span', { style: 'font-size:16px;flex-shrink:0;' }, '🔞'),
+        h('span', { style: 'color:#606266;font-size:13px;' }, '本剧本含有【恐怖、惊吓、血腥】等元素，未满18周岁未成年人禁止参与'),
+      ]),
+      h('div', { style: 'display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;line-height:1.6;' }, [
+        h('span', { style: 'font-size:16px;flex-shrink:0;' }, '💔'),
+        h('span', { style: 'color:#606266;font-size:13px;' }, '心脏病、高血压、癫痫及其他严重疾病患者请勿参与'),
+      ]),
+      h('div', { style: 'display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;line-height:1.6;' }, [
+        h('span', { style: 'font-size:16px;flex-shrink:0;' }, '🤰'),
+        h('span', { style: 'color:#606266;font-size:13px;' }, '孕妇请勿参与本剧本游戏'),
+      ]),
+      h('div', { style: 'display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;line-height:1.6;' }, [
+        h('span', { style: 'font-size:16px;flex-shrink:0;' }, '😨'),
+        h('span', { style: 'color:#606266;font-size:13px;' }, '极度恐惧黑暗、密闭空间或有幽闭恐惧症者请谨慎参与'),
+      ]),
+      h('div', { style: 'display:flex;align-items:flex-start;gap:8px;line-height:1.6;' }, [
+        h('span', { style: 'font-size:16px;flex-shrink:0;' }, '🚫'),
+        h('span', { style: 'color:#606266;font-size:13px;' }, '游戏中将出现强烈惊吓环节，请做好心理准备'),
+      ]),
+    ]),
+    // 使用原生 input[type=checkbox]，避免 Vue 响应式失效问题
+    h('label', {
+      style: 'display:flex;align-items:center;gap:8px;cursor:pointer;padding:4px 0;'
+    }, [
+      h('input', {
+        id: checkboxId,
+        type: 'checkbox',
+        style: 'width:16px;height:16px;cursor:pointer;accent-color:#c0392b;flex-shrink:0;'
+      }),
+      h('span', { style: 'font-size:13px;color:#606266;line-height:1.5;' },
+        '我已满18周岁，身体状况良好，下次预约此剧本不再提醒')
+    ]),
+  ])
+
+  ElMessageBox({
+    title: '⚠️ 恐怖剧本注意事项',
+    message: msgNode,
+    confirmButtonText: '✅ 我已知晓，继续预约',
+    cancelButtonText: '取消',
+    confirmButtonClass: 'el-button--danger',
+    showCancelButton: true,
+    closeOnClickModal: false,
+    closeOnPressEscape: false,
+    distinguishCancelAndClose: true,
+  }).then(() => {
+    // 读取 DOM 中 checkbox 的实际勾选状态
+    const checkbox = document.getElementById(checkboxId)
+    if (checkbox?.checked) {
+      localStorage.setItem(getHorrorSkipKey(form.scriptId), 'true')
+    }
+  }).catch(() => {
+    router.back()
+  })
+}
+
 // 判断是否需要拼单
 const needGroup = computed(() => {
   if (!selectedScript.value) return false
@@ -1192,6 +1276,9 @@ onMounted(async () => {
     form.scriptId = parseInt(route.query.scriptId)
     handleScriptChange(form.scriptId)
   }
+
+  // 恐怖剧本检测：加载完剧本列表后检查当前选中剧本是否为恐怖类型
+  checkHorrorScript()
   
   // 如果有门店参数，先加载门店的房间列表
   if (route.query.storeId) {

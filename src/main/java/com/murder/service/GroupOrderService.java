@@ -24,7 +24,7 @@ public interface GroupOrderService extends IService<GroupOrder> {
     /**
      * 获取拼单详情（包含成员列表）
      */
-    Map<String, Object> getDetailWithMembers(Long id);
+    Map<String, Object> getDetailWithMembers(Long id, Long userId);
     
     /**
      * 创建拼单
@@ -70,6 +70,11 @@ public interface GroupOrderService extends IService<GroupOrder> {
      * 处理超时未成团的拼单
      */
     void processExpiredGroups();
+
+    /**
+     * 发送拼团即将截止提醒（开局前3小时内仍未成团的拼单）
+     */
+    void sendDeadlineReminders();
 
     /**
      * 重新校验拼团状态，必要时触发成团

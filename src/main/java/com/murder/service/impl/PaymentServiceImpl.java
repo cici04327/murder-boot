@@ -533,12 +533,19 @@ public class PaymentServiceImpl implements PaymentService {
         String reservationTime = reservation.getReservationTime() == null
                 ? ""
                 : reservation.getReservationTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        String content = String.format(
+        String content = shouldGenerateCheckInCodeAfterPayment(reservation)
+                ? String.format(
                 "您已成功支付预约订单，订单号：%s，金额：%.2f，预约时间：%s，到店请出示核销码：%s。",
                 reservation.getOrderNo(),
                 defaultAmount(reservation.getActualAmount()),
                 reservationTime,
                 reservation.getCheckInCode()
+        )
+                : String.format(
+                "您已成功支付预约订单，订单号：%s，金额：%.2f，预约时间：%s。当前订单需待拼团成团后生成核销码，请留意后续通知。",
+                reservation.getOrderNo(),
+                defaultAmount(reservation.getActualAmount()),
+                reservationTime
         );
 
         notificationService.sendToUsers(
@@ -601,10 +608,14 @@ public class PaymentServiceImpl implements PaymentService {
             AlipayTradeRefundResponse response = alipayClient.execute(request);
             if (!response.isSuccess()) {
                 String errorMessage = firstNonBlank(response.getSubMsg(), response.getMsg(), "支付宝退款失败");
+                String detailedMessage = String.format("支付宝退款失败(code=%s, subCode=%s): %s",
+                        firstNonBlank(response.getCode(), "-"),
+                        firstNonBlank(response.getSubCode(), "-"),
+                        errorMessage);
                 log.error("支付宝退款失败: reservationId={}, orderNo={}, code={}, subCode={}, message={}",
                         reservation.getId(), reservation.getOrderNo(),
                         response.getCode(), response.getSubCode(), errorMessage);
-                throw new RuntimeException(errorMessage);
+                throw new RuntimeException(detailedMessage);
             }
 
             log.info("支付宝退款成功: reservationId={}, orderNo={}, refundAmount={}, fundChange={}",
@@ -612,7 +623,8 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (AlipayApiException e) {
             log.error("调用支付宝退款接口失败: reservationId={}, orderNo={}",
                     reservation.getId(), reservation.getOrderNo(), e);
-            throw new RuntimeException("调用支付宝退款接口失败: " + e.getMessage(), e);
+            String message = firstNonBlank(e.getErrMsg(), e.getMessage(), "支付宝退款接口调用失败，请检查密钥、网关配置或订单状态");
+            throw new RuntimeException("调用支付宝退款接口失败: " + message, e);
         }
     }
 
@@ -637,7 +649,7 @@ public class PaymentServiceImpl implements PaymentService {
         if (reservation.getCheckInStatus() == null) {
             reservation.setCheckInStatus(0);
         }
-        if (!StringUtils.hasText(reservation.getCheckInCode())) {
+        if (shouldGenerateCheckInCodeAfterPayment(reservation) && !StringUtils.hasText(reservation.getCheckInCode())) {
             reservation.setCheckInCode(generateCheckInCode());
         }
         reservationMapper.updateById(reservation);
@@ -656,6 +668,23 @@ public class PaymentServiceImpl implements PaymentService {
         } catch (Exception e) {
             log.error("支付成功后自动处理拼团失败: reservationId={}, orderNo={}",
                     reservation.getId(), reservation.getOrderNo(), e);
+        }
+    }
+
+    private boolean shouldGenerateCheckInCodeAfterPayment(Reservation reservation) {
+        if (reservation == null) {
+            return false;
+        }
+        if (reservation.getGroupId() == null || groupOrderService == null) {
+            return true;
+        }
+        try {
+            GroupOrder groupOrder = groupOrderService.getById(reservation.getGroupId());
+            return groupOrder == null || Integer.valueOf(2).equals(groupOrder.getStatus());
+        } catch (Exception e) {
+            log.warn("查询拼团状态失败，默认暂不生成核销码: reservationId={}, groupId={}",
+                    reservation.getId(), reservation.getGroupId(), e);
+            return false;
         }
     }
 

@@ -139,14 +139,32 @@
               class="join-btn" 
               :disabled="!canJoin" 
               @click="handleJoin"
+              v-if="!hasJoined"
             >
               <span class="btn-icon">🚗</span>
               {{ joinBtnText }}
             </el-button>
+
+            <!-- 已加入：显示退出按钮 -->
+            <div v-if="hasJoined && group.status === 1" class="joined-actions">
+              <div class="joined-badge">✅ 您已加入此拼单</div>
+              <el-button
+                type="danger"
+                size="large"
+                class="leave-btn"
+                :loading="leaveLoading"
+                @click="handleLeave"
+              >
+                <span class="btn-icon">🚪</span>
+                退出拼单
+              </el-button>
+            </div>
             
             <div class="action-tips">
               <p>🔒 参团后您的身份将被匿名保护</p>
               <p>📱 开局前会收到系统通知提醒</p>
+              <p v-if="group.status === 1">⏰ 距开局前2小时未成团将自动退款</p>
+              <p v-if="hasJoined" style="color: #e6a23c;">💡 退出拼单后已支付费用将自动原路退回</p>
             </div>
           </div>
 
@@ -173,7 +191,7 @@ import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import { Warning } from '@element-plus/icons-vue'
 import { h } from 'vue'
 import { ElInputNumber } from 'element-plus'
-import { getGroupDetail, joinGroup } from '@/api/group'
+import { getGroupDetail, joinGroup, leaveGroup } from '@/api/group'
 import { useUserStore } from '@/store/user'
 
 const route = useRoute()
@@ -183,6 +201,8 @@ const userStore = useUserStore()
 const loading = ref(false)
 const group = ref(null)
 const members = ref([])
+const hasJoined = ref(false)
+const leaveLoading = ref(false)
 
 const isDeadlinePassed = computed(() => {
   if (!group.value?.expireTime) return false
@@ -191,10 +211,10 @@ const isDeadlinePassed = computed(() => {
 
 const canJoin = computed(() => {
   if (!group.value) return false
+  if (hasJoined.value) return false  // 已加入不再显示加入按钮
   if (group.value.status !== 1) return false
   if (isDeadlinePassed.value) return false
   if (group.value.currentCount >= group.value.needCount) return false
-  // 匿名模式下无法判断是否已加入，依靠后端校验
   return true
 })
 
@@ -227,6 +247,9 @@ const loadDetail = async () => {
     if (res.code === 1 || res.code === 200) {
       group.value = res.data
       members.value = res.data.members || []
+      // 判断当前登录用户是否已加入（后端返回的 members 含 userId，但匿名模式下不暴露，
+      // 改为：后端在 data 中返回 hasJoined 字段；若无则退出按钮不影响功能，后端会校验）
+      hasJoined.value = res.data.hasJoined === true
     }
   } catch (error) {
     console.error('加载拼单详情失败:', error)
@@ -234,6 +257,49 @@ const loadDetail = async () => {
     router.push('/group')
   } finally {
     loading.value = false
+  }
+}
+
+const handleLeave = async () => {
+  try {
+    await ElMessageBox.confirm(
+      `<div style="line-height: 1.9; font-size: 14px;">
+        <p>您确定要退出拼单《<strong>${group.value.scriptName}</strong>》吗？</p>
+        <p style="color: #e6a23c; margin-top: 8px;">💰 退款说明：</p>
+        <ul style="margin: 4px 0 0 16px; color: #c0c4cc;">
+          <li>已支付费用将<strong style="color:#67c23a">自动原路退回</strong>，无需额外操作</li>
+          <li>剩余成员将继续等待新玩家加入</li>
+          <li>若距开局前2小时仍未成团，系统将自动为所有人退款</li>
+        </ul>
+      </div>`,
+      '⚠️ 确认退出拼单',
+      {
+        confirmButtonText: '确认退出',
+        cancelButtonText: '再想想',
+        type: 'warning',
+        dangerouslyUseHTMLString: true,
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+
+    leaveLoading.value = true
+    const res = await leaveGroup(route.params.id)
+    if (res.code === 1 || res.code === 200) {
+      ElNotification({
+        title: '已退出拼单',
+        message: '您已成功退出拼单，若已支付，退款将在1-3个工作日内原路退回。',
+        type: 'success',
+        duration: 5000
+      })
+      hasJoined.value = false
+      loadDetail()
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.response?.data?.msg || '退出失败，请重试')
+    }
+  } finally {
+    leaveLoading.value = false
   }
 }
 
@@ -789,6 +855,44 @@ onMounted(() => loadDetail())
   margin: 0 0 8px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.6);
+}
+
+/* 已加入操作区 */
+.joined-actions {
+  padding: 0 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.joined-badge {
+  text-align: center;
+  padding: 10px;
+  background: rgba(103, 194, 58, 0.15);
+  border: 1px solid rgba(103, 194, 58, 0.35);
+  border-radius: 10px;
+  color: #67c23a;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.leave-btn {
+  width: 100%;
+  height: 46px;
+  font-size: 16px;
+  border-radius: 23px;
+  border: none;
+  background: linear-gradient(135deg, #7f1d1d 0%, #c0392b 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.leave-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(192, 57, 43, 0.5);
 }
 
 /* 提示卡片 */

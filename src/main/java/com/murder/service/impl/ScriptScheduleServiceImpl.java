@@ -164,6 +164,7 @@ public class ScriptScheduleServiceImpl implements ScriptScheduleService {
                 schedule.setDuration(script.getDuration());
                 schedule.setDifficulty(script.getDifficulty());
                 schedule.setPlayerCount(script.getPlayerCount());
+                schedule.setScriptType(script.getType());
             }
 
             Store store = schedule.getStoreId() != null ? storeMap.get(schedule.getStoreId()) : null;

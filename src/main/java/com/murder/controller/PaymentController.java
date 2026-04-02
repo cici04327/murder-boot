@@ -134,7 +134,8 @@ public class PaymentController {
             return Result.success(message);
         } catch (Exception e) {
             log.error("处理退款失败", e);
-            return Result.error(e.getMessage());
+            String message = (e.getMessage() == null || e.getMessage().isBlank()) ? "退款处理失败，请检查支付宝退款配置或订单状态" : e.getMessage();
+            return Result.error(message);
         }
     }
 

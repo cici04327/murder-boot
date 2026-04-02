@@ -3,10 +3,26 @@
     <el-card v-if="reservation" class="detail-card">
       <template #header>
         <div class="header">
-          <h2>预约详情</h2>
-          <el-tag :type="getStatusType(reservation.status)" size="large">
-            {{ getStatusText(reservation.status) }}
-          </el-tag>
+          <div class="header-left">
+            <h2>预约详情</h2>
+            <!-- 拼团标识 -->
+            <el-tag v-if="reservation.groupId" class="group-badge" effect="dark">
+              🧩 拼团订单
+            </el-tag>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <el-tag
+              v-if="reservation.groupId"
+              :type="getGroupStatusType(reservation.groupStatus)"
+              size="large"
+              effect="dark"
+            >
+              {{ getGroupStatusText(reservation.groupStatus) }}
+            </el-tag>
+            <el-tag :type="getStatusType(reservation.status)" size="large">
+              {{ getStatusText(reservation.status) }}
+            </el-tag>
+          </div>
         </div>
       </template>
 
@@ -64,6 +80,45 @@
         </el-descriptions-item>
       </el-descriptions>
 
+      <!-- 拼团信息区块 -->
+      <el-descriptions
+        v-if="reservation.groupId"
+        title="🧩 拼团信息"
+        :column="2"
+        border
+        style="margin-top: 20px"
+      >
+        <el-descriptions-item label="拼团状态">
+          <el-tag :type="getGroupStatusType(reservation.groupStatus)" effect="dark">
+            {{ getGroupStatusText(reservation.groupStatus) }}
+          </el-tag>
+        </el-descriptions-item>
+        <el-descriptions-item label="拼团编号">
+          <el-link type="primary" @click="router.push(`/group/${reservation.groupId}`)">
+            #{{ reservation.groupId }}　查看拼团详情 →
+          </el-link>
+        </el-descriptions-item>
+        <!-- 拼团中：显示等待提示 -->
+        <el-descriptions-item v-if="reservation.groupStatus === 1" label="温馨提示" :span="2">
+          <div class="group-waiting-block">
+            <div class="group-tip-row">⏳ 拼团仍在进行中，等待其他玩家加入</div>
+            <div class="group-tip-row warning">⚠️ 若距开局前2小时仍未成团，系统将自动退款给所有等待成员</div>
+          </div>
+        </el-descriptions-item>
+        <!-- 已成团：成团成功提示 -->
+        <el-descriptions-item v-if="reservation.groupStatus === 2" label="成团状态" :span="2">
+          <div class="group-success-block">
+            🎉 拼团已成功！请准时到店，核销码已生成，出示给工作人员即可。
+          </div>
+        </el-descriptions-item>
+        <!-- 已取消：退款说明 -->
+        <el-descriptions-item v-if="reservation.groupStatus === 0" label="退款说明" :span="2">
+          <div class="group-cancelled-block">
+            ❌ 拼团已取消，若已支付费用将原路自动退回，请耐心等待1-3个工作日。
+          </div>
+        </el-descriptions-item>
+      </el-descriptions>
+
       <el-descriptions title="到店核销" :column="2" border style="margin-top: 20px">
         <el-descriptions-item label="核销状态">
           <el-tag :type="isCheckedIn ? 'success' : 'info'">
@@ -76,10 +131,16 @@
         <el-descriptions-item label="核销码" :span="2">
           <div v-if="reservation.payStatus === 1" class="check-in-code-wrapper">
             <div class="check-in-code">
-              <span>{{ reservation.checkInCode || '-' }}</span>
-              <span class="check-in-tip">到店后出示给门店工作人员进行核销</span>
+              <template v-if="reservation.checkInCode">
+                <span>{{ reservation.checkInCode }}</span>
+                <span class="check-in-tip">到店后出示给门店工作人员进行核销</span>
+              </template>
+              <template v-else>
+                <span>{{ reservation.groupId ? '待拼团成团后生成' : '-' }}</span>
+                <span class="check-in-tip">{{ reservation.groupId ? '订单成团后系统将自动生成核销码' : '支付成功后可直接到店核销' }}</span>
+              </template>
             </div>
-            <div class="qrcode-container">
+            <div v-if="reservation.checkInCode" class="qrcode-container">
               <canvas ref="qrcodeCanvas"></canvas>
               <span class="qrcode-label">扫码核销</span>
             </div>
@@ -145,6 +206,16 @@
         >
           申请退款
         </el-button>
+        <!-- 拼团中：提示无需手动退款 -->
+        <el-tooltip
+          v-if="reservation.groupId && reservation.groupStatus === 1 && reservation.payStatus === 1"
+          content="拼团中无需手动退款，距开局2小时未成团系统将自动为您退款"
+          placement="top"
+        >
+          <el-button type="info" size="large" disabled>
+            ⏳ 等待成团中
+          </el-button>
+        </el-tooltip>
         <el-button
           v-if="reservation.status < 3 && reservation.status !== 4 && !isCheckedIn"
           type="warning"
@@ -369,6 +440,8 @@ const isCheckedIn = computed(() => {
 
 const canRefund = computed(() => {
   if (!reservation.value) return false
+  // 拼团中的预约不可手动申请退款（距开局2小时未成团系统会自动退款）
+  if (reservation.value.groupId && reservation.value.groupStatus === 1) return false
   return Number(reservation.value.payStatus) === 1
     && Number(reservation.value.status) < 3
     && Number(reservation.value.status) !== 4
@@ -441,6 +514,10 @@ const getPayStatusText = (status) => {
   const map = { 0: '未支付', 1: '已支付', 2: '退款中', 3: '已退款' }
   return map[status] || '未知'
 }
+
+// 拼团状态辅助函数
+const getGroupStatusText = (s) => ({ 0: '拼团已取消', 1: '拼团中', 2: '已成团', 3: '已结束' }[s] ?? '拼团中')
+const getGroupStatusType = (s) => ({ 0: 'danger', 1: 'warning', 2: 'success', 3: 'info' }[s] ?? 'warning')
 
 const getVipDiscountLabel = (discount) => {
   if (!discount) return 'VIP 折扣'
@@ -728,9 +805,51 @@ onBeforeUnmount(() => {
   justify-content: space-between;
 }
 
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .header h2 {
   margin: 0;
   color: #f2f6ff;
+}
+
+.group-badge {
+  background: rgba(103, 58, 183, 0.3) !important;
+  border-color: rgba(103, 58, 183, 0.6) !important;
+  color: #ce93d8 !important;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+/* 拼团信息区块 */
+.group-waiting-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.group-tip-row {
+  font-size: 13px;
+  color: #9fb3d9;
+  line-height: 1.6;
+}
+.group-tip-row.warning {
+  color: #e6a23c;
+  font-weight: 500;
+}
+.group-success-block {
+  font-size: 13px;
+  color: #67c23a;
+  font-weight: 500;
+  line-height: 1.6;
+}
+.group-cancelled-block {
+  font-size: 13px;
+  color: #f56c6c;
+  line-height: 1.6;
 }
 
 .time-highlight {

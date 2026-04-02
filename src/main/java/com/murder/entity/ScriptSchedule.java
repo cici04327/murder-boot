@@ -145,4 +145,8 @@ public class ScriptSchedule implements Serializable {
     /** DM 头像（非数据库字段，查询时填充） */
     @TableField(exist = false)
     private String dmAvatar;
+
+    /** 剧本类型（非数据库字段，查询时填充）：1=恐怖，2=推理，3=情感，4=欢乐，5=机制，6=还原 */
+    @TableField(exist = false)
+    private Integer scriptType;
 }

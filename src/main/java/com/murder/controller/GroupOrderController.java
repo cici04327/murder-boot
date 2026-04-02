@@ -50,7 +50,8 @@ public class GroupOrderController {
      */
     @GetMapping("/{id}")
     public Result<Map<String, Object>> getDetail(@PathVariable Long id) {
-        Map<String, Object> result = groupOrderService.getDetailWithMembers(id);
+        Long userId = BaseContext.getCurrentId(); // 未登录时为null，不影响查询
+        Map<String, Object> result = groupOrderService.getDetailWithMembers(id, userId);
         if (result == null) {
             return Result.error("拼单不存在");
         }

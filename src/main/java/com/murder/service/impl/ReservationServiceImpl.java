@@ -612,9 +612,10 @@ public class ReservationServiceImpl implements ReservationService {
         assertAdminStoreScope(existing);
         ensureCheckInFields(existing);
 
-        String checkInCode = StringUtils.hasText(existing.getCheckInCode())
-                ? existing.getCheckInCode()
-                : generateCheckInCode();
+        boolean shouldGenerateCheckInCode = shouldGenerateCheckInCodeAfterPayment(existing);
+        String checkInCode = shouldGenerateCheckInCode
+                ? (StringUtils.hasText(existing.getCheckInCode()) ? existing.getCheckInCode() : generateCheckInCode())
+                : existing.getCheckInCode();
 
         Reservation update = new Reservation();
         update.setId(id);
@@ -910,20 +911,45 @@ public class ReservationServiceImpl implements ReservationService {
         String reservationTime = reservation.getReservationTime() == null
                 ? ""
                 : reservation.getReservationTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        notificationService.sendToUsers(
-                "支付成功通知",
-                String.format(
+        String content = shouldGenerateCheckInCodeAfterPayment(reservation)
+                ? String.format(
                         "您已成功支付预约订单，订单号：%s，金额：%.2f，预约时间：%s，到店请出示核销码：%s。",
                         reservation.getOrderNo(),
                         defaultAmount(reservation.getActualAmount()),
                         reservationTime,
                         reservation.getCheckInCode()
-                ),
+                )
+                : String.format(
+                        "您已成功支付预约订单，订单号：%s，金额：%.2f，预约时间：%s。当前订单需待拼团成团后生成核销码，请留意后续通知。",
+                        reservation.getOrderNo(),
+                        defaultAmount(reservation.getActualAmount()),
+                        reservationTime
+                );
+        notificationService.sendToUsers(
+                "支付成功通知",
+                content,
                 3,
                 "payment",
                 reservation.getId(),
                 reservation.getUserId()
         );
+    }
+
+    private boolean shouldGenerateCheckInCodeAfterPayment(Reservation reservation) {
+        if (reservation == null) {
+            return false;
+        }
+        if (reservation.getGroupId() == null || groupOrderService == null) {
+            return true;
+        }
+        try {
+            GroupOrder groupOrder = groupOrderService.getById(reservation.getGroupId());
+            return groupOrder == null || Integer.valueOf(2).equals(groupOrder.getStatus());
+        } catch (Exception e) {
+            log.warn("查询拼团状态失败，默认暂不生成核销码: reservationId={}, groupId={}",
+                    reservation.getId(), reservation.getGroupId(), e);
+            return false;
+        }
     }
 
     private void assertAdminStoreScope(Reservation reservation) {

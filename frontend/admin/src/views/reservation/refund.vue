@@ -312,7 +312,8 @@ const confirmProcess = async () => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('处理退款失败:', error)
-      ElMessage.error('操作失败，请稍后重试')
+      const errorMsg = error?.message || error?.response?.data?.msg || '操作失败，请稍后重试'
+      ElMessage.error(errorMsg)
     }
   } finally {
     processing.value = false

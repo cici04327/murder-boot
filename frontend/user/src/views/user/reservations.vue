@@ -64,10 +64,23 @@
             <div class="order-info">
               <span class="case-icon">{{ getStatusEmoji(item) }}</span>
               <span class="order-no">案件编号：#{{ item.id }}</span>
+              <!-- 拼团标识 -->
+              <el-tag v-if="item.groupId" class="group-tag" effect="dark" size="small">
+                🧩 拼团订单
+              </el-tag>
             </div>
             <div class="header-tags">
               <el-tag :type="getStatusType(item)" class="status-tag" effect="dark">
                 {{ getStatusText(item) }}
+              </el-tag>
+              <!-- 拼团状态标签 -->
+              <el-tag
+                v-if="item.groupId"
+                :type="getGroupStatusType(item.groupStatus)"
+                class="status-tag"
+                effect="dark"
+              >
+                {{ getGroupStatusText(item.groupStatus) }}
               </el-tag>
               <el-tag
                 :type="isCheckedIn(item) ? 'success' : 'info'"
@@ -101,9 +114,24 @@
                 <span class="label">👥 人数：</span>
                 <span class="value">{{ item.playerCount }}位侦探</span>
               </div>
+              <!-- 拼团信息行 -->
+              <div class="info-row group-info-row" v-if="item.groupId">
+                <span class="label">🧩 拼团：</span>
+                <span class="value">
+                  <span :class="['group-status-text', getGroupStatusClass(item.groupStatus)]">
+                    {{ getGroupStatusText(item.groupStatus) }}
+                  </span>
+                  <router-link :to="`/group/${item.groupId}`" class="group-link">查看拼团 →</router-link>
+                </span>
+              </div>
+              <!-- 拼团等待提示 -->
+              <div class="info-row" v-if="item.groupId && item.groupStatus === 1">
+                <span class="label"></span>
+                <span class="value group-waiting-tip">⏰ 距开局前2小时未成团将自动退款</span>
+              </div>
               <div class="info-row" v-if="item.payStatus === 1">
                 <span class="label">🔐 核销码：</span>
-                <span class="value">{{ item.checkInCode || '-' }}</span>
+                <span class="value">{{ item.checkInCode || (item.groupId ? '待成团后生成' : '-') }}</span>
               </div>
             </el-col>
 
@@ -131,6 +159,16 @@
                 >
                   🔄 申请退款
                 </el-button>
+                <!-- 拼团中不可退款提示 -->
+                <el-tooltip
+                  v-if="item.groupId && item.groupStatus === 1 && item.payStatus === 1"
+                  content="拼团中无需手动退款，距开局2小时未成团系统将自动退款"
+                  placement="left"
+                >
+                  <el-tag type="info" size="small" class="status-mini-tag" style="cursor:default;">
+                    ⏳ 等待成团中
+                  </el-tag>
+                </el-tooltip>
                 <el-tag
                   v-if="item.refundStatus === 1"
                   type="warning"
@@ -293,7 +331,21 @@ const getItemClass = (item) => {
   return classes.join(' ')
 }
 
+// 拼团状态辅助函数
+// groupStatus: 0=已取消, 1=拼团中, 2=已成团, 3=已结束
+const getGroupStatusText = (groupStatus) => {
+  return { 0: '拼团已取消', 1: '拼团中', 2: '已成团', 3: '已结束' }[groupStatus] ?? '拼团中'
+}
+const getGroupStatusType = (groupStatus) => {
+  return { 0: 'danger', 1: 'warning', 2: 'success', 3: 'info' }[groupStatus] ?? 'warning'
+}
+const getGroupStatusClass = (groupStatus) => {
+  return { 0: 'group-cancelled', 1: 'group-waiting', 2: 'group-success', 3: 'group-ended' }[groupStatus] ?? 'group-waiting'
+}
+
 const canRefund = (item) => {
+  // 拼团中的预约不可手动申请退款（距开局2小时未成团系统会自动退款）
+  if (item.groupId && item.groupStatus === 1) return false
   return item.payStatus === 1
     && item.status < 3
     && !isCheckedIn(item)
@@ -669,6 +721,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .status-tag {
@@ -781,6 +835,46 @@ onBeforeUnmount(() => {
   justify-content: center;
 }
 
+/* 拼团相关样式 */
+.group-tag {
+  background: rgba(103, 58, 183, 0.3) !important;
+  border-color: rgba(103, 58, 183, 0.6) !important;
+  color: #ce93d8 !important;
+  border-radius: 12px;
+}
+
+.group-info-row {
+  background: rgba(103, 58, 183, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  margin-bottom: 10px !important;
+}
+
+.group-status-text {
+  font-weight: 600;
+  margin-right: 10px;
+  font-size: 13px;
+}
+.group-status-text.group-waiting  { color: #e6a23c; }
+.group-status-text.group-success  { color: #67c23a; }
+.group-status-text.group-cancelled { color: #f56c6c; }
+.group-status-text.group-ended    { color: #909399; }
+
+.group-link {
+  font-size: 12px;
+  color: #ce93d8;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(206, 147, 216, 0.5);
+  transition: color 0.2s;
+}
+.group-link:hover { color: #fff; }
+
+.group-waiting-tip {
+  font-size: 12px;
+  color: #e6a23c;
+  opacity: 0.85;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .header-content {
@@ -818,8 +912,11 @@ onBeforeUnmount(() => {
   }
 
   .header-tags {
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    margin-top: 6px;
   }
 }
 </style>
