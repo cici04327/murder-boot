@@ -9,18 +9,28 @@
               <el-icon :size="32"><Shop /></el-icon>
             </div>
             <div class="stat-info">
-              <div class="stat-value">{{ statistics.totalStores || 0 }}</div>
-              <div class="stat-label">门店总数</div>
-              <div class="stat-detail">
-                <span class="success">营业: {{ statistics.openStores || 0 }}</span>
-                <span class="danger">停业: {{ statistics.closedStores || 0 }}</span>
-              </div>
+              <!-- 超级管理员显示门店总数，门店管理员显示本店状态 -->
+              <template v-if="isSuperAdmin">
+                <div class="stat-value">{{ statistics.totalStores || 0 }}</div>
+                <div class="stat-label">门店总数</div>
+                <div class="stat-detail">
+                  <span class="success">营业: {{ statistics.openStores || 0 }}</span>
+                  <span class="danger">停业: {{ statistics.closedStores || 0 }}</span>
+                </div>
+              </template>
+              <template v-else>
+                <div class="stat-value">{{ statistics.totalRooms || 0 }}</div>
+                <div class="stat-label">本店房间数</div>
+                <div class="stat-detail">
+                  <span class="success">可用: {{ statistics.availableRooms || 0 }}</span>
+                </div>
+              </template>
             </div>
           </div>
         </el-card>
       </el-col>
 
-      <el-col :span="6">
+      <el-col :span="6" v-if="isSuperAdmin">
         <el-card class="stat-card" shadow="hover">
           <div class="stat-content">
             <div class="stat-icon" style="background: #67c23a;">

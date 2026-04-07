@@ -3,7 +3,7 @@
     <el-card>
       <!-- 查询表单 -->
       <el-form :inline="true" :model="queryForm" class="query-form">
-        <el-form-item label="门店">
+        <el-form-item v-if="!isStoreAdmin" label="门店">
           <el-select v-model="queryForm.storeId" placeholder="请选择门店" clearable filterable>
             <el-option
               v-for="store in storeList"
@@ -93,7 +93,7 @@
       @close="handleDialogClose"
     >
       <el-form :model="formData" :rules="formRules" ref="formRef" label-width="100px">
-        <el-form-item label="门店" prop="storeId">
+        <el-form-item v-if="!isStoreAdmin" label="门店" prop="storeId">
           <el-select v-model="formData.storeId" placeholder="请选择门店" filterable>
             <el-option
               v-for="store in storeList"
@@ -148,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
 
@@ -159,6 +159,13 @@ const dialogVisible = ref(false)
 const dialogTitle = ref('新增房间')
 const formRef = ref(null)
 const storeList = ref([])
+
+// 判断是否为门店管理员
+const isStoreAdmin = computed(() => localStorage.getItem('admin-login-type') === 'store')
+const currentStoreId = computed(() => {
+  const id = localStorage.getItem('admin-store-id')
+  return id ? Number(id) : null
+})
 
 const queryForm = reactive({
   storeId: null,
@@ -197,24 +204,36 @@ const getRoomTypeColor = (type) => {
 
 const fetchStoreList = async () => {
   try {
-    const res = await request.get('/store/list')
-    storeList.value = res.data
+    if (isStoreAdmin.value) {
+      // 门店管理员只看自己的门店
+      const storeId = currentStoreId.value
+      if (storeId) {
+        const res = await request.get(`/store/${storeId}`)
+        storeList.value = res.data ? [res.data] : []
+        queryForm.storeId = storeId
+        formData.storeId = storeId
+      }
+    } else {
+      const res = await request.get('/store/list')
+      storeList.value = res.data
+    }
   } catch (error) {
     console.error('获取门店列表失败:', error)
   }
 }
 
 const fetchData = async () => {
-  if (!queryForm.storeId) {
+  const storeId = isStoreAdmin.value ? currentStoreId.value : queryForm.storeId
+  if (!storeId) {
     ElMessage.warning('请先选择门店')
     return
   }
-  
+
   loading.value = true
   try {
-    const res = await request.get(`/store/room/list/${queryForm.storeId}`)
+    const res = await request.get(`/store/room/list/${storeId}`)
     let data = res.data || []
-    
+
     // 前端过滤
     if (queryForm.type !== null) {
       data = data.filter(item => item.type === queryForm.type)
@@ -222,7 +241,7 @@ const fetchData = async () => {
     if (queryForm.status !== null) {
       data = data.filter(item => item.status === queryForm.status)
     }
-    
+
     tableData.value = data
     total.value = data.length
   } catch (error) {
@@ -247,6 +266,10 @@ const handleReset = () => {
 
 const handleAdd = () => {
   dialogTitle.value = '新增房间'
+  // 门店管理员新增时自动填入自己的门店
+  if (isStoreAdmin.value) {
+    formData.storeId = currentStoreId.value
+  }
   dialogVisible.value = true
 }
 

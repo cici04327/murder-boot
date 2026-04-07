@@ -59,7 +59,7 @@ const routes = [
         path: 'statistics',
         name: 'StoreStatistics',
         component: () => import('@/views/store/statistics.vue'),
-        meta: { title: '门店统计', icon: 'DataAnalysis', roles: ['admin'] }
+        meta: { title: '门店统计', icon: 'DataAnalysis', roles: ['admin', 'store'] }
       },
       {
         path: 'operation-board',
@@ -71,7 +71,7 @@ const routes = [
         path: 'room',
         name: 'StoreRoom',
         component: () => import('@/views/store/room.vue'),
-        meta: { title: '房间管理', icon: 'Operation', roles: ['admin'] }
+        meta: { title: '房间管理', icon: 'Operation', roles: ['admin', 'store'] }
       },
       {
         path: 'dm',
@@ -281,7 +281,7 @@ const routes = [
     path: '/coupon',
     component: Layout,
     redirect: '/coupon/list',
-    meta: { title: '优惠券管理', icon: 'Ticket', roles: ['admin', 'store'] },
+    meta: { title: '优惠券管理', icon: 'Ticket', roles: ['admin'] },
     children: [
       {
         path: 'list',
@@ -293,7 +293,7 @@ const routes = [
         path: 'user-coupon',
         name: 'UserCoupon',
         component: () => import('@/views/coupon/user-coupon.vue'),
-        meta: { title: '用户优惠券', icon: 'Tickets', roles: ['admin', 'store'] }
+        meta: { title: '用户优惠券', icon: 'Tickets', roles: ['admin'] }
       }
     ]
   },
